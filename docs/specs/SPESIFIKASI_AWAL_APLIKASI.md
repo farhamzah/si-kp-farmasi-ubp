@@ -21,7 +21,16 @@ Sistem mendukung multi-role sehingga satu user dapat memiliki lebih dari satu pe
 - Murah dihosting dan tidak bergantung pada layanan berbayar eksternal.
 - Aman melalui autentikasi, middleware role, dan validasi server-side.
 - UI/UX bersih, modern, responsive, dan berbahasa Indonesia.
+- UI menggunakan design system modern yang konsisten untuk layout, sidebar, topbar, card, form, table, badge, alert, empty state, dan progress step.
 - Modul dibangun bertahap agar stabil.
+
+## Design System UI
+- Arah visual aplikasi adalah modern admin dashboard untuk sistem kampus/farmasi.
+- Warna utama menggunakan teal, emerald, sky/cyan, dan navy lembut dengan background terang.
+- Layout utama menggunakan content container dengan lebar maksimum nyaman agar halaman tidak melebar berlebihan.
+- Card menggunakan permukaan putih, border halus, radius konsisten, dan shadow lembut.
+- Button, badge, alert, table, form input, dan empty state dibuat konsisten agar mudah dikembangkan pada tahap berikutnya.
+- Tampilan harus responsive untuk desktop, tablet, dan mobile, serta tetap menjaga kontras dan aksesibilitas.
 
 ## Alur Besar Aplikasi
 1. User login menggunakan email dan password.
