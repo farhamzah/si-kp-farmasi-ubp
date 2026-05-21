@@ -11,14 +11,10 @@
 @php
     $activeRole = session('active_role');
     $roleData = $activeRole ? \App\Support\RoleDashboard::dataFor($activeRole) : null;
-    $roleLabel = \App\Support\RoleDashboard::labelFor($activeRole);
-    $topbarRoleLabel = match ($activeRole) {
-        'pembimbing_dalam' => 'Pembimbing Dalam',
-        'pembimbing_lapangan' => 'Pembimbing Lapangan',
-        'koordinator_kp' => 'Koordinator KP',
-        default => $roleLabel,
-    };
-    $ownedRoles = auth()->user()?->roles ?? collect();
+    $currentUser = auth()->user();
+    $roleLabel = $currentUser?->displayRoleLabel($activeRole) ?? \App\Support\RoleDashboard::labelFor($activeRole);
+    $topbarRoleLabel = $currentUser?->displayRoleLabel($activeRole) ?? $roleLabel;
+    $ownedRoles = $currentUser?->roles ?? collect();
 @endphp
 <div class="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_32%),radial-gradient(circle_at_80%_12%,rgba(20,184,166,0.14),transparent_28%),linear-gradient(135deg,#f8fdff,#eef9fb_45%,#f4f9fc)] lg:flex">
     <!-- Sidebar Navigation -->
@@ -156,8 +152,13 @@
         <!-- User Info (Mobile) -->
         <div class="flex-none border-t border-sky-100 px-4 py-4 lg:hidden">
             <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Pengguna</p>
-            <p class="text-sm font-semibold text-slate-900 truncate">{{ auth()->user()->name }}</p>
-            <p class="text-xs text-cyan-700 mt-1">{{ $roleLabel }}</p>
+            <div class="flex items-center gap-3">
+                <x-ui.avatar :user="$currentUser" size="sm" />
+                <div class="min-w-0">
+                    <p class="truncate text-sm font-semibold text-slate-900">{{ $currentUser->name }}</p>
+                    <p class="mt-1 truncate text-xs text-cyan-700">{{ $roleLabel }}</p>
+                </div>
+            </div>
         </div>
     </aside>
 
@@ -176,11 +177,9 @@
                 <div class="flex w-full min-w-0 flex-wrap items-center justify-start gap-2 md:w-auto md:flex-nowrap md:justify-end md:gap-3">
                     <!-- User Pill -->
                     <div class="flex min-w-0 max-w-[220px] items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs shadow-sm ring-1 ring-sky-100 sm:max-w-[260px]">
-                        <span class="flex h-8 w-8 flex-none items-center justify-center rounded-xl bg-cyan-50 text-[11px] font-black text-cyan-700 ring-1 ring-cyan-100">
-                            {{ str(auth()->user()->name)->substr(0, 1)->upper() }}
-                        </span>
+                        <x-ui.avatar :user="$currentUser" size="sm" />
                         <span class="min-w-0 leading-tight">
-                            <span class="block truncate font-black text-slate-800">{{ auth()->user()->name }}</span>
+                            <span class="block truncate font-black text-slate-800">{{ $currentUser->name }}</span>
                             <span class="block truncate text-[11px] font-bold text-cyan-700">{{ $topbarRoleLabel }}</span>
                         </span>
                     </div>

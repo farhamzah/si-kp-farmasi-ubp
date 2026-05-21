@@ -4,7 +4,11 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\File;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProfileController extends Controller
 {
@@ -92,5 +96,83 @@ class ProfileController extends Controller
         $user->update(['profile_completed' => $complete]);
 
         return redirect()->route('profile.show')->with('status', 'Profil berhasil diperbarui.');
+    }
+
+    public function avatar(Request $request): StreamedResponse
+    {
+        $user = $request->user();
+
+        abort_if(! $user->avatar_path || ! Storage::disk($user->avatar_disk ?? 'local')->exists($user->avatar_path), 404);
+
+        return Storage::disk($user->avatar_disk ?? 'local')->response(
+            $user->avatar_path,
+            $user->avatar_original_filename,
+            [
+                'Content-Type' => $user->avatar_mime ?: 'image/jpeg',
+                'Cache-Control' => 'private, max-age=300',
+            ]
+        );
+    }
+
+    public function updateAvatar(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'avatar' => [
+                'required',
+                File::image()
+                    ->types(['jpg', 'jpeg', 'png', 'webp'])
+                    ->max(2048),
+            ],
+        ], [
+            'avatar.required' => 'Pilih file foto profil terlebih dahulu.',
+            'avatar.image' => 'Foto profil harus berupa gambar JPG, PNG, atau WebP.',
+            'avatar.mimes' => 'Foto profil harus berupa JPG, PNG, atau WebP.',
+            'avatar.max' => 'Ukuran foto profil maksimal 2MB.',
+        ]);
+
+        $user = $request->user();
+        $file = $validated['avatar'];
+        $disk = 'local';
+        $directory = 'avatars/'.$user->id;
+        $filename = Str::uuid().'.'.$file->extension();
+        $path = $file->storeAs($directory, $filename, $disk);
+
+        $oldDisk = $user->avatar_disk ?: $disk;
+        $oldPath = $user->avatar_path;
+
+        $user->update([
+            'avatar_path' => $path,
+            'avatar_disk' => $disk,
+            'avatar_original_filename' => $file->getClientOriginalName(),
+            'avatar_mime' => $file->getMimeType(),
+            'avatar_size' => $file->getSize(),
+        ]);
+
+        if ($oldPath) {
+            rescue(fn () => Storage::disk($oldDisk)->delete($oldPath), report: false);
+        }
+
+        return back()->with('status', 'Foto profil berhasil diperbarui.');
+    }
+
+    public function deleteAvatar(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        $oldDisk = $user->avatar_disk ?: 'local';
+        $oldPath = $user->avatar_path;
+
+        $user->update([
+            'avatar_path' => null,
+            'avatar_disk' => 'local',
+            'avatar_original_filename' => null,
+            'avatar_mime' => null,
+            'avatar_size' => null,
+        ]);
+
+        if ($oldPath) {
+            rescue(fn () => Storage::disk($oldDisk)->delete($oldPath), report: false);
+        }
+
+        return back()->with('status', 'Foto profil berhasil dihapus.');
     }
 }

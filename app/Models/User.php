@@ -28,6 +28,11 @@ class User extends Authenticatable
         'must_change_password',
         'profile_completed',
         'last_login_at',
+        'avatar_path',
+        'avatar_disk',
+        'avatar_original_filename',
+        'avatar_mime',
+        'avatar_size',
     ];
 
     /**
@@ -96,6 +101,51 @@ class User extends Authenticatable
     public function activeRoles()
     {
         return $this->roles()->orderBy('label')->get();
+    }
+
+    public function hasAvatar(): bool
+    {
+        return filled($this->avatar_path);
+    }
+
+    public function avatarUrl(): ?string
+    {
+        return $this->hasAvatar() ? route('profile.avatar.show') : null;
+    }
+
+    public function initials(): string
+    {
+        $words = str($this->name)
+            ->replaceMatches('/[^A-Za-z0-9\s]/', ' ')
+            ->squish()
+            ->explode(' ')
+            ->filter()
+            ->reject(fn (string $word) => in_array(strtolower($word), ['dr', 'drs', 'dra', 'prof'], true))
+            ->values();
+
+        if ($words->isEmpty()) {
+            return 'U';
+        }
+
+        $first = str($words->first())->substr(0, 1);
+        $last = $words->count() > 1 ? str($words->last())->substr(0, 1) : str($words->first())->substr(1, 1);
+
+        return str($first.$last)->upper()->toString();
+    }
+
+    public function displayRoleLabel(?string $role = null): string
+    {
+        $role ??= session('active_role');
+
+        return match ($role) {
+            'koordinator_kp' => 'Koordinator KP',
+            'pembimbing_dalam' => 'Pembimbing Dalam',
+            'pembimbing_lapangan' => 'Pembimbing Lapangan',
+            'mahasiswa' => 'Mahasiswa',
+            'admin' => 'Admin',
+            'penguji' => 'Penguji',
+            default => 'Belum memilih role',
+        };
     }
 
     public function scopeActive(Builder $query): Builder

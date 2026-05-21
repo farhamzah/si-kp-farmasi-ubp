@@ -8,6 +8,8 @@ use App\Services\UserImportService;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class UserImportAndProfileTest extends TestCase
@@ -73,6 +75,87 @@ class UserImportAndProfileTest extends TestCase
         $response->assertRedirect('/profil-saya');
         $this->assertTrue($user->fresh()->profile_completed);
         $this->assertDatabaseHas('students', ['nim' => '221010001', 'phone' => '081234567890']);
+    }
+
+    public function test_user_can_upload_view_and_delete_valid_avatar(): void
+    {
+        Storage::fake('local');
+
+        $user = User::create([
+            'name' => 'Mahasiswa Avatar',
+            'email' => 'avatar@test.local',
+            'password' => Hash::make('password'),
+            'status' => 'active',
+        ]);
+        $user->roles()->sync([Role::where('name', 'mahasiswa')->first()->id]);
+
+        $file = UploadedFile::fake()->image('avatar.jpg', 300, 300)->size(512);
+
+        $this->actingAs($user)
+            ->withSession(['active_role' => 'mahasiswa'])
+            ->post('/profile/avatar', ['avatar' => $file])
+            ->assertRedirect();
+
+        $user->refresh();
+        $this->assertNotNull($user->avatar_path);
+        Storage::disk('local')->assertExists($user->avatar_path);
+
+        $this->actingAs($user)
+            ->withSession(['active_role' => 'mahasiswa'])
+            ->get('/profile/avatar')
+            ->assertOk();
+
+        $oldPath = $user->avatar_path;
+
+        $this->actingAs($user)
+            ->withSession(['active_role' => 'mahasiswa'])
+            ->delete('/profile/avatar')
+            ->assertRedirect();
+
+        $this->assertNull($user->fresh()->avatar_path);
+        Storage::disk('local')->assertMissing($oldPath);
+    }
+
+    public function test_invalid_avatar_upload_is_rejected_and_initials_are_available(): void
+    {
+        Storage::fake('local');
+
+        $user = User::create([
+            'name' => 'Dr. Rina Kartika',
+            'email' => 'rina@test.local',
+            'password' => Hash::make('password'),
+            'status' => 'active',
+        ]);
+        $user->roles()->sync([Role::where('name', 'pembimbing_dalam')->first()->id]);
+
+        $this->assertSame('RK', $user->initials());
+
+        $this->actingAs($user)
+            ->withSession(['active_role' => 'pembimbing_dalam'])
+            ->post('/profile/avatar', ['avatar' => UploadedFile::fake()->create('avatar.svg', 12, 'image/svg+xml')])
+            ->assertSessionHasErrors('avatar');
+
+        $this->assertNull($user->fresh()->avatar_path);
+    }
+
+    public function test_multi_role_user_can_open_polished_role_selection_page(): void
+    {
+        $user = User::create([
+            'name' => 'Dosen Multi Role',
+            'email' => 'multi-role@test.local',
+            'password' => Hash::make('password'),
+            'status' => 'active',
+        ]);
+        $user->roles()->sync(Role::whereIn('name', ['koordinator_kp', 'pembimbing_dalam'])->pluck('id'));
+
+        $this->actingAs($user)
+            ->get('/pilih-role')
+            ->assertOk()
+            ->assertSee('Pilih akses untuk melanjutkan')
+            ->assertSee('Koordinator KP')
+            ->assertSee('Pembimbing Dalam')
+            ->assertSee('Kelola periode, kuota, pembimbing, sidang, dan nilai KP.')
+            ->assertSee('Pantau mahasiswa bimbingan, laporan, sidang, dan penilaian.');
     }
 
     public function test_admin_can_open_import_page(): void

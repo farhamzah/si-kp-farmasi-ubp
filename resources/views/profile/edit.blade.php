@@ -4,7 +4,40 @@
 @section('page_title', 'Edit Profil Akademik')
 
 @section('content')
-<form method="POST" action="{{ route('profile.update') }}" class="mx-auto max-w-4xl">
+<div class="mx-auto max-w-4xl space-y-6">
+<section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+    <div class="flex flex-col gap-5 sm:flex-row sm:items-center">
+        <x-ui.avatar :user="$user" size="xl" class="shadow-xl shadow-cyan-900/10" />
+        <div class="min-w-0 flex-1">
+            <h2 class="text-xl font-bold text-slate-950">Foto Profil</h2>
+            <p class="mt-1 text-sm leading-6 text-slate-500">Gunakan foto JPG/PNG/WebP maksimal 2MB. Foto akan tampil di topbar, dashboard, dan halaman pilih role.</p>
+            @if($user->avatar_original_filename)
+                <p class="mt-2 truncate text-xs font-semibold text-cyan-700">{{ $user->avatar_original_filename }}</p>
+            @endif
+        </div>
+    </div>
+
+    @error('avatar')
+        <div class="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{{ $message }}</div>
+    @enderror
+
+    <div class="mt-5 grid gap-3 md:grid-cols-[1fr_auto]">
+        <form method="POST" action="{{ route('profile.avatar.update') }}" enctype="multipart/form-data" class="flex flex-col gap-3 sm:flex-row">
+            @csrf
+            <input type="file" name="avatar" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-cyan-50 file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-cyan-700 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20">
+            <button class="flex-none rounded-xl bg-cyan-700 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-cyan-700/20 transition hover:bg-cyan-800">Ubah Foto</button>
+        </form>
+        @if($user->hasAvatar())
+            <form method="POST" action="{{ route('profile.avatar.delete') }}">
+                @csrf
+                @method('DELETE')
+                <button class="w-full rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-sm font-bold text-rose-700 transition hover:bg-rose-50">Hapus Foto</button>
+            </form>
+        @endif
+    </div>
+</section>
+
+<form method="POST" action="{{ route('profile.update') }}">
     @csrf
     @method('PUT')
 
@@ -143,4 +176,5 @@
         </div>
     </section>
 </form>
+</div>
 @endsection

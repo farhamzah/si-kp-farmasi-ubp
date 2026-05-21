@@ -175,3 +175,11 @@ Sistem mendukung multi-role sehingga satu user dapat memiliki lebih dari satu pe
 - UAT issue tracking disiapkan melalui template isu dan ringkasan UAT agar hasil pengujian prodi dapat dicatat konsisten.
 - Deployment smoke test checklist tersedia untuk validasi cepat setelah aplikasi dipasang di server demo/production.
 - Status Tahap 13 menyatakan aplikasi siap UAT/demo internal dan memiliki jalur checklist menuju production, dengan syarat konfigurasi server production, credential, HTTPS, backup, dan password demo disesuaikan sebelum go-live.
+
+## Fondasi Foto Profil dan Role Selection UI
+- Semua user dapat memiliki foto profil yang tersimpan pada storage aplikasi dan divalidasi server-side.
+- Format avatar yang diterima adalah JPG, JPEG, PNG, dan WebP dengan batas ukuran maksimal 2MB; SVG tidak diizinkan.
+- Jika user belum memiliki foto profil, sistem menampilkan avatar inisial dari nama user.
+- Avatar/inisial tampil pada topbar, halaman Profil Saya, Edit Profil, dashboard, dan halaman Pilih Role.
+- Halaman Pilih Role dibuat lebih modern dengan header identitas user, alert informasi multi-role, card role berisi label pendek, deskripsi, icon, badge akses, dan CTA masuk.
+- Topbar menjaga nama user dan role aktif panjang dengan truncate agar tidak overlap dengan tombol logout.

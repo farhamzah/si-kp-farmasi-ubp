@@ -23,13 +23,18 @@
         <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.18),transparent_34%),linear-gradient(135deg,rgba(236,254,255,0.95),rgba(255,255,255,0.72)_48%,rgba(240,249,255,0.92))]"></div>
         <div class="relative grid gap-7 lg:grid-cols-[minmax(0,1fr)_330px] lg:items-center">
             <div>
-                <span class="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-1.5 text-xs font-black uppercase tracking-widest text-cyan-800">
-                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M6 4a2 2 0 11-4 0 2 2 0 014 0zM15 4a2 2 0 11-4 0 2 2 0 014 0zM13 13a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    </svg>
-                    {{ $roleData['label'] }}
-                </span>
-                <h1 class="mt-5 max-w-3xl text-3xl font-black tracking-tight text-slate-950 md:text-4xl">Selamat datang kembali, {{ $firstName }}</h1>
+                <div class="flex items-center gap-4">
+                    <x-ui.avatar :user="auth()->user()" size="lg" class="shadow-lg shadow-cyan-800/10" />
+                    <div class="min-w-0">
+                        <span class="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-1.5 text-xs font-black uppercase tracking-widest text-cyan-800">
+                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M6 4a2 2 0 11-4 0 2 2 0 014 0zM15 4a2 2 0 11-4 0 2 2 0 014 0zM13 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            {{ auth()->user()->displayRoleLabel(session('active_role')) }}
+                        </span>
+                        <h1 class="mt-4 max-w-3xl text-3xl font-black tracking-tight text-slate-950 md:text-4xl">Selamat datang kembali, {{ $firstName }}</h1>
+                    </div>
+                </div>
                 <p class="mt-4 max-w-3xl text-base leading-8 text-slate-600">Pantau proses Kerja Praktek Farmasi dari pendaftaran, berkas, pemilihan tempat, bimbingan, laporan, hingga sidang dalam satu dashboard yang rapi.</p>
             </div>
             <div class="rounded-3xl border border-cyan-100 bg-white/80 p-5 shadow-xl shadow-sky-900/8 backdrop-blur">

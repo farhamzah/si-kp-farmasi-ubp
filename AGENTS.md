@@ -160,3 +160,10 @@ Setiap fitur harus dibuat modular dan mudah dikembangkan. Pisahkan tanggung jawa
 - Dokumentasi report wajib dibuat untuk setiap tahap atau patch rilis agar keputusan teknis dan hasil QA tetap terlacak.
 - Sebelum commit rilis, wajib menjalankan `php artisan test` dan `npm run build`; untuk tahap production readiness juga jalankan `php artisan optimize:clear` dan `php artisan migrate`.
 - Akun demo dan password default hanya untuk development/UAT internal; production wajib mengganti atau menonaktifkannya.
+
+## 23. Aturan Avatar dan Identitas User
+- Upload avatar wajib divalidasi server-side sebagai gambar JPG, JPEG, PNG, atau WebP dengan ukuran maksimal yang ditentukan fitur.
+- SVG tidak boleh diizinkan sebagai avatar karena berisiko membawa konten aktif.
+- Avatar user disimpan melalui storage yang aman dan path file tidak boleh diekspos langsung ke UI.
+- Jika avatar tidak tersedia, UI wajib menampilkan inisial user yang rapi.
+- Topbar wajib menjaga nama user dan role panjang dengan truncate agar tidak overlap dengan tombol aksi/logout.

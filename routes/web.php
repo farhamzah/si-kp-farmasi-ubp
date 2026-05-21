@@ -70,6 +70,9 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'redirect'])->name('dashboard');
         Route::get('/profil-saya', [ProfileController::class, 'show'])->name('profile.show');
         Route::redirect('/profile', '/profil-saya')->name('profile.alias');
+        Route::get('/profile/avatar', [ProfileController::class, 'avatar'])->name('profile.avatar.show');
+        Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
+        Route::delete('/profile/avatar', [ProfileController::class, 'deleteAvatar'])->name('profile.avatar.delete');
         Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
