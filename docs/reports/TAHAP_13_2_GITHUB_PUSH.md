@@ -28,11 +28,19 @@ Commit terakhir sebelum push:
 Commit dokumentasi push:
 
 ```text
-TBD Document GitHub push setup
+6e02282 Document GitHub push setup
 ```
 
 ## 6. Hasil Push
-TBD setelah `git push -u origin main`.
+Push berhasil ke branch `main`.
+
+Output utama:
+
+```text
+branch 'main' set up to track 'origin/main'.
+To https://github.com/farhamzah/si-kp-farmasi-ubp.git
+ * [new branch]      main -> main
+```
 
 ## 7. Catatan
 - `.gitignore` sudah mengabaikan `.env`, `vendor`, `node_modules`, `public/storage`, `public/build`, log, cache, dan file key storage.
