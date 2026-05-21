@@ -137,3 +137,10 @@ Setiap fitur harus dibuat modular dan mudah dikembangkan. Pisahkan tanggung jawa
 - Nilai final/published tidak boleh diubah penilai; unlock hanya Admin/Koordinator.
 - Mahasiswa hanya melihat nilai setelah dipublish.
 - Semua perubahan penting nilai wajib dicatat di `kp_score_logs`.
+
+## 20. Aturan Rekap, Export, dan QA
+- Rekap dan export hanya boleh diakses Admin/Koordinator.
+- Export Excel harus memiliki header jelas dan tidak membuka data ke role lain.
+- Setiap tahap besar wajib menjalankan `php artisan migrate`, `php artisan test`, dan `npm run build`.
+- UI/UX harus dijaga konsisten: route aktif tidak overlap, menu yang sudah dibuat tidak diberi badge "Segera", table responsive, dan empty state informatif.
+- Report tahap wajib mencatat hasil test/build, kendala, dan status git.

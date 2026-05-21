@@ -1,0 +1,28 @@
+<?php
+
+namespace App\Http\Controllers\Management;
+
+use App\Exports\KpRecapExport;
+use App\Http\Controllers\Controller;
+use App\Services\KpRecapService;
+use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+
+class ExportController extends Controller
+{
+    public function __invoke(string $type, Request $request, KpRecapService $service): BinaryFileResponse
+    {
+        abort_unless(in_array($type, ['students', 'placements', 'logbooks', 'exams', 'scores'], true), 404);
+
+        $filenames = [
+            'students' => 'rekap_mahasiswa_kp.xlsx',
+            'placements' => 'rekap_penempatan_kp.xlsx',
+            'logbooks' => 'rekap_logbook_kp.xlsx',
+            'exams' => 'rekap_sidang_kp.xlsx',
+            'scores' => 'rekap_nilai_kp.xlsx',
+        ];
+
+        return Excel::download(new KpRecapExport($service->rows($type, $request)), $filenames[$type]);
+    }
+}

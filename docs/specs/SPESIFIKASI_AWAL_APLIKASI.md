@@ -149,3 +149,11 @@ Sistem mendukung multi-role sehingga satu user dapat memiliki lebih dari satu pe
 - Admin dan Koordinator KP dapat finalisasi, publish, dan unlock nilai akhir.
 - Mahasiswa hanya dapat melihat nilai akhir setelah status nilai dipublish.
 - Semua aktivitas penilaian dan nilai akhir dicatat pada `kp_score_logs`.
+
+## Fondasi Rekap, Export, dan MVP Demo
+- Admin dan Koordinator KP memiliki pusat Rekap KP untuk mahasiswa, penempatan, logbook, sidang, dan nilai.
+- Data rekap penting dapat diexport ke Excel melalui route protected.
+- Dashboard final per role menampilkan ringkasan operasional sesuai hak akses.
+- Panduan penggunaan dibuat untuk Admin/Koordinator, Mahasiswa, Pembimbing Dalam, Pembimbing Lapangan, dan Penguji.
+- Panduan deployment lokal/hosting tersedia sebagai dasar instalasi production.
+- Dengan modul Tahap 1-11, aplikasi dinyatakan siap demo sebagai MVP internal jika data demo dan UAT sudah disiapkan.

@@ -27,6 +27,7 @@ use App\Http\Controllers\Management\FinalReportMonitoringController;
 use App\Http\Controllers\Management\ExamLogController;
 use App\Http\Controllers\Management\ExamRequestController as ManagementExamRequestController;
 use App\Http\Controllers\Management\ExamScheduleController as ManagementExamScheduleController;
+use App\Http\Controllers\Management\ExportController;
 use App\Http\Controllers\Management\AssessmentComponentController;
 use App\Http\Controllers\Management\LogbookLogController;
 use App\Http\Controllers\Management\LogbookMonitoringController;
@@ -34,6 +35,7 @@ use App\Http\Controllers\Management\PlaceSelectionMonitoringController;
 use App\Http\Controllers\Management\SelectionLogController;
 use App\Http\Controllers\Management\ScoreLogController;
 use App\Http\Controllers\Management\ScoreMonitoringController;
+use App\Http\Controllers\Management\RecapController;
 use App\Http\Controllers\Management\WaitingListController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleSelectionController;
@@ -146,6 +148,13 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('final-scores/{finalScore}/publish', [ScoreMonitoringController::class, 'publish'])->name('final-scores.publish');
             Route::post('final-scores/{finalScore}/unlock', [ScoreMonitoringController::class, 'unlock'])->name('final-scores.unlock');
             Route::get('score-logs', [ScoreLogController::class, 'index'])->name('score-logs.index');
+            Route::get('recaps', [RecapController::class, 'index'])->name('recaps.index');
+            Route::get('recaps/students', [RecapController::class, 'students'])->name('recaps.students');
+            Route::get('recaps/placements', [RecapController::class, 'placements'])->name('recaps.placements');
+            Route::get('recaps/logbooks', [RecapController::class, 'logbooks'])->name('recaps.logbooks');
+            Route::get('recaps/exams', [RecapController::class, 'exams'])->name('recaps.exams');
+            Route::get('recaps/scores', [RecapController::class, 'scores'])->name('recaps.scores');
+            Route::get('exports/{type}', ExportController::class)->name('exports.download');
         });
 
         Route::middleware('role:mahasiswa')->prefix('mahasiswa')->name('student.')->group(function () {
