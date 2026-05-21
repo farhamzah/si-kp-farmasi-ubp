@@ -7,8 +7,8 @@
     <title>{{ config('app.name', 'SI-KP Farmasi UBP') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-slate-50 font-sans text-slate-900">
-    <main class="min-h-screen bg-[radial-gradient(circle_at_top_left,#ccfbf1,transparent_32%),linear-gradient(135deg,#f8fafc,#ecfeff)]">
+<body class="min-h-screen bg-gradient-to-br from-slate-50 via-teal-50/30 to-slate-50 font-sans text-slate-900">
+    <main class="min-h-screen flex items-center justify-center">
         {{ $slot ?? '' }}
         @yield('content')
     </main>
