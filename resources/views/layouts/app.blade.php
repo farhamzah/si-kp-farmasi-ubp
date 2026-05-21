@@ -70,6 +70,10 @@
                         'Logbook Mahasiswa' => 'internal-supervisor.logbooks.index',
                         'Monitoring Logbook' => 'management.logbooks.index',
                         'Log Aktivitas Logbook' => 'management.logbook-logs.index',
+                        'Laporan Akhir' => 'student.final-reports.show',
+                        'Review Laporan' => 'internal-supervisor.final-reports.index',
+                        'Monitoring Laporan' => 'management.final-reports.index',
+                        'Log Laporan' => 'management.final-report-logs.index',
                     ];
                     $mappedRoute = $routeMap[$item] ?? null;
                     $href = $isDashboard ? route($roleData['route'] ?? 'dashboard') : ($isProfile ? route('profile.show') : ($mappedRoute && Route::has($mappedRoute) ? route($mappedRoute) : '#'));

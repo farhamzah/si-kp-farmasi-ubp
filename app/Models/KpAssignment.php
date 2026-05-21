@@ -31,6 +31,7 @@ class KpAssignment extends Model
     public function assignedBy() { return $this->belongsTo(User::class, 'assigned_by'); }
     public function logs() { return $this->hasMany(KpAssignmentLog::class, 'kp_assignment_id'); }
     public function logbooks() { return $this->hasMany(KpLogbook::class, 'kp_assignment_id'); }
+    public function finalReport() { return $this->hasOne(KpFinalReport::class, 'kp_assignment_id'); }
 
     public function statusLabel(): string
     {

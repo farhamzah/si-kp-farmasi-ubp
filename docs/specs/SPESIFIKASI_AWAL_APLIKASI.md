@@ -116,3 +116,14 @@ Sistem mendukung multi-role sehingga satu user dapat memiliki lebih dari satu pe
 - Admin dan Koordinator KP dapat memonitor seluruh logbook dan memberi komentar monitoring.
 - Semua perubahan status, upload/ganti bukti, submit, validasi, penolakan, revisi, dan komentar penting dicatat pada `kp_logbook_logs`.
 - Logbook menjadi dasar pemantauan pelaksanaan KP dan fondasi untuk Tahap 8 Laporan Akhir KP.
+
+## Fondasi Laporan Akhir KP
+- Mahasiswa dengan assignment aktif/berjalan dapat upload Laporan Akhir KP.
+- Satu assignment memiliki satu status laporan akhir aktif pada `kp_final_reports`.
+- Setiap upload laporan atau revisi disimpan sebagai versi baru di `kp_final_report_files`.
+- Mahasiswa dapat submit laporan untuk review setelah file tersedia.
+- Pembimbing Dalam/Dosen menjadi reviewer utama dan dapat menyetujui, meminta revisi, atau menolak laporan.
+- Laporan yang sudah disetujui menjadi syarat untuk tahap berikutnya, yaitu Pengajuan dan Penjadwalan Sidang KP.
+- Admin dan Koordinator KP dapat memonitor seluruh laporan akhir dan melihat log aktivitas.
+- File laporan disimpan aman di storage non-public dan hanya dapat diakses melalui route protected sesuai role/ownership.
+- Semua aktivitas penting laporan akhir dicatat pada `kp_final_report_logs`.

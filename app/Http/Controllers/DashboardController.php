@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\KpPeriod;
 use App\Models\KpAssignment;
 use App\Models\KpLogbook;
+use App\Models\KpFinalReport;
 use App\Models\KpPlace;
 use App\Models\KpPlaceQuota;
 use App\Models\KpPlaceSelection;
@@ -38,6 +39,7 @@ class DashboardController extends Controller
             'selectionStats' => in_array($role, ['admin', 'koordinator_kp'], true) ? $this->selectionStats() : null,
             'assignmentStats' => $this->assignmentStats($role, $request),
             'logbookStats' => $this->logbookStats($role, $request),
+            'finalReportStats' => $this->finalReportStats($role, $request),
             'studentRegistration' => $role === 'mahasiswa' ? $request->user()->student?->kpRegistrations()->with(['documents', 'activePlaceSelection.place', 'waitingList'])->latest()->first() : null,
         ]);
     }
@@ -155,6 +157,40 @@ class DashboardController extends Controller
             return [
                 'total' => KpLogbook::whereHas('assignment', fn ($q) => $q->where('internal_supervisor_id', $lecturerId))->count(),
                 'komentar' => KpLogbook::whereHas('comments', fn ($q) => $q->where('user_id', $request->user()->id))->count(),
+            ];
+        }
+
+        return null;
+    }
+
+    private function finalReportStats(string $role, Request $request): ?array
+    {
+        if (in_array($role, ['admin', 'koordinator_kp'], true)) {
+            return [
+                'total' => KpFinalReport::count(),
+                'menunggu_review' => KpFinalReport::where('status', 'menunggu_review')->count(),
+                'revisi' => KpFinalReport::where('status', 'revisi')->count(),
+                'disetujui' => KpFinalReport::where('status', 'disetujui')->count(),
+            ];
+        }
+
+        if ($role === 'pembimbing_dalam') {
+            $lecturerId = $request->user()->lecturer?->id;
+
+            return [
+                'menunggu_review' => KpFinalReport::where('status', 'menunggu_review')->whereHas('assignment', fn ($q) => $q->where('internal_supervisor_id', $lecturerId))->count(),
+                'revisi' => KpFinalReport::where('status', 'revisi')->whereHas('assignment', fn ($q) => $q->where('internal_supervisor_id', $lecturerId))->count(),
+                'disetujui' => KpFinalReport::where('status', 'disetujui')->whereHas('assignment', fn ($q) => $q->where('internal_supervisor_id', $lecturerId))->count(),
+            ];
+        }
+
+        if ($role === 'mahasiswa') {
+            $assignment = $request->user()->student?->assignments()->whereIn('status', ['aktif', 'berjalan'])->latest()->first();
+            $report = $assignment?->finalReport;
+
+            return [
+                'status_laporan' => $report?->statusLabel() ?? 'Belum upload',
+                'versi' => $report?->current_version ?? 0,
             ];
         }
 

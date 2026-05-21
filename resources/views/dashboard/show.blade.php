@@ -262,6 +262,23 @@
         </section>
     @endif
 
+    @if($finalReportStats)
+        <section>
+            <div class="mb-6">
+                <h2 class="text-lg font-bold text-slate-950">Ringkasan Laporan Akhir</h2>
+                <p class="mt-1 text-sm text-slate-500">Status upload, review, dan approval laporan akhir KP.</p>
+            </div>
+            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                @foreach($finalReportStats as $label => $value)
+                    <div class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
+                        <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">{{ str_replace('_', ' ', ucfirst($label)) }}</p>
+                        <p class="mt-3 text-2xl font-bold text-teal-700">{{ $value }}</p>
+                    </div>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
     @if($studentRegistration)
         <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

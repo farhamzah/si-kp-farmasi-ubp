@@ -105,3 +105,13 @@ Setiap fitur harus dibuat modular dan mudah dikembangkan. Pisahkan tanggung jawa
 - Admin dan Koordinator KP boleh memonitor semua logbook.
 - Bukti kegiatan wajib divalidasi server-side, disimpan di storage non-public, dan diunduh lewat route protected.
 - Semua perubahan status, submit, validasi, revisi, penolakan, upload/ganti bukti, dan komentar wajib dicatat di `kp_logbook_logs`.
+
+## 17. Aturan Laporan Akhir KP
+- Laporan akhir hanya dapat dibuat oleh mahasiswa yang memiliki assignment aktif atau berjalan.
+- Satu assignment hanya memiliki satu record `kp_final_reports`, sedangkan revisi disimpan sebagai versi baru di `kp_final_report_files`.
+- Mahasiswa hanya boleh mengelola laporan miliknya sendiri dan tidak boleh upload setelah laporan disetujui.
+- Review laporan akhir wajib melalui `KpFinalReportService`.
+- Pembimbing Dalam hanya boleh approve/revisi/tolak laporan mahasiswa bimbingannya.
+- Admin dan Koordinator KP hanya melakukan monitoring pada Tahap 8.
+- File laporan wajib divalidasi server-side, disimpan di storage non-public, dan diunduh melalui route protected.
+- Semua upload, submit, review, revisi, penolakan, approval, dan download penting harus dicatat di `kp_final_report_logs` bila relevan.

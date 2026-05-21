@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FieldSupervisor\FieldStudentController;
 use App\Http\Controllers\FieldSupervisor\LogbookValidationController;
+use App\Http\Controllers\InternalSupervisor\FinalReportReviewController;
 use App\Http\Controllers\InternalSupervisor\LogbookMonitoringController as InternalLogbookMonitoringController;
 use App\Http\Controllers\InternalSupervisor\SupervisedStudentController;
 use App\Http\Controllers\Management\KpAssignmentController;
@@ -16,6 +17,8 @@ use App\Http\Controllers\Management\KpPlaceQuotaController;
 use App\Http\Controllers\Management\KpDocumentRequirementController;
 use App\Http\Controllers\Management\KpRegistrationReviewController;
 use App\Http\Controllers\Management\KpQuotaLogController;
+use App\Http\Controllers\Management\FinalReportLogController;
+use App\Http\Controllers\Management\FinalReportMonitoringController;
 use App\Http\Controllers\Management\LogbookLogController;
 use App\Http\Controllers\Management\LogbookMonitoringController;
 use App\Http\Controllers\Management\PlaceSelectionMonitoringController;
@@ -26,6 +29,7 @@ use App\Http\Controllers\RoleSelectionController;
 use App\Http\Controllers\Student\KpDocumentUploadController;
 use App\Http\Controllers\Student\KpRegistrationController;
 use App\Http\Controllers\Student\AssignmentController;
+use App\Http\Controllers\Student\FinalReportController;
 use App\Http\Controllers\Student\LogbookController;
 use App\Http\Controllers\Student\PlaceSelectionController;
 use Illuminate\Http\Request;
@@ -102,6 +106,10 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('logbooks/{logbook}/comments', [LogbookMonitoringController::class, 'comments'])->name('logbooks.comments');
             Route::get('logbooks/{logbook}/evidence/download', [LogbookMonitoringController::class, 'download'])->name('logbooks.evidence.download');
             Route::get('logbook-logs', [LogbookLogController::class, 'index'])->name('logbook-logs.index');
+            Route::get('final-reports', [FinalReportMonitoringController::class, 'index'])->name('final-reports.index');
+            Route::get('final-reports/{report}', [FinalReportMonitoringController::class, 'show'])->name('final-reports.show');
+            Route::get('final-reports/files/{file}/download', [FinalReportMonitoringController::class, 'download'])->name('final-reports.files.download');
+            Route::get('final-report-logs', [FinalReportLogController::class, 'index'])->name('final-report-logs.index');
         });
 
         Route::middleware('role:mahasiswa')->prefix('mahasiswa')->name('student.')->group(function () {
@@ -127,6 +135,10 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('logbook/{logbook}/submit', [LogbookController::class, 'submit'])->name('logbooks.submit');
             Route::get('logbook/{logbook}/evidence/download', [LogbookController::class, 'download'])->name('logbooks.evidence.download');
             Route::delete('logbook/{logbook}', [LogbookController::class, 'destroy'])->name('logbooks.destroy');
+            Route::get('laporan-akhir', [FinalReportController::class, 'show'])->name('final-reports.show');
+            Route::post('laporan-akhir/upload', [FinalReportController::class, 'upload'])->name('final-reports.upload');
+            Route::post('laporan-akhir/submit', [FinalReportController::class, 'submit'])->name('final-reports.submit');
+            Route::get('laporan-akhir/files/{file}/download', [FinalReportController::class, 'download'])->name('final-reports.files.download');
         });
 
         Route::middleware('role:pembimbing_dalam')->prefix('pembimbing-dalam')->name('internal-supervisor.')->group(function () {
@@ -136,6 +148,12 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('logbook/{logbook}', [InternalLogbookMonitoringController::class, 'show'])->name('logbooks.show');
             Route::post('logbook/{logbook}/comments', [InternalLogbookMonitoringController::class, 'comments'])->name('logbooks.comments');
             Route::get('logbook/{logbook}/evidence/download', [InternalLogbookMonitoringController::class, 'download'])->name('logbooks.evidence.download');
+            Route::get('laporan-akhir', [FinalReportReviewController::class, 'index'])->name('final-reports.index');
+            Route::get('laporan-akhir/{report}', [FinalReportReviewController::class, 'show'])->name('final-reports.show');
+            Route::post('laporan-akhir/{report}/approve', [FinalReportReviewController::class, 'approve'])->name('final-reports.approve');
+            Route::post('laporan-akhir/{report}/revision', [FinalReportReviewController::class, 'revision'])->name('final-reports.revision');
+            Route::post('laporan-akhir/{report}/reject', [FinalReportReviewController::class, 'reject'])->name('final-reports.reject');
+            Route::get('laporan-akhir/files/{file}/download', [FinalReportReviewController::class, 'download'])->name('final-reports.files.download');
         });
 
         Route::middleware('role:pembimbing_lapangan')->prefix('pembimbing-lapangan')->name('field-supervisor.')->group(function () {
