@@ -152,3 +152,11 @@ Setiap fitur harus dibuat modular dan mudah dikembangkan. Pisahkan tanggung jawa
 - Route baru wajib memiliki middleware `auth` dan role middleware sesuai kebutuhan.
 - Seeder demo wajib idempotent, aman dijalankan berulang, dan tidak menjadi rekomendasi password production.
 - Route download file baru wajib tetap melewati controller protected dan validasi ownership/role.
+
+## 22. Aturan Production Readiness
+- Route baru wajib dilindungi middleware `auth`, `active`, `role.selected`, dan role spesifik jika route tersebut hanya untuk area tertentu.
+- File upload wajib disimpan non-public dan hanya boleh diakses melalui route protected, kecuali asset publik yang memang dirancang untuk publik.
+- Deployment production wajib memakai `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL` domain resmi, dan cookie secure saat memakai HTTPS.
+- Dokumentasi report wajib dibuat untuk setiap tahap atau patch rilis agar keputusan teknis dan hasil QA tetap terlacak.
+- Sebelum commit rilis, wajib menjalankan `php artisan test` dan `npm run build`; untuk tahap production readiness juga jalankan `php artisan optimize:clear` dan `php artisan migrate`.
+- Akun demo dan password default hanya untuk development/UAT internal; production wajib mengganti atau menonaktifkannya.

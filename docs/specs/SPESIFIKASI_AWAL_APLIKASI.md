@@ -166,3 +166,12 @@ Sistem mendukung multi-role sehingga satu user dapat memiliki lebih dari satu pe
 - Alur login diperkuat untuk mengurangi risiko token stale/419 pada demo lokal, termasuk header no-cache pada halaman login dan contoh konfigurasi session lokal di `.env.example`.
 - Route permission audit dilakukan untuk memastikan area management, mahasiswa, pembimbing, dan penguji tetap dilindungi middleware auth/role.
 - Status stabilisasi Tahap 12 menyatakan aplikasi siap UAT/demo internal jika seed, migrate, test, dan build berhasil.
+
+## Fondasi Production Readiness dan Final UAT
+- `.env.example` dirapikan agar memiliki placeholder konfigurasi lokal/demo yang aman tanpa credential production atau secret key.
+- Production checklist tersedia untuk memandu requirement server, environment, dependency, command Laravel, permission storage, web server, security, backup, dan smoke test pasca deploy.
+- Release notes MVP menjelaskan cakupan fitur, role yang didukung, akun demo development, cara menjalankan demo lokal, status kesiapan, dan known limitations.
+- Security checklist mendokumentasikan kontrol authentication, authorization, file upload, CSRF/session, input validation, dan catatan production.
+- UAT issue tracking disiapkan melalui template isu dan ringkasan UAT agar hasil pengujian prodi dapat dicatat konsisten.
+- Deployment smoke test checklist tersedia untuk validasi cepat setelah aplikasi dipasang di server demo/production.
+- Status Tahap 13 menyatakan aplikasi siap UAT/demo internal dan memiliki jalur checklist menuju production, dengan syarat konfigurasi server production, credential, HTTPS, backup, dan password demo disesuaikan sebelum go-live.
