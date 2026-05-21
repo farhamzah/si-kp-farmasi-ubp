@@ -75,9 +75,41 @@
                         'Monitoring Laporan' => 'management.final-reports.index',
                         'Log Laporan' => 'management.final-report-logs.index',
                     ];
+                    $activeMap = [
+                        'Dashboard' => [$roleData['route'] ?? 'dashboard'],
+                        'Profil Saya' => ['profile.show', 'profile.edit'],
+                        'Pendaftaran KP' => ['student.kp-registrations.index', 'student.kp-registrations.create', 'student.kp-registrations.store'],
+                        'Berkas KP' => ['student.kp-registrations.show', 'student.kp-registrations.documents.*', 'student.kp-registrations.submit', 'student.kp-registrations.cancel'],
+                        'Pemilihan Tempat KP' => ['student.place-selections.*'],
+                        'Penempatan KP' => ['student.assignments.*', 'management.kp-assignments.*'],
+                        'Logbook KP' => ['student.logbooks.*'],
+                        'Laporan Akhir' => ['student.final-reports.*'],
+                        'Manajemen User' => ['admin.users.*'],
+                        'Import User' => ['admin.import-users.index', 'admin.import-users.preview', 'admin.import-users.process', 'admin.import-users.template'],
+                        'Riwayat Import' => ['admin.import-users.history', 'admin.import-users.history.*'],
+                        'Periode KP' => ['management.kp-periods.*'],
+                        'Tempat KP' => ['management.kp-places.*'],
+                        'Kuota Tempat KP' => ['management.kp-place-quotas.*'],
+                        'Log Kuota' => ['management.kp-quota-logs.*'],
+                        'Persyaratan Dokumen' => ['management.document-requirements.*'],
+                        'Verifikasi Pendaftaran' => ['management.kp-registrations.*'],
+                        'Monitoring Pemilihan' => ['management.place-selections.*'],
+                        'Daftar Tunggu' => ['management.waiting-lists.*'],
+                        'Log Pemilihan' => ['management.selection-logs.*'],
+                        'Log Penempatan' => ['management.kp-assignment-logs.*'],
+                        'Mahasiswa Bimbingan' => ['internal-supervisor.assignments.*'],
+                        'Mahasiswa KP' => ['field-supervisor.assignments.*'],
+                        'Validasi Logbook' => ['field-supervisor.logbooks.*'],
+                        'Logbook Mahasiswa' => ['internal-supervisor.logbooks.*'],
+                        'Monitoring Logbook' => ['management.logbooks.*'],
+                        'Log Aktivitas Logbook' => ['management.logbook-logs.*'],
+                        'Review Laporan' => ['internal-supervisor.final-reports.*'],
+                        'Monitoring Laporan' => ['management.final-reports.*'],
+                        'Log Laporan' => ['management.final-report-logs.*'],
+                    ];
                     $mappedRoute = $routeMap[$item] ?? null;
                     $href = $isDashboard ? route($roleData['route'] ?? 'dashboard') : ($isProfile ? route('profile.show') : ($mappedRoute && Route::has($mappedRoute) ? route($mappedRoute) : '#'));
-                    $isActive = ($isDashboard && request()->routeIs($roleData['route'] ?? 'dashboard')) || ($isProfile && request()->routeIs('profile.show', 'profile.edit')) || ($mappedRoute && request()->routeIs($mappedRoute, $mappedRoute.'.*'));
+                    $isActive = collect($activeMap[$item] ?? [])->contains(fn ($pattern) => request()->routeIs($pattern));
                 @endphp
                 <a href="{{ $href }}" class="group flex min-w-max items-center justify-between rounded-2xl px-3 py-3 text-sm font-bold transition-all {{ $isActive ? 'bg-cyan-700 text-white shadow-lg shadow-cyan-700/20 ring-1 ring-cyan-600' : 'text-slate-600 hover:bg-sky-50 hover:text-cyan-800' }}">
                     <span class="flex min-w-0 items-center gap-3">

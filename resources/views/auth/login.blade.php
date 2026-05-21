@@ -1,13 +1,13 @@
 @extends('layouts.guest')
 
 @section('content')
-<div class="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-slate-950 px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
+<div class="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-slate-950 px-4 py-5 text-slate-900 sm:px-6 lg:h-screen lg:px-8 lg:py-4">
     <div class="absolute inset-0 bg-[linear-gradient(135deg,rgba(13,148,136,0.42),rgba(15,23,42,0.9)_42%,rgba(37,99,235,0.24))]"></div>
     <div class="absolute inset-x-0 top-0 h-32 bg-linear-to-b from-white/10 to-transparent"></div>
     <div class="absolute bottom-0 left-0 right-0 h-40 bg-linear-to-t from-slate-950 to-transparent"></div>
 
-    <div class="relative grid w-full max-w-6xl overflow-hidden rounded-2xl border border-white/15 bg-white shadow-2xl shadow-black/35 lg:min-h-165 lg:grid-cols-[1fr_0.94fr]">
-        <section class="relative flex min-h-107.5 flex-col justify-between overflow-hidden bg-slate-900 px-6 py-8 text-white sm:px-8 lg:min-h-0 lg:px-10 lg:py-10 xl:px-12 xl:py-11">
+    <div class="relative grid w-full max-w-6xl overflow-hidden rounded-2xl border border-white/15 bg-white shadow-2xl shadow-black/35 lg:max-h-[calc(100vh-2rem)] lg:grid-cols-[1fr_0.92fr]">
+        <section class="relative flex min-h-100 flex-col justify-between overflow-hidden bg-slate-900 px-6 py-7 text-white sm:px-8 lg:min-h-0 lg:px-9 lg:py-8 xl:px-10">
             <div class="absolute inset-0 bg-[linear-gradient(145deg,rgba(20,184,166,0.25),rgba(15,23,42,0.16)_40%,rgba(37,99,235,0.18))]"></div>
             <div class="absolute inset-0 bg-[image:linear-gradient(rgba(255,255,255,.65)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.65)_1px,transparent_1px)] bg-[size:28px_28px] opacity-[0.08]"></div>
 
@@ -22,20 +22,18 @@
                     </div>
                 </div>
 
-                <div class="mt-10 grid items-start gap-6 xl:mt-16 xl:grid-cols-[minmax(0,1fr)_220px]">
+                <div class="mt-8 grid items-start gap-5 xl:mt-10 xl:grid-cols-[minmax(0,1fr)_210px]">
                     <div class="min-w-0">
-                    <p class="inline-flex rounded-full border border-teal-300/30 bg-teal-300/10 px-3 py-1 text-xs font-semibold uppercase text-teal-100">
-                        Dari pendaftaran sampai sidang
-                    </p>
-                    <h1 class="mt-5 max-w-lg text-3xl font-black leading-tight text-white sm:text-4xl lg:text-[42px] xl:text-5xl">
-                        Portal kerja praktek yang siap dipakai mahasiswa dan dosen.
+                    <p class="inline-flex rounded-full border border-teal-300/30 bg-teal-300/10 px-3 py-1 text-xs font-semibold uppercase text-teal-100">Portal Akademik KP</p>
+                    <h1 class="mt-4 max-w-lg text-3xl font-black leading-tight text-white sm:text-4xl lg:text-4xl">
+                        Portal Kerja Praktek Farmasi UBP
                     </h1>
-                    <p class="mt-5 max-w-lg text-base leading-7 text-slate-200">
-                        Pantau administrasi, tempat KP, pembimbing, logbook harian, laporan, jadwal sidang, dan penilaian dalam satu alur yang jelas.
+                    <p class="mt-4 max-w-lg text-sm leading-6 text-slate-200">
+                        Kelola pendaftaran, bimbingan, laporan, dan sidang dalam satu sistem.
                     </p>
                     </div>
 
-                    <div class="w-full rounded-2xl border border-white/12 bg-white/10 p-4 shadow-2xl shadow-slate-950/25 backdrop-blur sm:max-w-sm xl:max-w-none">
+                    <div class="hidden w-full rounded-2xl border border-white/12 bg-white/10 p-4 shadow-2xl shadow-slate-950/25 backdrop-blur sm:max-w-sm lg:block xl:max-w-none">
                         <div class="flex items-center justify-between border-b border-white/10 pb-3">
                             <span class="text-xs font-bold uppercase text-teal-100">Progress KP</span>
                             <span class="rounded-full bg-emerald-300 px-2 py-1 text-[11px] font-black text-emerald-950">Aktif</span>
@@ -64,21 +62,21 @@
                 </div>
             </div>
 
-            <div class="relative mt-10">
+            <div class="relative mt-7">
                 <div class="grid gap-3 sm:grid-cols-3">
                     @foreach ([
                         ['01', 'Daftar KP'],
                         ['02', 'Bimbingan'],
                         ['03', 'Sidang & Nilai'],
                     ] as [$number, $label])
-                        <div class="rounded-xl border border-white/12 bg-white/10 p-4 shadow-lg shadow-slate-950/10 backdrop-blur">
+                        <div class="rounded-xl border border-white/12 bg-white/10 p-3 shadow-lg shadow-slate-950/10 backdrop-blur">
                             <p class="text-xs font-black text-teal-200">{{ $number }}</p>
                             <p class="mt-2 text-sm font-bold text-white">{{ $label }}</p>
                         </div>
                     @endforeach
                 </div>
 
-                <div class="mt-3 grid gap-3 xl:grid-cols-2">
+                <div class="mt-3 hidden gap-3 xl:grid xl:grid-cols-2">
                 @foreach ([
                     'Mahasiswa, Admin, Koordinator, Dosen Pembimbing, Penguji',
                     'Berkas, logbook, laporan, dan nilai tersusun rapi',
@@ -96,12 +94,12 @@
             </div>
         </section>
 
-        <section class="flex items-center bg-white px-6 py-8 sm:px-10 lg:px-14">
+        <section class="flex items-center bg-white px-6 py-7 sm:px-10 lg:px-12">
             <div class="w-full">
-                <div class="mb-8">
+                <div class="mb-5">
                     <p class="text-sm font-semibold uppercase text-teal-700">Portal Kerja Praktek</p>
-                    <h2 class="mt-2 text-3xl font-black text-slate-950">Masuk ke SI-KP</h2>
-                    <p class="mt-3 text-sm leading-6 text-slate-500">Akses dashboard sesuai peran Anda untuk mengelola proses KP Farmasi UBP.</p>
+                    <h2 class="mt-2 text-2xl font-black text-slate-950">Masuk ke SI-KP</h2>
+                    <p class="mt-2 text-sm leading-6 text-slate-500">Akses dashboard sesuai peran Anda.</p>
                 </div>
 
                 @if(session('status'))
@@ -126,12 +124,12 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('login.store') }}" class="space-y-5">
+                <form method="POST" action="{{ route('login.store') }}" class="space-y-4">
                     @csrf
 
                     <div>
                         <label for="email" class="mb-2 block text-sm font-bold text-slate-800">Email Akun SI-KP</label>
-                        <input id="email" name="email" type="email" value="{{ old('email') }}" required autofocus placeholder="nama@ubp.ac.id" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3.5 text-sm font-medium text-slate-950 outline-none transition placeholder:text-slate-400 hover:border-slate-400 focus:border-teal-600 focus:bg-white focus:ring-4 focus:ring-teal-600/15">
+                        <input id="email" name="email" type="email" value="{{ old('email') }}" required autofocus placeholder="nama@ubp.ac.id" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-950 outline-none transition placeholder:text-slate-400 hover:border-slate-400 focus:border-teal-600 focus:bg-white focus:ring-4 focus:ring-teal-600/15">
                         @error('email')
                             <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p>
                         @enderror
@@ -139,7 +137,7 @@
 
                     <div>
                         <label for="password" class="mb-2 block text-sm font-bold text-slate-800">Kata Sandi</label>
-                        <input id="password" name="password" type="password" required placeholder="Masukkan kata sandi" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3.5 text-sm font-medium text-slate-950 outline-none transition placeholder:text-slate-400 hover:border-slate-400 focus:border-teal-600 focus:bg-white focus:ring-4 focus:ring-teal-600/15">
+                        <input id="password" name="password" type="password" required placeholder="Masukkan kata sandi" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-950 outline-none transition placeholder:text-slate-400 hover:border-slate-400 focus:border-teal-600 focus:bg-white focus:ring-4 focus:ring-teal-600/15">
                         @error('password')
                             <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p>
                         @enderror
@@ -152,7 +150,7 @@
                         </label>
                     </div>
 
-                    <button type="submit" class="group flex w-full items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 py-3.5 text-sm font-black text-white shadow-xl shadow-teal-700/25 transition hover:bg-teal-800 focus:outline-none focus:ring-4 focus:ring-teal-600/20 focus:ring-offset-2">
+                    <button type="submit" class="group flex w-full items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 py-3 text-sm font-black text-white shadow-xl shadow-teal-700/25 transition hover:bg-teal-800 focus:outline-none focus:ring-4 focus:ring-teal-600/20 focus:ring-offset-2">
                         <span>Buka Dashboard KP</span>
                         <svg class="h-4 w-4 transition group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
@@ -160,7 +158,7 @@
                     </button>
                 </form>
 
-                <div class="mt-8 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+                <div class="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                     <p>Belum punya akun atau role KP belum sesuai? Hubungi <span class="font-bold text-slate-900">Admin Program</span>.</p>
                 </div>
             </div>
