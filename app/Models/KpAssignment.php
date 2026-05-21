@@ -32,6 +32,8 @@ class KpAssignment extends Model
     public function logs() { return $this->hasMany(KpAssignmentLog::class, 'kp_assignment_id'); }
     public function logbooks() { return $this->hasMany(KpLogbook::class, 'kp_assignment_id'); }
     public function finalReport() { return $this->hasOne(KpFinalReport::class, 'kp_assignment_id'); }
+    public function examRequest() { return $this->hasOne(KpExamRequest::class, 'kp_assignment_id'); }
+    public function exam() { return $this->hasOne(KpExam::class, 'kp_assignment_id'); }
 
     public function statusLabel(): string
     {
@@ -81,5 +83,12 @@ class KpAssignment extends Model
         }
 
         return ! $this->internal_supervisor_id ? 'Belum ada pembimbing dalam' : 'Belum ada pembimbing lapangan';
+    }
+
+    public function isEligibleForExamRequest(): bool
+    {
+        $this->loadMissing('finalReport');
+
+        return $this->isActive() && $this->finalReport?->isApproved();
     }
 }

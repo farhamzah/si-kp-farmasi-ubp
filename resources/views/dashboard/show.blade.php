@@ -279,6 +279,23 @@
         </section>
     @endif
 
+    @if($examStats)
+        <section>
+            <div class="mb-6">
+                <h2 class="text-lg font-bold text-slate-950">Ringkasan Sidang KP</h2>
+                <p class="mt-1 text-sm text-slate-500">Status pengajuan, penjadwalan, dan pelaksanaan sidang Kerja Praktek.</p>
+            </div>
+            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                @foreach($examStats as $label => $value)
+                    <div class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
+                        <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">{{ str_replace('_', ' ', ucfirst($label)) }}</p>
+                        <p class="mt-3 text-2xl font-bold text-cyan-700">{{ $value ?: '-' }}</p>
+                    </div>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
     @if($studentRegistration)
         <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

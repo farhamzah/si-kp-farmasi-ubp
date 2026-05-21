@@ -40,4 +40,14 @@ class Lecturer extends Model
     {
         return $this->hasManyThrough(KpLogbook::class, KpAssignment::class, 'internal_supervisor_id', 'kp_assignment_id');
     }
+
+    public function supervisedExams()
+    {
+        return $this->hasMany(KpExam::class, 'supervisor_id');
+    }
+
+    public function examinerExams()
+    {
+        return $this->hasMany(KpExam::class, 'examiner_id');
+    }
 }

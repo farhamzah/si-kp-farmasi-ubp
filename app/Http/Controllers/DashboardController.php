@@ -6,6 +6,8 @@ use App\Models\KpPeriod;
 use App\Models\KpAssignment;
 use App\Models\KpLogbook;
 use App\Models\KpFinalReport;
+use App\Models\KpExam;
+use App\Models\KpExamRequest;
 use App\Models\KpPlace;
 use App\Models\KpPlaceQuota;
 use App\Models\KpPlaceSelection;
@@ -40,6 +42,7 @@ class DashboardController extends Controller
             'assignmentStats' => $this->assignmentStats($role, $request),
             'logbookStats' => $this->logbookStats($role, $request),
             'finalReportStats' => $this->finalReportStats($role, $request),
+            'examStats' => $this->examStats($role, $request),
             'studentRegistration' => $role === 'mahasiswa' ? $request->user()->student?->kpRegistrations()->with(['documents', 'activePlaceSelection.place', 'waitingList'])->latest()->first() : null,
         ]);
     }
@@ -191,6 +194,41 @@ class DashboardController extends Controller
             return [
                 'status_laporan' => $report?->statusLabel() ?? 'Belum upload',
                 'versi' => $report?->current_version ?? 0,
+            ];
+        }
+
+        return null;
+    }
+
+    private function examStats(string $role, Request $request): ?array
+    {
+        if (in_array($role, ['admin', 'koordinator_kp'], true)) {
+            return [
+                'total_pengajuan' => KpExamRequest::count(),
+                'menunggu_jadwal' => KpExamRequest::whereIn('status', ['diajukan', 'disetujui'])->count(),
+                'dijadwalkan' => KpExam::where('status', 'dijadwalkan')->count(),
+                'selesai' => KpExam::where('status', 'selesai')->count(),
+            ];
+        }
+
+        if ($role === 'mahasiswa') {
+            $assignment = $request->user()->student?->assignments()->whereIn('status', ['aktif', 'berjalan'])->latest()->first();
+            return [
+                'status_pengajuan' => $assignment?->examRequest?->statusLabel() ?? 'Belum diajukan',
+                'jadwal_sidang' => $assignment?->exam?->scheduleLabel() ?? 'Belum dijadwalkan',
+            ];
+        }
+
+        if ($role === 'pembimbing_dalam') {
+            $lecturerId = $request->user()->lecturer?->id;
+            return ['sidang_terjadwal' => KpExam::where('supervisor_id', $lecturerId)->where('status', 'dijadwalkan')->count()];
+        }
+
+        if ($role === 'penguji') {
+            $lecturerId = $request->user()->lecturer?->id;
+            return [
+                'sidang_ditugaskan' => KpExam::where('examiner_id', $lecturerId)->count(),
+                'sidang_mendatang' => KpExam::where('examiner_id', $lecturerId)->where('status', 'dijadwalkan')->count(),
             ];
         }
 

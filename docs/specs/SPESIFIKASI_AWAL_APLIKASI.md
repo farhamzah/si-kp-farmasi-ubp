@@ -127,3 +127,15 @@ Sistem mendukung multi-role sehingga satu user dapat memiliki lebih dari satu pe
 - Admin dan Koordinator KP dapat memonitor seluruh laporan akhir dan melihat log aktivitas.
 - File laporan disimpan aman di storage non-public dan hanya dapat diakses melalui route protected sesuai role/ownership.
 - Semua aktivitas penting laporan akhir dicatat pada `kp_final_report_logs`.
+
+## Fondasi Pengajuan dan Penjadwalan Sidang KP
+- Mahasiswa dapat mengajukan Sidang KP setelah Laporan Akhir berstatus `disetujui`.
+- Satu assignment memiliki satu pengajuan/sidang sederhana pada tahap ini.
+- Admin dan Koordinator KP dapat memonitor pengajuan, mereview, menjadwalkan, membatalkan, dan menandai sidang selesai.
+- Sidang memiliki dua penilai utama: Pembimbing Dalam dari assignment dan satu Penguji Sidang.
+- Penguji harus berasal dari lecturer yang user-nya memiliki role `penguji`.
+- Penguji tidak boleh sama dengan Pembimbing Dalam.
+- Mahasiswa, Pembimbing Dalam, dan Penguji dapat melihat jadwal sidang sesuai hak akses masing-masing.
+- Pembimbing Lapangan belum memiliki akses modul sidang pada tahap ini.
+- Semua aktivitas pengajuan, review, penjadwalan, cancel, dan complete dicatat pada `kp_exam_logs`.
+- Bugfix UI Tahap 9 memperbaiki active state sidebar mahasiswa dan halaman login agar lebih fit di viewport desktop/laptop.

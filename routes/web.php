@@ -4,8 +4,10 @@ use App\Http\Controllers\Admin\UserImportController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Examiner\ExamScheduleController as ExaminerExamScheduleController;
 use App\Http\Controllers\FieldSupervisor\FieldStudentController;
 use App\Http\Controllers\FieldSupervisor\LogbookValidationController;
+use App\Http\Controllers\InternalSupervisor\ExamScheduleController as InternalExamScheduleController;
 use App\Http\Controllers\InternalSupervisor\FinalReportReviewController;
 use App\Http\Controllers\InternalSupervisor\LogbookMonitoringController as InternalLogbookMonitoringController;
 use App\Http\Controllers\InternalSupervisor\SupervisedStudentController;
@@ -19,6 +21,9 @@ use App\Http\Controllers\Management\KpRegistrationReviewController;
 use App\Http\Controllers\Management\KpQuotaLogController;
 use App\Http\Controllers\Management\FinalReportLogController;
 use App\Http\Controllers\Management\FinalReportMonitoringController;
+use App\Http\Controllers\Management\ExamLogController;
+use App\Http\Controllers\Management\ExamRequestController as ManagementExamRequestController;
+use App\Http\Controllers\Management\ExamScheduleController as ManagementExamScheduleController;
 use App\Http\Controllers\Management\LogbookLogController;
 use App\Http\Controllers\Management\LogbookMonitoringController;
 use App\Http\Controllers\Management\PlaceSelectionMonitoringController;
@@ -29,6 +34,7 @@ use App\Http\Controllers\RoleSelectionController;
 use App\Http\Controllers\Student\KpDocumentUploadController;
 use App\Http\Controllers\Student\KpRegistrationController;
 use App\Http\Controllers\Student\AssignmentController;
+use App\Http\Controllers\Student\ExamRequestController as StudentExamRequestController;
 use App\Http\Controllers\Student\FinalReportController;
 use App\Http\Controllers\Student\LogbookController;
 use App\Http\Controllers\Student\PlaceSelectionController;
@@ -110,6 +116,20 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('final-reports/{report}', [FinalReportMonitoringController::class, 'show'])->name('final-reports.show');
             Route::get('final-reports/files/{file}/download', [FinalReportMonitoringController::class, 'download'])->name('final-reports.files.download');
             Route::get('final-report-logs', [FinalReportLogController::class, 'index'])->name('final-report-logs.index');
+            Route::get('exam-requests', [ManagementExamRequestController::class, 'index'])->name('exam-requests.index');
+            Route::get('exam-requests/{examRequest}', [ManagementExamRequestController::class, 'show'])->name('exam-requests.show');
+            Route::post('exam-requests/{examRequest}/approve', [ManagementExamRequestController::class, 'approve'])->name('exam-requests.approve');
+            Route::post('exam-requests/{examRequest}/revision', [ManagementExamRequestController::class, 'revision'])->name('exam-requests.revision');
+            Route::post('exam-requests/{examRequest}/reject', [ManagementExamRequestController::class, 'reject'])->name('exam-requests.reject');
+            Route::get('exam-requests/{examRequest}/schedule', [ManagementExamScheduleController::class, 'create'])->name('exam-requests.schedule');
+            Route::post('exam-requests/{examRequest}/schedule', [ManagementExamScheduleController::class, 'store'])->name('exam-requests.schedule.store');
+            Route::get('exams', [ManagementExamScheduleController::class, 'index'])->name('exams.index');
+            Route::get('exams/{exam}', [ManagementExamScheduleController::class, 'show'])->name('exams.show');
+            Route::get('exams/{exam}/edit', [ManagementExamScheduleController::class, 'edit'])->name('exams.edit');
+            Route::put('exams/{exam}', [ManagementExamScheduleController::class, 'update'])->name('exams.update');
+            Route::post('exams/{exam}/cancel', [ManagementExamScheduleController::class, 'cancel'])->name('exams.cancel');
+            Route::post('exams/{exam}/complete', [ManagementExamScheduleController::class, 'complete'])->name('exams.complete');
+            Route::get('exam-logs', [ExamLogController::class, 'index'])->name('exam-logs.index');
         });
 
         Route::middleware('role:mahasiswa')->prefix('mahasiswa')->name('student.')->group(function () {
@@ -139,6 +159,9 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('laporan-akhir/upload', [FinalReportController::class, 'upload'])->name('final-reports.upload');
             Route::post('laporan-akhir/submit', [FinalReportController::class, 'submit'])->name('final-reports.submit');
             Route::get('laporan-akhir/files/{file}/download', [FinalReportController::class, 'download'])->name('final-reports.files.download');
+            Route::get('sidang', [StudentExamRequestController::class, 'index'])->name('exams.index');
+            Route::post('sidang/ajukan', [StudentExamRequestController::class, 'submit'])->name('exams.submit');
+            Route::post('sidang/batalkan-pengajuan', [StudentExamRequestController::class, 'cancel'])->name('exams.cancel');
         });
 
         Route::middleware('role:pembimbing_dalam')->prefix('pembimbing-dalam')->name('internal-supervisor.')->group(function () {
@@ -154,6 +177,8 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('laporan-akhir/{report}/revision', [FinalReportReviewController::class, 'revision'])->name('final-reports.revision');
             Route::post('laporan-akhir/{report}/reject', [FinalReportReviewController::class, 'reject'])->name('final-reports.reject');
             Route::get('laporan-akhir/files/{file}/download', [FinalReportReviewController::class, 'download'])->name('final-reports.files.download');
+            Route::get('jadwal-sidang', [InternalExamScheduleController::class, 'index'])->name('exams.index');
+            Route::get('jadwal-sidang/{exam}', [InternalExamScheduleController::class, 'show'])->name('exams.show');
         });
 
         Route::middleware('role:pembimbing_lapangan')->prefix('pembimbing-lapangan')->name('field-supervisor.')->group(function () {
@@ -165,6 +190,11 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('logbook/{logbook}/revision', [LogbookValidationController::class, 'revision'])->name('logbooks.revision');
             Route::post('logbook/{logbook}/reject', [LogbookValidationController::class, 'reject'])->name('logbooks.reject');
             Route::get('logbook/{logbook}/evidence/download', [LogbookValidationController::class, 'download'])->name('logbooks.evidence.download');
+        });
+
+        Route::middleware('role:penguji')->prefix('penguji')->name('examiner.')->group(function () {
+            Route::get('jadwal-sidang', [ExaminerExamScheduleController::class, 'index'])->name('exams.index');
+            Route::get('jadwal-sidang/{exam}', [ExaminerExamScheduleController::class, 'show'])->name('exams.show');
         });
 
         Route::get('/mahasiswa/dashboard', fn (DashboardController $controller, Request $request) => $controller->show($request, 'mahasiswa'))

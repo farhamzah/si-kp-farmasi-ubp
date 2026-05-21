@@ -74,6 +74,10 @@
                         'Review Laporan' => 'internal-supervisor.final-reports.index',
                         'Monitoring Laporan' => 'management.final-reports.index',
                         'Log Laporan' => 'management.final-report-logs.index',
+                        'Sidang' => 'student.exams.index',
+                        'Pengajuan Sidang' => 'management.exam-requests.index',
+                        'Jadwal Sidang' => $activeRole === 'pembimbing_dalam' ? 'internal-supervisor.exams.index' : ($activeRole === 'penguji' ? 'examiner.exams.index' : 'management.exams.index'),
+                        'Log Sidang' => 'management.exam-logs.index',
                     ];
                     $activeMap = [
                         'Dashboard' => [$roleData['route'] ?? 'dashboard'],
@@ -106,6 +110,10 @@
                         'Review Laporan' => ['internal-supervisor.final-reports.*'],
                         'Monitoring Laporan' => ['management.final-reports.*'],
                         'Log Laporan' => ['management.final-report-logs.*'],
+                        'Sidang' => ['student.exams.*'],
+                        'Pengajuan Sidang' => ['management.exam-requests.*'],
+                        'Jadwal Sidang' => ['management.exams.*', 'internal-supervisor.exams.*', 'examiner.exams.*'],
+                        'Log Sidang' => ['management.exam-logs.*'],
                     ];
                     $mappedRoute = $routeMap[$item] ?? null;
                     $href = $isDashboard ? route($roleData['route'] ?? 'dashboard') : ($isProfile ? route('profile.show') : ($mappedRoute && Route::has($mappedRoute) ? route($mappedRoute) : '#'));

@@ -115,3 +115,14 @@ Setiap fitur harus dibuat modular dan mudah dikembangkan. Pisahkan tanggung jawa
 - Admin dan Koordinator KP hanya melakukan monitoring pada Tahap 8.
 - File laporan wajib divalidasi server-side, disimpan di storage non-public, dan diunduh melalui route protected.
 - Semua upload, submit, review, revisi, penolakan, approval, dan download penting harus dicatat di `kp_final_report_logs` bila relevan.
+
+## 18. Aturan Sidang KP
+- Pengajuan sidang hanya dapat dilakukan jika assignment aktif/berjalan dan laporan akhir sudah disetujui.
+- Mahasiswa hanya boleh mengajukan dan melihat sidang miliknya sendiri.
+- Penjadwalan sidang wajib melalui `KpExamService`.
+- Pembimbing Dalam otomatis berasal dari assignment.
+- Penguji wajib berasal dari `lecturers` yang user-nya memiliki role `penguji`.
+- Penguji tidak boleh sama dengan Pembimbing Dalam.
+- Admin dan Koordinator KP dapat memonitor, menjadwalkan, menjadwalkan ulang, membatalkan, dan menandai sidang selesai.
+- Pembimbing Dalam dan Penguji hanya boleh melihat jadwal sidang yang terkait dengan profil lecturer masing-masing.
+- Semua submit, review, schedule, reschedule, cancel, dan complete wajib dicatat di `kp_exam_logs`.
