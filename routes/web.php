@@ -5,6 +5,8 @@ use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FieldSupervisor\FieldStudentController;
+use App\Http\Controllers\FieldSupervisor\LogbookValidationController;
+use App\Http\Controllers\InternalSupervisor\LogbookMonitoringController as InternalLogbookMonitoringController;
 use App\Http\Controllers\InternalSupervisor\SupervisedStudentController;
 use App\Http\Controllers\Management\KpAssignmentController;
 use App\Http\Controllers\Management\KpAssignmentLogController;
@@ -14,6 +16,8 @@ use App\Http\Controllers\Management\KpPlaceQuotaController;
 use App\Http\Controllers\Management\KpDocumentRequirementController;
 use App\Http\Controllers\Management\KpRegistrationReviewController;
 use App\Http\Controllers\Management\KpQuotaLogController;
+use App\Http\Controllers\Management\LogbookLogController;
+use App\Http\Controllers\Management\LogbookMonitoringController;
 use App\Http\Controllers\Management\PlaceSelectionMonitoringController;
 use App\Http\Controllers\Management\SelectionLogController;
 use App\Http\Controllers\Management\WaitingListController;
@@ -22,6 +26,7 @@ use App\Http\Controllers\RoleSelectionController;
 use App\Http\Controllers\Student\KpDocumentUploadController;
 use App\Http\Controllers\Student\KpRegistrationController;
 use App\Http\Controllers\Student\AssignmentController;
+use App\Http\Controllers\Student\LogbookController;
 use App\Http\Controllers\Student\PlaceSelectionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -92,6 +97,11 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('kp-assignments/{assignment}/cancel', [KpAssignmentController::class, 'cancel'])->name('kp-assignments.cancel');
             Route::post('place-selections/{selection}/create-assignment', [KpAssignmentController::class, 'createFromSelection'])->name('place-selections.create-assignment');
             Route::get('kp-assignment-logs', [KpAssignmentLogController::class, 'index'])->name('kp-assignment-logs.index');
+            Route::get('logbooks', [LogbookMonitoringController::class, 'index'])->name('logbooks.index');
+            Route::get('logbooks/{logbook}', [LogbookMonitoringController::class, 'show'])->name('logbooks.show');
+            Route::post('logbooks/{logbook}/comments', [LogbookMonitoringController::class, 'comments'])->name('logbooks.comments');
+            Route::get('logbooks/{logbook}/evidence/download', [LogbookMonitoringController::class, 'download'])->name('logbooks.evidence.download');
+            Route::get('logbook-logs', [LogbookLogController::class, 'index'])->name('logbook-logs.index');
         });
 
         Route::middleware('role:mahasiswa')->prefix('mahasiswa')->name('student.')->group(function () {
@@ -108,16 +118,35 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('pemilihan-tempat/{quota}/pilih', [PlaceSelectionController::class, 'select'])->name('place-selections.select');
             Route::post('pemilihan-tempat/daftar-tunggu', [PlaceSelectionController::class, 'joinWaitingList'])->name('place-selections.waiting-list');
             Route::get('penempatan-kp', [AssignmentController::class, 'show'])->name('assignments.show');
+            Route::get('logbook', [LogbookController::class, 'index'])->name('logbooks.index');
+            Route::get('logbook/create', [LogbookController::class, 'create'])->name('logbooks.create');
+            Route::post('logbook', [LogbookController::class, 'store'])->name('logbooks.store');
+            Route::get('logbook/{logbook}', [LogbookController::class, 'show'])->name('logbooks.show');
+            Route::get('logbook/{logbook}/edit', [LogbookController::class, 'edit'])->name('logbooks.edit');
+            Route::put('logbook/{logbook}', [LogbookController::class, 'update'])->name('logbooks.update');
+            Route::post('logbook/{logbook}/submit', [LogbookController::class, 'submit'])->name('logbooks.submit');
+            Route::get('logbook/{logbook}/evidence/download', [LogbookController::class, 'download'])->name('logbooks.evidence.download');
+            Route::delete('logbook/{logbook}', [LogbookController::class, 'destroy'])->name('logbooks.destroy');
         });
 
         Route::middleware('role:pembimbing_dalam')->prefix('pembimbing-dalam')->name('internal-supervisor.')->group(function () {
             Route::get('mahasiswa-bimbingan', [SupervisedStudentController::class, 'index'])->name('assignments.index');
             Route::get('mahasiswa-bimbingan/{assignment}', [SupervisedStudentController::class, 'show'])->name('assignments.show');
+            Route::get('logbook', [InternalLogbookMonitoringController::class, 'index'])->name('logbooks.index');
+            Route::get('logbook/{logbook}', [InternalLogbookMonitoringController::class, 'show'])->name('logbooks.show');
+            Route::post('logbook/{logbook}/comments', [InternalLogbookMonitoringController::class, 'comments'])->name('logbooks.comments');
+            Route::get('logbook/{logbook}/evidence/download', [InternalLogbookMonitoringController::class, 'download'])->name('logbooks.evidence.download');
         });
 
         Route::middleware('role:pembimbing_lapangan')->prefix('pembimbing-lapangan')->name('field-supervisor.')->group(function () {
             Route::get('mahasiswa-kp', [FieldStudentController::class, 'index'])->name('assignments.index');
             Route::get('mahasiswa-kp/{assignment}', [FieldStudentController::class, 'show'])->name('assignments.show');
+            Route::get('logbook', [LogbookValidationController::class, 'index'])->name('logbooks.index');
+            Route::get('logbook/{logbook}', [LogbookValidationController::class, 'show'])->name('logbooks.show');
+            Route::post('logbook/{logbook}/approve', [LogbookValidationController::class, 'approve'])->name('logbooks.approve');
+            Route::post('logbook/{logbook}/revision', [LogbookValidationController::class, 'revision'])->name('logbooks.revision');
+            Route::post('logbook/{logbook}/reject', [LogbookValidationController::class, 'reject'])->name('logbooks.reject');
+            Route::get('logbook/{logbook}/evidence/download', [LogbookValidationController::class, 'download'])->name('logbooks.evidence.download');
         });
 
         Route::get('/mahasiswa/dashboard', fn (DashboardController $controller, Request $request) => $controller->show($request, 'mahasiswa'))

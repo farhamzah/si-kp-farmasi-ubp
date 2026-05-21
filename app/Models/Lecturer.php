@@ -35,4 +35,9 @@ class Lecturer extends Model
     {
         return $this->hasMany(KpAssignment::class, 'internal_supervisor_id');
     }
+
+    public function supervisedLogbooks()
+    {
+        return $this->hasManyThrough(KpLogbook::class, KpAssignment::class, 'internal_supervisor_id', 'kp_assignment_id');
+    }
 }

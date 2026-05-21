@@ -94,3 +94,14 @@ Setiap fitur harus dibuat modular dan mudah dikembangkan. Pisahkan tanggung jawa
 - Jika pembimbing lapangan dipilih, mapping tempat-pembimbing di `kp_place_field_supervisors` harus dijaga.
 - Mahasiswa hanya melihat penempatannya sendiri; pembimbing hanya melihat assignment yang ditugaskan kepadanya.
 - Semua perubahan assignment wajib dicatat di `kp_assignment_logs`.
+
+## 16. Aturan Logbook KP
+- Logbook KP hanya dapat dibuat oleh mahasiswa yang memiliki assignment aktif atau berjalan.
+- Mahasiswa hanya boleh mengakses dan mengubah logbook miliknya sendiri.
+- Logbook status `disetujui` tidak boleh diedit oleh mahasiswa.
+- Validasi logbook wajib melalui `KpLogbookService`.
+- Pembimbing Lapangan hanya boleh validasi logbook assignment yang ditugaskan kepadanya.
+- Pembimbing Dalam hanya boleh memantau dan memberi komentar pada logbook mahasiswa bimbingannya.
+- Admin dan Koordinator KP boleh memonitor semua logbook.
+- Bukti kegiatan wajib divalidasi server-side, disimpan di storage non-public, dan diunduh lewat route protected.
+- Semua perubahan status, submit, validasi, revisi, penolakan, upload/ganti bukti, dan komentar wajib dicatat di `kp_logbook_logs`.

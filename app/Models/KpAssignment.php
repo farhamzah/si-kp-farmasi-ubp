@@ -30,6 +30,7 @@ class KpAssignment extends Model
     public function fieldSupervisor() { return $this->belongsTo(FieldSupervisor::class, 'field_supervisor_id'); }
     public function assignedBy() { return $this->belongsTo(User::class, 'assigned_by'); }
     public function logs() { return $this->hasMany(KpAssignmentLog::class, 'kp_assignment_id'); }
+    public function logbooks() { return $this->hasMany(KpLogbook::class, 'kp_assignment_id'); }
 
     public function statusLabel(): string
     {

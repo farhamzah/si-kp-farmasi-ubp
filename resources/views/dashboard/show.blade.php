@@ -4,26 +4,51 @@
 @section('page_title', 'Dashboard '.$roleData['label'])
 
 @section('content')
+@php
+    $firstName = explode(' ', auth()->user()->name)[0];
+    $featureDescriptions = [
+        'Pendaftaran KP' => 'Mulai pengajuan kerja praktek dan pantau status verifikasi.',
+        'Berkas Persyaratan' => 'Kelola dokumen wajib sebelum pemilihan tempat KP.',
+        'Berkas KP' => 'Simpan dan lengkapi berkas administrasi kerja praktek.',
+        'Pemilihan Tempat KP' => 'Pilih tempat KP sesuai periode dan kuota yang tersedia.',
+        'Logbook' => 'Catat aktivitas harian selama pelaksanaan kerja praktek.',
+        'Laporan Akhir' => 'Susun dan ajukan laporan akhir untuk proses review.',
+        'Sidang' => 'Pantau jadwal sidang dan kelengkapan sebelum presentasi.',
+        'Nilai' => 'Lihat rekap penilaian dari pembimbing dan penguji.',
+    ];
+@endphp
 <div class="space-y-6">
     <!-- Welcome Banner -->
-    <section class="relative overflow-hidden rounded-3xl bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 p-8 text-white shadow-2xl shadow-slate-900/25 before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_20%_50%,rgba(20,184,166,0.15),transparent_50%)] before:pointer-events-none md:p-10">
-        <div class="relative z-10">
-            <div class="mb-2">
-                <span class="inline-flex items-center gap-2 rounded-full bg-teal-500/20 border border-teal-400/30 px-4 py-1.5 text-xs font-semibold text-teal-300 uppercase tracking-widest">
+    <section class="relative overflow-hidden rounded-[1.75rem] border border-cyan-100 bg-white p-7 shadow-2xl shadow-sky-900/8 md:p-8">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.18),transparent_34%),linear-gradient(135deg,rgba(236,254,255,0.95),rgba(255,255,255,0.72)_48%,rgba(240,249,255,0.92))]"></div>
+        <div class="relative grid gap-7 lg:grid-cols-[minmax(0,1fr)_330px] lg:items-center">
+            <div>
+                <span class="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-1.5 text-xs font-black uppercase tracking-widest text-cyan-800">
                     <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M6 4a2 2 0 11-4 0 2 2 0 014 0zM15 4a2 2 0 11-4 0 2 2 0 014 0zM13 13a3 3 0 11-6 0 3 3 0 016 0z"/>
                     </svg>
                     {{ $roleData['label'] }}
                 </span>
+                <h1 class="mt-5 max-w-3xl text-3xl font-black tracking-tight text-slate-950 md:text-4xl">Selamat datang kembali, {{ $firstName }}</h1>
+                <p class="mt-4 max-w-3xl text-base leading-8 text-slate-600">Pantau proses Kerja Praktek Farmasi dari pendaftaran, berkas, pemilihan tempat, bimbingan, laporan, hingga sidang dalam satu dashboard yang rapi.</p>
             </div>
-            <h1 class="text-3xl md:text-4xl font-bold tracking-tight">Selamat datang kembali, {{ explode(' ', auth()->user()->name)[0] }}</h1>
-            <p class="mt-4 max-w-3xl text-base leading-8 text-slate-200">Portalnya akademik berisi fitur-fitur komprehensif untuk mengelola proses Kerja Praktek Farmasi. Terus pantau kemajuan akademis Anda melalui dashboard yang dirancang khusus.</p>
+            <div class="rounded-3xl border border-cyan-100 bg-white/80 p-5 shadow-xl shadow-sky-900/8 backdrop-blur">
+                <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Alur Kerja Praktek</p>
+                <div class="mt-4 space-y-3">
+                    @foreach([['01', 'Pendaftaran'], ['02', 'Pemilihan Tempat'], ['03', 'Bimbingan & Sidang']] as [$number, $label])
+                        <div class="flex items-center gap-3 rounded-2xl bg-sky-50 px-4 py-3">
+                            <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-700 text-xs font-black text-white">{{ $number }}</span>
+                            <span class="text-sm font-black text-slate-800">{{ $label }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
         </div>
     </section>
 
     <!-- Alerts Section -->
     @if(! auth()->user()->profile_completed)
-        <div class="rounded-xl border border-amber-300/30 bg-linear-to-r from-amber-50 to-amber-100/50 px-5 py-4 text-sm text-amber-900 shadow-sm">
+        <div class="rounded-2xl border border-amber-200 bg-linear-to-r from-amber-50 to-white px-5 py-4 text-sm text-amber-900 shadow-lg shadow-amber-900/5">
             <div class="flex items-start gap-3">
                 <svg class="w-5 h-5 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
@@ -37,7 +62,7 @@
     @endif
 
     @if(auth()->user()->must_change_password)
-        <div class="rounded-xl border border-sky-300/30 bg-linear-to-r from-sky-50 to-sky-100/50 px-5 py-4 text-sm text-sky-900 shadow-sm">
+        <div class="rounded-2xl border border-cyan-200 bg-linear-to-r from-cyan-50 to-white px-5 py-4 text-sm text-cyan-900 shadow-lg shadow-cyan-900/5">
             <div class="flex items-start gap-3">
                 <svg class="w-5 h-5 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
@@ -220,6 +245,23 @@
         </section>
     @endif
 
+    @if($logbookStats)
+        <section>
+            <div class="mb-6">
+                <h2 class="text-lg font-bold text-slate-950">Ringkasan Logbook KP</h2>
+                <p class="mt-1 text-sm text-slate-500">Pemantauan aktivitas harian dan validasi kegiatan KP.</p>
+            </div>
+            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+                @foreach($logbookStats as $label => $value)
+                    <div class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
+                        <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">{{ str_replace('_', ' ', ucfirst($label)) }}</p>
+                        <p class="mt-3 text-3xl font-bold text-teal-700">{{ $value }}</p>
+                    </div>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
     @if($studentRegistration)
         <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -239,41 +281,41 @@
 
     <!-- User Status Cards -->
     <section class="grid gap-4 md:grid-cols-3">
-        <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-100 hover:shadow-md transition-all">
+        <div class="rounded-3xl bg-white p-6 shadow-xl shadow-sky-900/6 ring-1 ring-sky-100 transition-all hover:-translate-y-0.5 hover:shadow-2xl">
             <div class="flex items-center justify-between mb-4">
-                <p class="text-sm font-semibold text-slate-500 uppercase tracking-widest">Status Profil Akademik</p>
-                <div class="rounded-lg {{ auth()->user()->profile_completed ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600' }} p-2">
+                <p class="text-xs font-black text-slate-500 uppercase tracking-widest">Status Profil Akademik</p>
+                <div class="rounded-2xl {{ auth()->user()->profile_completed ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600' }} p-3">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
                         <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
                     </svg>
                 </div>
             </div>
-            <p class="text-2xl font-bold text-slate-950">{{ auth()->user()->profile_completed ? 'Lengkap' : 'Belum Lengkap' }}</p>
-            <span class="mt-4 inline-flex rounded-full {{ auth()->user()->profile_completed ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }} px-3 py-1 text-xs font-semibold">{{ auth()->user()->profile_completed ? 'Terpenuhi' : 'Tindakan Diperlukan' }}</span>
+            <p class="text-2xl font-black text-slate-950">{{ auth()->user()->profile_completed ? 'Lengkap' : 'Belum Lengkap' }}</p>
+            <span class="mt-4 inline-flex rounded-full {{ auth()->user()->profile_completed ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }} px-3 py-1 text-xs font-black">{{ auth()->user()->profile_completed ? 'Terpenuhi' : 'Tindakan Diperlukan' }}</span>
         </div>
-        <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-100 hover:shadow-md transition-all">
+        <div class="rounded-3xl bg-white p-6 shadow-xl shadow-sky-900/6 ring-1 ring-sky-100 transition-all hover:-translate-y-0.5 hover:shadow-2xl">
             <div class="flex items-center justify-between mb-4">
-                <p class="text-sm font-semibold text-slate-500 uppercase tracking-widest">Peran Aktif</p>
-                <div class="rounded-lg bg-teal-50 text-teal-600 p-2">
+                <p class="text-xs font-black text-slate-500 uppercase tracking-widest">Peran Aktif</p>
+                <div class="rounded-2xl bg-cyan-50 text-cyan-700 p-3">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-1a4 4 0 00-4-4l-.5-.5-4 4v1h8.5z"/>
                     </svg>
                 </div>
             </div>
-            <p class="text-2xl font-bold text-slate-950">{{ $roleData['label'] }}</p>
+            <p class="text-2xl font-black text-slate-950">{{ $roleData['label'] }}</p>
             <p class="mt-2 text-xs text-slate-500">Peran saat ini dalam sistem akademik.</p>
         </div>
-        <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-100 hover:shadow-md transition-all">
+        <div class="rounded-3xl bg-white p-6 shadow-xl shadow-sky-900/6 ring-1 ring-sky-100 transition-all hover:-translate-y-0.5 hover:shadow-2xl">
             <div class="flex items-center justify-between mb-4">
-                <p class="text-sm font-semibold text-slate-500 uppercase tracking-widest">Status Akun</p>
-                <div class="rounded-lg bg-emerald-50 text-emerald-600 p-2">
+                <p class="text-xs font-black text-slate-500 uppercase tracking-widest">Status Akun</p>
+                <div class="rounded-2xl bg-emerald-50 text-emerald-600 p-3">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                     </svg>
                 </div>
             </div>
-            <p class="text-2xl font-bold text-slate-950">Aktif</p>
+            <p class="text-2xl font-black text-slate-950">Aktif</p>
             <p class="mt-2 text-xs text-slate-500">Akun Anda siap digunakan.</p>
         </div>
     </section>
@@ -281,26 +323,25 @@
     <!-- Features Overview -->
     <section>
         <div class="mb-6">
-            <h2 class="text-lg font-bold text-slate-950">Modul Akademik</h2>
-            <p class="mt-1 text-sm text-slate-500">Fitur-fitur yang sedang dikembangkan untuk mendukung proses Kerja Praktek Farmasi.</p>
+            <h2 class="text-xl font-black text-slate-950">Modul Akademik</h2>
+            <p class="mt-1 text-sm leading-6 text-slate-500">Fitur-fitur utama untuk mengelola proses Kerja Praktek Farmasi secara bertahap.</p>
         </div>
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             @foreach($features as $feature)
-                <div class="group relative overflow-hidden rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-100 hover:shadow-lg hover:ring-slate-200 transition-all cursor-not-allowed">
-                    <div class="absolute inset-0 bg-linear-to-br from-transparent to-slate-50 opacity-0 group-hover:opacity-100 transition-opacity"/>
+                <div class="group relative overflow-hidden rounded-3xl bg-white p-6 shadow-xl shadow-sky-900/6 ring-1 ring-sky-100 transition-all hover:-translate-y-0.5 hover:shadow-2xl hover:ring-cyan-100">
+                    <div class="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-cyan-500 via-sky-400 to-teal-400"></div>
+                    <div class="absolute inset-0 bg-linear-to-br from-cyan-50/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"/>
                     <div class="relative z-10">
-                        <div class="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-linear-to-br from-teal-50 to-teal-100 text-sm font-bold text-teal-700 group-hover:from-teal-100 group-hover:to-teal-200 transition-all">
+                        <div class="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-sm font-bold text-cyan-700 ring-1 ring-cyan-100 transition-all group-hover:bg-cyan-700 group-hover:text-white">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                             </svg>
                         </div>
-                        <h4 class="font-bold text-slate-950 group-hover:text-teal-700 transition-colors">{{ $feature }}</h4>
-                        <p class="mt-2 text-sm leading-6 text-slate-500">Modul ini sedang dalam tahap pengembangan dan akan diluncurkan pada iterasi berikutnya.</p>
-                        <div class="mt-4 flex items-center gap-2">
-                            <div class="h-1.5 flex-1 rounded-full bg-slate-200">
-                                <div class="h-full w-0 rounded-full bg-linear-to-r from-teal-400 to-teal-600"/>
-                            </div>
-                            <span class="text-xs font-semibold text-slate-500">Segera</span>
+                        <h4 class="font-black text-slate-950 group-hover:text-cyan-800 transition-colors">{{ $feature }}</h4>
+                        <p class="mt-2 text-sm leading-6 text-slate-500">{{ $featureDescriptions[$feature] ?? 'Modul ini sedang disiapkan untuk mendukung proses kerja praktek.' }}</p>
+                        <div class="mt-5 flex items-center justify-between gap-3">
+                            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">Segera tersedia</span>
+                            <span class="text-xs font-black uppercase tracking-widest text-cyan-700">SI-KP</span>
                         </div>
                     </div>
                 </div>

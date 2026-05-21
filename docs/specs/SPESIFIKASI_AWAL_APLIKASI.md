@@ -96,3 +96,14 @@ Sistem mendukung multi-role sehingga satu user dapat memiliki lebih dari satu pe
 - Pembimbing Dalam hanya melihat mahasiswa bimbingannya.
 - Pembimbing Lapangan hanya melihat mahasiswa KP yang ditugaskan kepadanya.
 - Assignment menjadi dasar Tahap 7 Logbook KP.
+
+## Fondasi Logbook KP
+- Mahasiswa dapat mengisi logbook kegiatan setelah memiliki assignment/penempatan KP berstatus aktif atau berjalan.
+- Logbook terhubung langsung ke `kp_assignments` sehingga akses mahasiswa, pembimbing dalam, dan pembimbing lapangan dapat dibatasi berdasarkan penempatan.
+- Mahasiswa dapat menyimpan logbook sebagai draft, mengedit status draft/revisi, submit untuk validasi, serta upload bukti kegiatan opsional.
+- Bukti kegiatan disimpan di storage Laravel non-public dan hanya diunduh melalui route yang dilindungi autentikasi dan role.
+- Pembimbing Lapangan memvalidasi logbook mahasiswa yang ditugaskan kepadanya dengan status disetujui, revisi, atau ditolak.
+- Pembimbing Dalam memantau logbook mahasiswa bimbingan dan dapat memberi komentar/catatan pemantauan.
+- Admin dan Koordinator KP dapat memonitor seluruh logbook dan memberi komentar monitoring.
+- Semua perubahan status, upload/ganti bukti, submit, validasi, penolakan, revisi, dan komentar penting dicatat pada `kp_logbook_logs`.
+- Logbook menjadi dasar pemantauan pelaksanaan KP dan fondasi untuk Tahap 8 Laporan Akhir KP.

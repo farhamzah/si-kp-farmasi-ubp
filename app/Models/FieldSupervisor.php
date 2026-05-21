@@ -33,6 +33,11 @@ class FieldSupervisor extends Model
         return $this->hasMany(KpAssignment::class, 'field_supervisor_id');
     }
 
+    public function logbooks()
+    {
+        return $this->hasManyThrough(KpLogbook::class, KpAssignment::class, 'field_supervisor_id', 'kp_assignment_id');
+    }
+
     public function places()
     {
         return $this->belongsToMany(KpPlace::class, 'kp_place_field_supervisors')->withPivot(['status'])->withTimestamps();

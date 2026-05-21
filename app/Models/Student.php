@@ -54,6 +54,11 @@ class Student extends Model
         return $this->hasMany(KpAssignment::class);
     }
 
+    public function logbooks()
+    {
+        return $this->hasManyThrough(KpLogbook::class, KpAssignment::class, 'student_id', 'kp_assignment_id');
+    }
+
     public function activeAssignment()
     {
         return $this->hasOne(KpAssignment::class)->whereIn('status', ['menunggu_pembimbing', 'aktif', 'berjalan']);

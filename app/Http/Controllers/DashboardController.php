@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\KpPeriod;
 use App\Models\KpAssignment;
+use App\Models\KpLogbook;
 use App\Models\KpPlace;
 use App\Models\KpPlaceQuota;
 use App\Models\KpPlaceSelection;
@@ -36,6 +37,7 @@ class DashboardController extends Controller
             'registrationStats' => in_array($role, ['admin', 'koordinator_kp'], true) ? $this->registrationStats() : null,
             'selectionStats' => in_array($role, ['admin', 'koordinator_kp'], true) ? $this->selectionStats() : null,
             'assignmentStats' => $this->assignmentStats($role, $request),
+            'logbookStats' => $this->logbookStats($role, $request),
             'studentRegistration' => $role === 'mahasiswa' ? $request->user()->student?->kpRegistrations()->with(['documents', 'activePlaceSelection.place', 'waitingList'])->latest()->first() : null,
         ]);
     }
@@ -109,6 +111,50 @@ class DashboardController extends Controller
             return [
                 'total' => KpAssignment::where('field_supervisor_id', $request->user()->fieldSupervisor?->id)->count(),
                 'active' => KpAssignment::where('field_supervisor_id', $request->user()->fieldSupervisor?->id)->whereIn('status', ['aktif', 'berjalan'])->count(),
+            ];
+        }
+
+        return null;
+    }
+
+    private function logbookStats(string $role, Request $request): ?array
+    {
+        if (in_array($role, ['admin', 'koordinator_kp'], true)) {
+            return [
+                'total' => KpLogbook::count(),
+                'menunggu_validasi' => KpLogbook::where('status', 'menunggu_validasi')->count(),
+                'disetujui' => KpLogbook::where('status', 'disetujui')->count(),
+                'revisi' => KpLogbook::where('status', 'revisi')->count(),
+                'ditolak' => KpLogbook::where('status', 'ditolak')->count(),
+            ];
+        }
+
+        if ($role === 'mahasiswa') {
+            $assignment = $request->user()->student?->assignments()->whereIn('status', ['aktif', 'berjalan'])->latest()->first();
+
+            return $assignment ? [
+                'total' => $assignment->logbooks()->count(),
+                'menunggu_validasi' => $assignment->logbooks()->where('status', 'menunggu_validasi')->count(),
+                'disetujui' => $assignment->logbooks()->where('status', 'disetujui')->count(),
+                'revisi' => $assignment->logbooks()->where('status', 'revisi')->count(),
+            ] : ['total' => 0, 'menunggu_validasi' => 0, 'disetujui' => 0, 'revisi' => 0];
+        }
+
+        if ($role === 'pembimbing_lapangan') {
+            $fieldSupervisorId = $request->user()->fieldSupervisor?->id;
+
+            return [
+                'total' => KpLogbook::whereHas('assignment', fn ($q) => $q->where('field_supervisor_id', $fieldSupervisorId))->count(),
+                'menunggu_validasi' => KpLogbook::where('status', 'menunggu_validasi')->whereHas('assignment', fn ($q) => $q->where('field_supervisor_id', $fieldSupervisorId))->count(),
+            ];
+        }
+
+        if ($role === 'pembimbing_dalam') {
+            $lecturerId = $request->user()->lecturer?->id;
+
+            return [
+                'total' => KpLogbook::whereHas('assignment', fn ($q) => $q->where('internal_supervisor_id', $lecturerId))->count(),
+                'komentar' => KpLogbook::whereHas('comments', fn ($q) => $q->where('user_id', $request->user()->id))->count(),
             ];
         }
 

@@ -7,36 +7,40 @@
     <title>@yield('title', config('app.name', 'SI-KP Farmasi UBP'))</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="bg-slate-50 font-sans text-slate-900">
+<body class="bg-sky-50 font-sans text-slate-900">
 @php
     $activeRole = session('active_role');
     $roleData = $activeRole ? \App\Support\RoleDashboard::dataFor($activeRole) : null;
     $roleLabel = \App\Support\RoleDashboard::labelFor($activeRole);
     $ownedRoles = auth()->user()?->roles ?? collect();
 @endphp
-<div class="min-h-screen lg:flex">
+<div class="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_32%),radial-gradient(circle_at_80%_12%,rgba(20,184,166,0.14),transparent_28%),linear-gradient(135deg,#f8fdff,#eef9fb_45%,#f4f9fc)] lg:flex">
     <!-- Sidebar Navigation -->
-    <aside class="border-b border-slate-200 bg-white shadow-sm lg:fixed lg:inset-y-0 lg:left-0 lg:w-72 lg:border-b-0 lg:border-r lg:shadow-none">
+    <aside class="border-b border-sky-100 bg-white/92 text-slate-800 shadow-xl shadow-sky-900/8 backdrop-blur-xl lg:fixed lg:inset-y-0 lg:left-0 lg:w-72 lg:border-b-0 lg:border-r lg:border-sky-100">
         <!-- Branding -->
-        <div class="flex items-center justify-between gap-3 px-5 py-6 lg:py-8 border-b border-slate-200/50">
+        <div class="relative overflow-hidden border-b border-sky-100 px-5 py-6 lg:py-7">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.22),transparent_46%),linear-gradient(135deg,rgba(20,184,166,0.16),transparent)]"></div>
+            <div class="relative flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
-                <div class="flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg bg-linear-to-br from-teal-400 to-teal-600 p-1.5 shadow-md shadow-teal-500/25">
+                <div class="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-white p-2 shadow-lg shadow-cyan-700/14 ring-1 ring-sky-100">
                     <img src="{{ asset('images/logo-fakultas-farmasi-ubp.png') }}" alt="Logo Fakultas Farmasi UBP" class="h-full w-full object-contain">
                 </div>
                 <div class="hidden lg:block">
-                    <p class="text-xs font-bold tracking-widest uppercase text-slate-900">SI-KP</p>
-                    <p class="text-[10px] text-slate-500 font-medium">Farmasi UBP</p>
+                    <p class="text-sm font-black tracking-widest uppercase text-slate-950">SI-KP</p>
+                    <p class="mt-0.5 text-[11px] font-bold text-cyan-700">Farmasi UBP</p>
                 </div>
             </div>
-            <a href="/" class="hidden lg:block text-slate-400 hover:text-slate-600 transition">
+            <a href="/" class="hidden rounded-xl p-2 text-slate-400 transition hover:bg-sky-50 hover:text-cyan-700 lg:block">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                 </svg>
             </a>
+            </div>
         </div>
         
         <!-- Navigation Menu -->
-        <nav class="flex gap-2 overflow-x-auto px-4 py-4 lg:block lg:space-y-1 lg:overflow-visible lg:p-4">
+        <nav class="flex gap-2 overflow-x-auto px-4 py-4 lg:block lg:space-y-1.5 lg:overflow-visible lg:p-4">
+            <p class="mb-3 hidden px-3 text-[11px] font-black uppercase tracking-widest text-sky-700/70 lg:block">Menu Kerja Praktek</p>
             @foreach(($roleData['menu'] ?? ['Dashboard', 'Profil Saya']) as $item)
                 @php
                     $isDashboard = $item === 'Dashboard';
@@ -61,55 +65,63 @@
                         'Log Penempatan' => 'management.kp-assignment-logs.index',
                         'Mahasiswa Bimbingan' => 'internal-supervisor.assignments.index',
                         'Mahasiswa KP' => 'field-supervisor.assignments.index',
+                        'Logbook KP' => 'student.logbooks.index',
+                        'Validasi Logbook' => 'field-supervisor.logbooks.index',
+                        'Logbook Mahasiswa' => 'internal-supervisor.logbooks.index',
+                        'Monitoring Logbook' => 'management.logbooks.index',
+                        'Log Aktivitas Logbook' => 'management.logbook-logs.index',
                     ];
                     $mappedRoute = $routeMap[$item] ?? null;
                     $href = $isDashboard ? route($roleData['route'] ?? 'dashboard') : ($isProfile ? route('profile.show') : ($mappedRoute && Route::has($mappedRoute) ? route($mappedRoute) : '#'));
                     $isActive = ($isDashboard && request()->routeIs($roleData['route'] ?? 'dashboard')) || ($isProfile && request()->routeIs('profile.show', 'profile.edit')) || ($mappedRoute && request()->routeIs($mappedRoute, $mappedRoute.'.*'));
                 @endphp
-                <a href="{{ $href }}" class="flex min-w-max items-center justify-between rounded-lg px-4 py-2.5 text-sm font-medium transition-all {{ $isActive ? 'bg-teal-50 text-teal-700 shadow-sm ring-1 ring-teal-100' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' }}">
-                    <span>{{ $item }}</span>
+                <a href="{{ $href }}" class="group flex min-w-max items-center justify-between rounded-2xl px-3 py-3 text-sm font-bold transition-all {{ $isActive ? 'bg-cyan-700 text-white shadow-lg shadow-cyan-700/20 ring-1 ring-cyan-600' : 'text-slate-600 hover:bg-sky-50 hover:text-cyan-800' }}">
+                    <span class="flex min-w-0 items-center gap-3">
+                        <span class="h-2 w-2 rounded-full {{ $isActive ? 'bg-cyan-100' : 'bg-sky-300 group-hover:bg-cyan-500' }}"></span>
+                        <span class="truncate">{{ $item }}</span>
+                    </span>
                     @unless($isDashboard || $isProfile || $mappedRoute)
-                        <span class="ml-2 rounded-md bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-slate-600">Segera</span>
+                        <span class="ml-3 rounded-md {{ $isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500' }} px-2 py-0.5 text-[10px] font-black uppercase tracking-widest">Segera</span>
                     @endunless
                 </a>
             @endforeach
         </nav>
 
         <!-- User Info (Mobile) -->
-        <div class="border-t border-slate-200/50 px-4 py-4 lg:hidden">
-            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Pengguna</p>
+        <div class="border-t border-sky-100 px-4 py-4 lg:hidden">
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Pengguna</p>
             <p class="text-sm font-semibold text-slate-900 truncate">{{ auth()->user()->name }}</p>
-            <p class="text-xs text-slate-500 mt-1">{{ $roleLabel }}</p>
+            <p class="text-xs text-cyan-700 mt-1">{{ $roleLabel }}</p>
         </div>
     </aside>
 
     <!-- Main Content Area -->
     <div class="flex min-h-screen flex-1 flex-col lg:pl-72">
         <!-- Header -->
-        <header class="sticky top-0 z-20 border-b border-slate-200 bg-white/80 backdrop-blur-md">
-            <div class="flex flex-col gap-4 px-5 py-4 md:flex-row md:items-center md:justify-between md:gap-3">
+        <header class="sticky top-0 z-20 border-b border-sky-100/90 bg-white/88 shadow-sm shadow-sky-900/5 backdrop-blur-xl">
+            <div class="mx-auto flex w-full max-w-7xl flex-col gap-4 px-5 py-4 md:flex-row md:items-center md:justify-between md:gap-3 lg:px-8">
                 <!-- Page Title -->
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-widest text-teal-700 mb-1">{{ config('app.name') }}</p>
-                    <h1 class="text-xl font-bold text-slate-950">@yield('page_title', 'Dashboard')</h1>
+                    <p class="text-xs font-black uppercase tracking-widest text-cyan-700 mb-1">{{ config('app.name') }}</p>
+                    <h1 class="text-2xl font-black tracking-tight text-slate-950">@yield('page_title', 'Dashboard')</h1>
                 </div>
                 
                 <!-- Header Actions -->
                 <div class="flex flex-wrap items-center gap-2 md:gap-3">
                     <!-- Role Badge -->
-                    <span class="inline-flex items-center gap-2 rounded-lg bg-linear-to-r from-teal-50 to-emerald-50 px-3 py-1.5 text-xs font-semibold text-teal-700 ring-1 ring-teal-100">
-                        <span class="h-2 w-2 rounded-full bg-teal-500"/>
+                    <span class="inline-flex items-center gap-2 rounded-2xl bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-800 shadow-sm ring-1 ring-cyan-100">
+                        <span class="h-2 w-2 rounded-full bg-cyan-500"/>
                         {{ $roleLabel }}
                     </span>
                     
                     <!-- User Badge -->
-                    <span class="hidden md:inline-flex items-center rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                    <span class="hidden md:inline-flex items-center rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-sky-100">
                         {{ auth()->user()->name }}
                     </span>
                     
                     <!-- Role Switcher -->
                     @if($ownedRoles->count() > 1)
-                        <a href="{{ route('role.select') }}" class="flex items-center gap-2 rounded-lg border border-teal-300 bg-white px-3 py-1.5 text-xs font-semibold text-teal-700 hover:bg-teal-50 transition-all">
+                        <a href="{{ route('role.select') }}" class="flex items-center gap-2 rounded-2xl border border-cyan-200 bg-white px-3 py-2 text-xs font-bold text-cyan-700 shadow-sm transition-all hover:bg-cyan-50">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                             </svg>
@@ -120,7 +132,7 @@
                     <!-- Logout Button -->
                     <form method="POST" action="{{ route('logout') }}" class="inline">
                         @csrf
-                        <button type="submit" class="flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 transition-all ring-1 ring-slate-700">
+                        <button type="submit" class="flex items-center gap-2 rounded-2xl bg-cyan-900 px-3 py-2 text-xs font-bold text-white shadow-lg shadow-cyan-900/20 transition-all hover:bg-cyan-800 ring-1 ring-cyan-800">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                             </svg>
@@ -132,10 +144,10 @@
         </header>
 
         <!-- Main Content -->
-        <main class="flex-1 px-5 py-6 md:px-8">
+        <main class="mx-auto w-full max-w-7xl flex-1 px-5 py-6 md:px-8">
             <!-- Status Message -->
             @if(session('status'))
-                <div class="mb-6 rounded-lg border border-emerald-200 bg-linear-to-r from-emerald-50 to-teal-50 px-5 py-4 text-sm text-emerald-800 shadow-sm">
+                <div class="mb-6 rounded-2xl border border-emerald-200 bg-linear-to-r from-emerald-50 to-cyan-50 px-5 py-4 text-sm font-medium text-emerald-800 shadow-sm">
                     <div class="flex gap-3">
                         <svg class="w-5 h-5 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
@@ -150,8 +162,8 @@
         </main>
 
         <!-- Footer -->
-        <footer class="border-t border-slate-200 px-5 py-5 text-center text-xs text-slate-500 md:px-8">
-            <p class="font-medium">SI-KP Farmasi UBP</p>
+        <footer class="border-t border-sky-100 bg-white/70 px-5 py-5 text-center text-xs text-slate-500 md:px-8">
+            <p class="font-bold text-slate-700">SI-KP Farmasi UBP</p>
             <p class="mt-1">Sistem Informasi Portal Akademik Kerja Praktek Farmasi Universitas Bhakti Pensada</p>
         </footer>
     </div>
