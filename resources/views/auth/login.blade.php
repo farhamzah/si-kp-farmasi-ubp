@@ -5,7 +5,9 @@
     <div class="grid w-full max-w-5xl overflow-hidden rounded-2xl border border-white/70 bg-white shadow-xl shadow-teal-900/10 lg:grid-cols-[1.05fr_0.95fr]">
         <section class="bg-slate-900 px-8 py-10 text-white md:px-10">
             <div class="mb-12 flex items-center gap-3">
-                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-500 font-bold">KP</div>
+                <div class="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm">
+                    <img src="{{ asset('images/logo-fakultas-farmasi-ubp.png') }}" alt="Logo Fakultas Farmasi UBP" class="h-full w-full object-contain">
+                </div>
                 <div>
                     <p class="text-sm font-semibold text-teal-200">SI-KP Farmasi UBP</p>
                     <p class="text-xs text-slate-300">Sistem Informasi Kerja Praktek</p>

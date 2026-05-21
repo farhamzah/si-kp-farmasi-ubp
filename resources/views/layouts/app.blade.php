@@ -17,7 +17,9 @@
 <div class="min-h-screen lg:flex">
     <aside class="border-b border-slate-200 bg-white lg:fixed lg:inset-y-0 lg:left-0 lg:w-72 lg:border-b-0 lg:border-r">
         <div class="flex items-center gap-3 px-5 py-5">
-            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-600 text-sm font-bold text-white">KP</div>
+            <div class="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+                <img src="{{ asset('images/logo-fakultas-farmasi-ubp.png') }}" alt="Logo Fakultas Farmasi UBP" class="h-full w-full object-contain">
+            </div>
             <div>
                 <p class="text-sm font-semibold tracking-wide text-teal-700">SI-KP Farmasi UBP</p>
                 <p class="text-xs text-slate-500">Kerja Praktek Farmasi</p>
@@ -76,7 +78,7 @@
         </main>
 
         <footer class="border-t border-slate-200 px-5 py-4 text-xs text-slate-500">
-            SI-KP Farmasi UBP - Fondasi Tahap 1
+            SI-KP Farmasi UBP - Sistem Informasi Kerja Praktek Farmasi
         </footer>
     </div>
 </div>
