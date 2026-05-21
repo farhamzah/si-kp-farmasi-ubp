@@ -8,6 +8,7 @@ use App\Models\KpLogbook;
 use App\Models\KpFinalReport;
 use App\Models\KpExam;
 use App\Models\KpExamRequest;
+use App\Models\KpFinalScore;
 use App\Models\KpPlace;
 use App\Models\KpPlaceQuota;
 use App\Models\KpPlaceSelection;
@@ -43,6 +44,7 @@ class DashboardController extends Controller
             'logbookStats' => $this->logbookStats($role, $request),
             'finalReportStats' => $this->finalReportStats($role, $request),
             'examStats' => $this->examStats($role, $request),
+            'scoreStats' => $this->scoreStats($role, $request),
             'studentRegistration' => $role === 'mahasiswa' ? $request->user()->student?->kpRegistrations()->with(['documents', 'activePlaceSelection.place', 'waitingList'])->latest()->first() : null,
         ]);
     }
@@ -230,6 +232,36 @@ class DashboardController extends Controller
                 'sidang_ditugaskan' => KpExam::where('examiner_id', $lecturerId)->count(),
                 'sidang_mendatang' => KpExam::where('examiner_id', $lecturerId)->where('status', 'dijadwalkan')->count(),
             ];
+        }
+
+        return null;
+    }
+
+    private function scoreStats(string $role, Request $request): ?array
+    {
+        if (in_array($role, ['admin', 'koordinator_kp'], true)) {
+            return [
+                'belum_lengkap' => KpAssignment::whereDoesntHave('finalScore', fn ($q) => $q->whereIn('status', ['locked', 'published']))->count(),
+                'siap_finalisasi' => KpFinalScore::where('status', 'calculated')->count(),
+                'sudah_publish' => KpFinalScore::where('status', 'published')->count(),
+            ];
+        }
+
+        if ($role === 'mahasiswa') {
+            $assignment = $request->user()->student?->assignments()->whereIn('status', ['aktif', 'berjalan', 'selesai'])->latest()->first();
+            return ['status_nilai' => $assignment?->finalScore?->statusLabel() ?? 'Belum tersedia'];
+        }
+
+        if ($role === 'pembimbing_dalam') {
+            return ['belum_submit' => KpAssignment::where('internal_supervisor_id', $request->user()->lecturer?->id)->whereDoesntHave('scores', fn ($q) => $q->where('assessor_type', 'pembimbing_dalam')->whereIn('status', ['submitted', 'locked']))->count()];
+        }
+
+        if ($role === 'pembimbing_lapangan') {
+            return ['belum_submit' => KpAssignment::where('field_supervisor_id', $request->user()->fieldSupervisor?->id)->whereDoesntHave('scores', fn ($q) => $q->where('assessor_type', 'pembimbing_lapangan')->whereIn('status', ['submitted', 'locked']))->count()];
+        }
+
+        if ($role === 'penguji') {
+            return ['sidang_belum_submit' => KpExam::where('examiner_id', $request->user()->lecturer?->id)->whereDoesntHave('scores', fn ($q) => $q->where('assessor_type', 'penguji')->whereIn('status', ['submitted', 'locked']))->count()];
         }
 
         return null;

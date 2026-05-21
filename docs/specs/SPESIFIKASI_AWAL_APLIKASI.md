@@ -139,3 +139,13 @@ Sistem mendukung multi-role sehingga satu user dapat memiliki lebih dari satu pe
 - Pembimbing Lapangan belum memiliki akses modul sidang pada tahap ini.
 - Semua aktivitas pengajuan, review, penjadwalan, cancel, dan complete dicatat pada `kp_exam_logs`.
 - Bugfix UI Tahap 9 memperbaiki active state sidebar mahasiswa dan halaman login agar lebih fit di viewport desktop/laptop.
+
+## Fondasi Penilaian KP dan Nilai Akhir
+- Mahasiswa memiliki halaman khusus Berkas KP di `/mahasiswa/berkas-kp` untuk melihat, upload, re-upload, dan download dokumen persyaratan KP.
+- Komponen penilaian fleksibel disimpan per periode pada `kp_assessment_components`.
+- Penilaian dilakukan oleh Pembimbing Dalam, Pembimbing Lapangan, dan Penguji sesuai assignment/sidang yang ditugaskan.
+- Nilai komponen divalidasi pada rentang 0-100 dan menghasilkan weighted score berdasarkan bobot.
+- Nilai akhir dihitung dari total weighted score pada komponen aktif yang sudah submitted/locked.
+- Admin dan Koordinator KP dapat finalisasi, publish, dan unlock nilai akhir.
+- Mahasiswa hanya dapat melihat nilai akhir setelah status nilai dipublish.
+- Semua aktivitas penilaian dan nilai akhir dicatat pada `kp_score_logs`.

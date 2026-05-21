@@ -5,9 +5,12 @@ use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Examiner\ExamScheduleController as ExaminerExamScheduleController;
+use App\Http\Controllers\Examiner\AssessmentController as ExaminerAssessmentController;
+use App\Http\Controllers\FieldSupervisor\AssessmentController as FieldAssessmentController;
 use App\Http\Controllers\FieldSupervisor\FieldStudentController;
 use App\Http\Controllers\FieldSupervisor\LogbookValidationController;
 use App\Http\Controllers\InternalSupervisor\ExamScheduleController as InternalExamScheduleController;
+use App\Http\Controllers\InternalSupervisor\AssessmentController as InternalAssessmentController;
 use App\Http\Controllers\InternalSupervisor\FinalReportReviewController;
 use App\Http\Controllers\InternalSupervisor\LogbookMonitoringController as InternalLogbookMonitoringController;
 use App\Http\Controllers\InternalSupervisor\SupervisedStudentController;
@@ -24,10 +27,13 @@ use App\Http\Controllers\Management\FinalReportMonitoringController;
 use App\Http\Controllers\Management\ExamLogController;
 use App\Http\Controllers\Management\ExamRequestController as ManagementExamRequestController;
 use App\Http\Controllers\Management\ExamScheduleController as ManagementExamScheduleController;
+use App\Http\Controllers\Management\AssessmentComponentController;
 use App\Http\Controllers\Management\LogbookLogController;
 use App\Http\Controllers\Management\LogbookMonitoringController;
 use App\Http\Controllers\Management\PlaceSelectionMonitoringController;
 use App\Http\Controllers\Management\SelectionLogController;
+use App\Http\Controllers\Management\ScoreLogController;
+use App\Http\Controllers\Management\ScoreMonitoringController;
 use App\Http\Controllers\Management\WaitingListController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleSelectionController;
@@ -39,6 +45,7 @@ use App\Http\Controllers\Student\ExamRequestController as StudentExamRequestCont
 use App\Http\Controllers\Student\FinalReportController;
 use App\Http\Controllers\Student\LogbookController;
 use App\Http\Controllers\Student\PlaceSelectionController;
+use App\Http\Controllers\Student\ScoreController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -131,6 +138,14 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('exams/{exam}/cancel', [ManagementExamScheduleController::class, 'cancel'])->name('exams.cancel');
             Route::post('exams/{exam}/complete', [ManagementExamScheduleController::class, 'complete'])->name('exams.complete');
             Route::get('exam-logs', [ExamLogController::class, 'index'])->name('exam-logs.index');
+            Route::resource('assessment-components', AssessmentComponentController::class)->except(['show'])->parameters(['assessment-components' => 'component']);
+            Route::get('scores', [ScoreMonitoringController::class, 'index'])->name('scores.index');
+            Route::get('scores/{assignment}', [ScoreMonitoringController::class, 'show'])->name('scores.show');
+            Route::post('scores/{assignment}/calculate', [ScoreMonitoringController::class, 'calculate'])->name('scores.calculate');
+            Route::post('scores/{assignment}/finalize', [ScoreMonitoringController::class, 'finalize'])->name('scores.finalize');
+            Route::post('final-scores/{finalScore}/publish', [ScoreMonitoringController::class, 'publish'])->name('final-scores.publish');
+            Route::post('final-scores/{finalScore}/unlock', [ScoreMonitoringController::class, 'unlock'])->name('final-scores.unlock');
+            Route::get('score-logs', [ScoreLogController::class, 'index'])->name('score-logs.index');
         });
 
         Route::middleware('role:mahasiswa')->prefix('mahasiswa')->name('student.')->group(function () {
@@ -164,6 +179,7 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('sidang', [StudentExamRequestController::class, 'index'])->name('exams.index');
             Route::post('sidang/ajukan', [StudentExamRequestController::class, 'submit'])->name('exams.submit');
             Route::post('sidang/batalkan-pengajuan', [StudentExamRequestController::class, 'cancel'])->name('exams.cancel');
+            Route::get('nilai', [ScoreController::class, 'show'])->name('scores.show');
         });
 
         Route::middleware('role:pembimbing_dalam')->prefix('pembimbing-dalam')->name('internal-supervisor.')->group(function () {
@@ -181,6 +197,10 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('laporan-akhir/files/{file}/download', [FinalReportReviewController::class, 'download'])->name('final-reports.files.download');
             Route::get('jadwal-sidang', [InternalExamScheduleController::class, 'index'])->name('exams.index');
             Route::get('jadwal-sidang/{exam}', [InternalExamScheduleController::class, 'show'])->name('exams.show');
+            Route::get('penilaian', [InternalAssessmentController::class, 'index'])->name('assessments.index');
+            Route::get('penilaian/{assignment}', [InternalAssessmentController::class, 'show'])->name('assessments.show');
+            Route::post('penilaian/{assignment}/save', [InternalAssessmentController::class, 'save'])->name('assessments.save');
+            Route::post('penilaian/{assignment}/submit', [InternalAssessmentController::class, 'submit'])->name('assessments.submit');
         });
 
         Route::middleware('role:pembimbing_lapangan')->prefix('pembimbing-lapangan')->name('field-supervisor.')->group(function () {
@@ -192,11 +212,19 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('logbook/{logbook}/revision', [LogbookValidationController::class, 'revision'])->name('logbooks.revision');
             Route::post('logbook/{logbook}/reject', [LogbookValidationController::class, 'reject'])->name('logbooks.reject');
             Route::get('logbook/{logbook}/evidence/download', [LogbookValidationController::class, 'download'])->name('logbooks.evidence.download');
+            Route::get('penilaian', [FieldAssessmentController::class, 'index'])->name('assessments.index');
+            Route::get('penilaian/{assignment}', [FieldAssessmentController::class, 'show'])->name('assessments.show');
+            Route::post('penilaian/{assignment}/save', [FieldAssessmentController::class, 'save'])->name('assessments.save');
+            Route::post('penilaian/{assignment}/submit', [FieldAssessmentController::class, 'submit'])->name('assessments.submit');
         });
 
         Route::middleware('role:penguji')->prefix('penguji')->name('examiner.')->group(function () {
             Route::get('jadwal-sidang', [ExaminerExamScheduleController::class, 'index'])->name('exams.index');
             Route::get('jadwal-sidang/{exam}', [ExaminerExamScheduleController::class, 'show'])->name('exams.show');
+            Route::get('penilaian', [ExaminerAssessmentController::class, 'index'])->name('assessments.index');
+            Route::get('penilaian/{exam}', [ExaminerAssessmentController::class, 'show'])->name('assessments.show');
+            Route::post('penilaian/{exam}/save', [ExaminerAssessmentController::class, 'save'])->name('assessments.save');
+            Route::post('penilaian/{exam}/submit', [ExaminerAssessmentController::class, 'submit'])->name('assessments.submit');
         });
 
         Route::get('/mahasiswa/dashboard', fn (DashboardController $controller, Request $request) => $controller->show($request, 'mahasiswa'))

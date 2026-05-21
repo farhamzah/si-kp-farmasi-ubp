@@ -19,6 +19,7 @@ class KpExam extends Model
     public function examiner() { return $this->belongsTo(Lecturer::class, 'examiner_id'); }
     public function scheduledBy() { return $this->belongsTo(User::class, 'scheduled_by'); }
     public function logs() { return $this->hasMany(KpExamLog::class, 'kp_exam_id'); }
+    public function scores() { return $this->hasMany(KpScore::class, 'kp_exam_id'); }
 
     public function statusLabel(): string
     {

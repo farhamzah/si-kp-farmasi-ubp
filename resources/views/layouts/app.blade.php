@@ -78,6 +78,13 @@
                         'Pengajuan Sidang' => 'management.exam-requests.index',
                         'Jadwal Sidang' => $activeRole === 'pembimbing_dalam' ? 'internal-supervisor.exams.index' : ($activeRole === 'penguji' ? 'examiner.exams.index' : 'management.exams.index'),
                         'Log Sidang' => 'management.exam-logs.index',
+                        'Komponen Penilaian' => 'management.assessment-components.index',
+                        'Monitoring Nilai' => 'management.scores.index',
+                        'Log Nilai' => 'management.score-logs.index',
+                        'Penilaian Pembimbing' => 'internal-supervisor.assessments.index',
+                        'Penilaian Lapangan' => 'field-supervisor.assessments.index',
+                        'Penilaian Sidang' => 'examiner.assessments.index',
+                        'Nilai' => 'student.scores.show',
                     ];
                     $activeMap = [
                         'Dashboard' => [$roleData['route'] ?? 'dashboard'],
@@ -114,6 +121,13 @@
                         'Pengajuan Sidang' => ['management.exam-requests.*'],
                         'Jadwal Sidang' => ['management.exams.*', 'internal-supervisor.exams.*', 'examiner.exams.*'],
                         'Log Sidang' => ['management.exam-logs.*'],
+                        'Komponen Penilaian' => ['management.assessment-components.*'],
+                        'Monitoring Nilai' => ['management.scores.*', 'management.final-scores.*'],
+                        'Log Nilai' => ['management.score-logs.*'],
+                        'Penilaian Pembimbing' => ['internal-supervisor.assessments.*'],
+                        'Penilaian Lapangan' => ['field-supervisor.assessments.*'],
+                        'Penilaian Sidang' => ['examiner.assessments.*'],
+                        'Nilai' => ['student.scores.*'],
                     ];
                     $mappedRoute = $routeMap[$item] ?? null;
                     $href = $isDashboard ? route($roleData['route'] ?? 'dashboard') : ($isProfile ? route('profile.show') : ($mappedRoute && Route::has($mappedRoute) ? route($mappedRoute) : '#'));

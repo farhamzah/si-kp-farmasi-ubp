@@ -34,6 +34,8 @@ class KpAssignment extends Model
     public function finalReport() { return $this->hasOne(KpFinalReport::class, 'kp_assignment_id'); }
     public function examRequest() { return $this->hasOne(KpExamRequest::class, 'kp_assignment_id'); }
     public function exam() { return $this->hasOne(KpExam::class, 'kp_assignment_id'); }
+    public function scores() { return $this->hasMany(KpScore::class, 'kp_assignment_id'); }
+    public function finalScore() { return $this->hasOne(KpFinalScore::class, 'kp_assignment_id'); }
 
     public function statusLabel(): string
     {
@@ -90,5 +92,32 @@ class KpAssignment extends Model
         $this->loadMissing('finalReport');
 
         return $this->isActive() && $this->finalReport?->isApproved();
+    }
+
+    public function scoresCompletionPercentage(): int
+    {
+        $this->loadMissing('scores');
+        $components = $this->period?->assessmentComponents()->where('status', 'aktif')->where('is_required', true)->get() ?? collect();
+
+        if ($components->isEmpty()) {
+            return 0;
+        }
+
+        $submitted = $components->filter(fn ($component) => in_array($this->scores->firstWhere('kp_assessment_component_id', $component->id)?->status, ['submitted', 'locked'], true))->count();
+
+        return (int) round(($submitted / $components->count()) * 100);
+    }
+
+    public function isAllRequiredScoresSubmitted(): bool
+    {
+        $this->loadMissing('scores');
+        $components = $this->period?->assessmentComponents()->where('status', 'aktif')->where('is_required', true)->get() ?? collect();
+
+        return $components->isNotEmpty() && $components->every(fn ($component) => in_array($this->scores->firstWhere('kp_assessment_component_id', $component->id)?->status, ['submitted', 'locked'], true));
+    }
+
+    public function calculateFinalScore(): float
+    {
+        return round((float) $this->scores()->whereIn('status', ['submitted', 'locked'])->sum('weighted_score'), 2);
     }
 }

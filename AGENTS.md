@@ -126,3 +126,14 @@ Setiap fitur harus dibuat modular dan mudah dikembangkan. Pisahkan tanggung jawa
 - Admin dan Koordinator KP dapat memonitor, menjadwalkan, menjadwalkan ulang, membatalkan, dan menandai sidang selesai.
 - Pembimbing Dalam dan Penguji hanya boleh melihat jadwal sidang yang terkait dengan profil lecturer masing-masing.
 - Semua submit, review, schedule, reschedule, cancel, dan complete wajib dicatat di `kp_exam_logs`.
+
+## 19. Aturan Penilaian KP
+- Komponen penilaian dikelola per periode oleh Admin/Koordinator.
+- Input nilai wajib melalui `KpAssessmentService`.
+- Pembimbing Dalam hanya boleh menilai assignment dengan `internal_supervisor_id` miliknya.
+- Pembimbing Lapangan hanya boleh menilai assignment dengan `field_supervisor_id` miliknya.
+- Penguji hanya boleh menilai exam dengan `examiner_id` miliknya.
+- Nilai harus divalidasi 0-100 dan weighted score dihitung dari bobot komponen.
+- Nilai final/published tidak boleh diubah penilai; unlock hanya Admin/Koordinator.
+- Mahasiswa hanya melihat nilai setelah dipublish.
+- Semua perubahan penting nilai wajib dicatat di `kp_score_logs`.
