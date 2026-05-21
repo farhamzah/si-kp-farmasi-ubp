@@ -87,7 +87,19 @@
     }
 
     .si-table-wrap {
-        @apply w-full overflow-x-auto overflow-y-hidden rounded-2xl border border-sky-100 bg-white shadow-sm shadow-sky-900/5;
+        @apply w-full overflow-x-auto overflow-y-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-sky-900/5;
+    }
+
+    .si-table-card {
+        @apply overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-sky-900/5;
+    }
+
+    .si-data-table {
+        @apply w-full min-w-full table-auto border-separate border-spacing-0 text-sm;
+    }
+
+    .si-table-action {
+        @apply inline-flex min-h-9 items-center justify-center rounded-xl border border-teal-200 bg-white px-4 py-2 text-sm font-semibold text-teal-700 transition hover:bg-teal-50 focus:outline-none focus:ring-4 focus:ring-teal-100;
     }
 
     .si-sidebar-scroll {
@@ -114,7 +126,9 @@
     }
 
     main table {
-        @apply w-full min-w-full text-sm;
+        @apply w-full min-w-full table-auto text-sm;
+        border-collapse: separate;
+        border-spacing: 0;
     }
 
     main .overflow-x-auto,
@@ -123,24 +137,56 @@
     }
 
     main .overflow-x-auto > table,
-    main .si-table-wrap > table {
-        min-width: max(100%, 56rem);
+    main .si-table-wrap table {
+        min-width: max(100%, 48rem);
     }
 
     main thead {
-        @apply bg-sky-50/70 text-left text-xs font-bold uppercase tracking-wide text-slate-500;
+        @apply bg-sky-50/70 text-left text-xs font-semibold uppercase tracking-wide text-slate-500;
     }
 
     main th {
-        @apply px-4 py-3;
+        @apply whitespace-nowrap border-b border-slate-100 px-4 py-3 align-middle;
     }
 
     main td {
-        @apply px-4 py-4 align-middle;
+        @apply border-b border-slate-100 px-4 py-3.5 align-middle text-slate-700;
+    }
+
+    main th:first-child,
+    main td:first-child {
+        @apply pl-5;
+    }
+
+    main th:last-child,
+    main td:last-child {
+        @apply pr-5;
+    }
+
+    main th:last-child,
+    main td:last-child {
+        @apply w-px whitespace-nowrap text-right;
+    }
+
+    main td:last-child {
+        @apply text-slate-700;
+    }
+
+    main th:nth-last-child(2),
+    main td:nth-last-child(2) {
+        @apply whitespace-nowrap;
+    }
+
+    main td .rounded-full {
+        @apply inline-flex items-center whitespace-nowrap px-3 py-1 text-xs font-semibold;
+    }
+
+    main tbody tr:last-child td {
+        @apply border-b-0;
     }
 
     main tbody tr {
-        @apply border-t border-slate-100 transition hover:bg-sky-50/45;
+        @apply transition hover:bg-slate-50/70;
     }
 
     main input:not([type='checkbox']):not([type='radio']),
