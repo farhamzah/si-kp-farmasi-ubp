@@ -8,6 +8,12 @@
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+    --color-brand-50: #ecfeff;
+    --color-brand-100: #cffafe;
+    --color-brand-500: #06b6d4;
+    --color-brand-600: #0891b2;
+    --color-brand-700: #0e7490;
+    --color-brand-900: #164e63;
 }
 
 @layer base {
@@ -19,5 +25,94 @@
     a,
     input {
         -webkit-tap-highlight-color: transparent;
+    }
+
+    :focus-visible {
+        outline: 3px solid color-mix(in oklab, var(--color-brand-500) 35%, transparent);
+        outline-offset: 2px;
+    }
+}
+
+@layer components {
+    .si-page {
+        @apply space-y-6;
+    }
+
+    .si-card {
+        @apply rounded-2xl border border-sky-100 bg-white shadow-sm shadow-sky-900/5;
+    }
+
+    .si-card-lg {
+        @apply rounded-3xl border border-sky-100 bg-white shadow-xl shadow-sky-900/6;
+    }
+
+    .si-section-title {
+        @apply text-lg font-bold tracking-tight text-slate-950;
+    }
+
+    .si-section-subtitle {
+        @apply mt-1 text-sm leading-6 text-slate-500;
+    }
+
+    .si-label {
+        @apply text-sm font-semibold text-slate-700;
+    }
+
+    .si-input {
+        @apply mt-1 w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-cyan-600 focus:ring-4 focus:ring-cyan-100;
+    }
+
+    .si-btn {
+        @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60;
+    }
+
+    .si-btn-primary {
+        @apply bg-cyan-700 text-white shadow-lg shadow-cyan-700/15 hover:bg-cyan-800 focus:ring-cyan-100;
+    }
+
+    .si-btn-secondary {
+        @apply border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 focus:ring-slate-100;
+    }
+
+    .si-btn-danger {
+        @apply bg-rose-600 text-white shadow-lg shadow-rose-600/15 hover:bg-rose-700 focus:ring-rose-100;
+    }
+
+    .si-badge {
+        @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold;
+    }
+
+    .si-alert {
+        @apply rounded-2xl border px-5 py-4 text-sm shadow-sm;
+    }
+
+    .si-table-wrap {
+        @apply overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-sm shadow-sky-900/5;
+    }
+
+    main table {
+        @apply min-w-full text-sm;
+    }
+
+    main thead {
+        @apply bg-sky-50/70 text-left text-xs font-bold uppercase tracking-wide text-slate-500;
+    }
+
+    main th {
+        @apply px-4 py-3;
+    }
+
+    main td {
+        @apply px-4 py-4 align-middle;
+    }
+
+    main tbody tr {
+        @apply border-t border-slate-100 transition hover:bg-sky-50/45;
+    }
+
+    main input:not([type='checkbox']):not([type='radio']),
+    main select,
+    main textarea {
+        @apply rounded-xl border-slate-300 shadow-sm focus:border-cyan-600 focus:ring-4 focus:ring-cyan-100;
     }
 }
