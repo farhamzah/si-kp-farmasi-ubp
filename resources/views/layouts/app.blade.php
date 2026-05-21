@@ -20,7 +20,7 @@
         <!-- Branding -->
         <div class="flex items-center justify-between gap-3 px-5 py-6 lg:py-8 border-b border-slate-200/50">
             <div class="flex items-center gap-3">
-                <div class="flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 p-1.5 shadow-md shadow-teal-500/25">
+                <div class="flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg bg-linear-to-br from-teal-400 to-teal-600 p-1.5 shadow-md shadow-teal-500/25">
                     <img src="{{ asset('images/logo-fakultas-farmasi-ubp.png') }}" alt="Logo Fakultas Farmasi UBP" class="h-full w-full object-contain">
                 </div>
                 <div class="hidden lg:block">
@@ -57,6 +57,10 @@
                         'Monitoring Pemilihan' => 'management.place-selections.index',
                         'Daftar Tunggu' => 'management.waiting-lists.index',
                         'Log Pemilihan' => 'management.selection-logs.index',
+                        'Penempatan KP' => $activeRole === 'mahasiswa' ? 'student.assignments.show' : 'management.kp-assignments.index',
+                        'Log Penempatan' => 'management.kp-assignment-logs.index',
+                        'Mahasiswa Bimbingan' => 'internal-supervisor.assignments.index',
+                        'Mahasiswa KP' => 'field-supervisor.assignments.index',
                     ];
                     $mappedRoute = $routeMap[$item] ?? null;
                     $href = $isDashboard ? route($roleData['route'] ?? 'dashboard') : ($isProfile ? route('profile.show') : ($mappedRoute && Route::has($mappedRoute) ? route($mappedRoute) : '#'));
@@ -93,7 +97,7 @@
                 <!-- Header Actions -->
                 <div class="flex flex-wrap items-center gap-2 md:gap-3">
                     <!-- Role Badge -->
-                    <span class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-teal-50 to-emerald-50 px-3 py-1.5 text-xs font-semibold text-teal-700 ring-1 ring-teal-100">
+                    <span class="inline-flex items-center gap-2 rounded-lg bg-linear-to-r from-teal-50 to-emerald-50 px-3 py-1.5 text-xs font-semibold text-teal-700 ring-1 ring-teal-100">
                         <span class="h-2 w-2 rounded-full bg-teal-500"/>
                         {{ $roleLabel }}
                     </span>
@@ -131,9 +135,9 @@
         <main class="flex-1 px-5 py-6 md:px-8">
             <!-- Status Message -->
             @if(session('status'))
-                <div class="mb-6 rounded-lg border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 px-5 py-4 text-sm text-emerald-800 shadow-sm">
+                <div class="mb-6 rounded-lg border border-emerald-200 bg-linear-to-r from-emerald-50 to-teal-50 px-5 py-4 text-sm text-emerald-800 shadow-sm">
                     <div class="flex gap-3">
-                        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <svg class="w-5 h-5 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                         </svg>
                         <span>{{ session('status') }}</span>

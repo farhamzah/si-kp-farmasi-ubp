@@ -3,13 +3,13 @@
 @section('content')
 <div class="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-slate-950 px-4 py-8 text-slate-900 sm:px-6 lg:px-8">
     <div class="absolute inset-0 bg-[linear-gradient(135deg,rgba(13,148,136,0.42),rgba(15,23,42,0.9)_42%,rgba(37,99,235,0.24))]"></div>
-    <div class="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white/10 to-transparent"></div>
-    <div class="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-slate-950 to-transparent"></div>
+    <div class="absolute inset-x-0 top-0 h-32 bg-linear-to-b from-white/10 to-transparent"></div>
+    <div class="absolute bottom-0 left-0 right-0 h-40 bg-linear-to-t from-slate-950 to-transparent"></div>
 
-    <div class="relative grid w-full max-w-6xl overflow-hidden rounded-2xl border border-white/15 bg-white shadow-2xl shadow-black/35 lg:min-h-[660px] lg:grid-cols-[1fr_0.94fr]">
-        <section class="relative flex min-h-[430px] flex-col justify-between overflow-hidden bg-slate-900 px-6 py-8 text-white sm:px-8 lg:min-h-0 lg:px-10 lg:py-10 xl:px-12 xl:py-11">
+    <div class="relative grid w-full max-w-6xl overflow-hidden rounded-2xl border border-white/15 bg-white shadow-2xl shadow-black/35 lg:min-h-165 lg:grid-cols-[1fr_0.94fr]">
+        <section class="relative flex min-h-107.5 flex-col justify-between overflow-hidden bg-slate-900 px-6 py-8 text-white sm:px-8 lg:min-h-0 lg:px-10 lg:py-10 xl:px-12 xl:py-11">
             <div class="absolute inset-0 bg-[linear-gradient(145deg,rgba(20,184,166,0.25),rgba(15,23,42,0.16)_40%,rgba(37,99,235,0.18))]"></div>
-            <div class="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,.65)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.65)_1px,transparent_1px)] [background-size:28px_28px]"></div>
+            <div class="absolute inset-0 bg-[image:linear-gradient(rgba(255,255,255,.65)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.65)_1px,transparent_1px)] bg-[size:28px_28px] opacity-[0.08]"></div>
 
             <div class="relative">
                 <div class="flex items-center gap-4">
@@ -107,7 +107,7 @@
                 @if(session('status'))
                     <div class="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                         <div class="flex gap-3">
-                            <svg class="mt-0.5 h-5 w-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                            <svg class="mt-0.5 h-5 w-5 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.707-9.293a1 1 0 0 0-1.414-1.414L9 10.586 7.707 9.293a1 1 0 0 0-1.414 1.414l2 2a1 1 0 0 0 1.414 0l4-4Z" clip-rule="evenodd"/>
                             </svg>
                             <span>{{ session('status') }}</span>
@@ -118,7 +118,7 @@
                 @if($errors->any())
                     <div class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                         <div class="flex gap-3">
-                            <svg class="mt-0.5 h-5 w-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                            <svg class="mt-0.5 h-5 w-5 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM8.707 7.293a1 1 0 0 0-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 1 0 1.414 1.414L10 11.414l1.293 1.293a1 1 0 0 0 1.414-1.414L11.414 10l1.293-1.293a1 1 0 0 0-1.414-1.414L10 8.586 8.707 7.293Z" clip-rule="evenodd"/>
                             </svg>
                             <span>{{ $errors->first() }}</span>

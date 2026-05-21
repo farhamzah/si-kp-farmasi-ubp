@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\KpPeriod;
+use App\Models\KpAssignment;
 use App\Models\KpPlace;
 use App\Models\KpPlaceQuota;
 use App\Models\KpPlaceSelection;
@@ -34,6 +35,7 @@ class DashboardController extends Controller
             'kpStats' => in_array($role, ['admin', 'koordinator_kp'], true) ? $this->kpStats() : null,
             'registrationStats' => in_array($role, ['admin', 'koordinator_kp'], true) ? $this->registrationStats() : null,
             'selectionStats' => in_array($role, ['admin', 'koordinator_kp'], true) ? $this->selectionStats() : null,
+            'assignmentStats' => $this->assignmentStats($role, $request),
             'studentRegistration' => $role === 'mahasiswa' ? $request->user()->student?->kpRegistrations()->with(['documents', 'activePlaceSelection.place', 'waitingList'])->latest()->first() : null,
         ]);
     }
@@ -82,5 +84,34 @@ class DashboardController extends Controller
             'remaining_quota' => max(0, $totalQuota - $selected),
             'full_places' => KpPlaceQuota::get()->filter->isFull()->count(),
         ];
+    }
+
+    private function assignmentStats(string $role, Request $request): ?array
+    {
+        if (in_array($role, ['admin', 'koordinator_kp'], true)) {
+            return [
+                'total' => KpAssignment::count(),
+                'waiting' => KpAssignment::where('status', 'menunggu_pembimbing')->count(),
+                'active' => KpAssignment::whereIn('status', ['aktif', 'berjalan'])->count(),
+                'cancelled' => KpAssignment::where('status', 'dibatalkan')->count(),
+                'unassigned_selection' => KpPlaceSelection::where('status', 'aktif')->whereDoesntHave('assignment')->count(),
+            ];
+        }
+
+        if ($role === 'pembimbing_dalam') {
+            return [
+                'total' => KpAssignment::where('internal_supervisor_id', $request->user()->lecturer?->id)->count(),
+                'active' => KpAssignment::where('internal_supervisor_id', $request->user()->lecturer?->id)->whereIn('status', ['aktif', 'berjalan'])->count(),
+            ];
+        }
+
+        if ($role === 'pembimbing_lapangan') {
+            return [
+                'total' => KpAssignment::where('field_supervisor_id', $request->user()->fieldSupervisor?->id)->count(),
+                'active' => KpAssignment::where('field_supervisor_id', $request->user()->fieldSupervisor?->id)->whereIn('status', ['aktif', 'berjalan'])->count(),
+            ];
+        }
+
+        return null;
     }
 }

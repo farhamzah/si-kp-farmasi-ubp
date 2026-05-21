@@ -6,7 +6,7 @@
 @section('content')
 <div class="space-y-6">
     <!-- Welcome Banner -->
-    <section class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-8 text-white shadow-2xl shadow-slate-900/25 before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_20%_50%,rgba(20,184,166,0.15),transparent_50%)] before:pointer-events-none md:p-10">
+    <section class="relative overflow-hidden rounded-3xl bg-linear-to-br from-slate-950 via-slate-900 to-slate-800 p-8 text-white shadow-2xl shadow-slate-900/25 before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_20%_50%,rgba(20,184,166,0.15),transparent_50%)] before:pointer-events-none md:p-10">
         <div class="relative z-10">
             <div class="mb-2">
                 <span class="inline-flex items-center gap-2 rounded-full bg-teal-500/20 border border-teal-400/30 px-4 py-1.5 text-xs font-semibold text-teal-300 uppercase tracking-widest">
@@ -23,9 +23,9 @@
 
     <!-- Alerts Section -->
     @if(! auth()->user()->profile_completed)
-        <div class="rounded-xl border border-amber-300/30 bg-gradient-to-r from-amber-50 to-amber-100/50 px-5 py-4 text-sm text-amber-900 shadow-sm">
+        <div class="rounded-xl border border-amber-300/30 bg-linear-to-r from-amber-50 to-amber-100/50 px-5 py-4 text-sm text-amber-900 shadow-sm">
             <div class="flex items-start gap-3">
-                <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-5 h-5 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                 </svg>
                 <div>
@@ -37,9 +37,9 @@
     @endif
 
     @if(auth()->user()->must_change_password)
-        <div class="rounded-xl border border-sky-300/30 bg-gradient-to-r from-sky-50 to-sky-100/50 px-5 py-4 text-sm text-sky-900 shadow-sm">
+        <div class="rounded-xl border border-sky-300/30 bg-linear-to-r from-sky-50 to-sky-100/50 px-5 py-4 text-sm text-sky-900 shadow-sm">
             <div class="flex items-start gap-3">
-                <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-5 h-5 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
                 </svg>
                 <div>
@@ -58,7 +58,7 @@
                 <p class="mt-1 text-sm text-slate-500">Ringkasan data pengguna dan status sistem.</p>
             </div>
             <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-                <div class="rounded-xl bg-gradient-to-br from-white to-slate-50 p-6 shadow-sm ring-1 ring-slate-100 hover:shadow-md transition-all">
+                <div class="rounded-xl bg-linear-to-br from-white to-slate-50 p-6 shadow-sm ring-1 ring-slate-100 hover:shadow-md transition-all">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Total Pengguna</p>
@@ -71,7 +71,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="rounded-xl bg-gradient-to-br from-white to-emerald-50 p-6 shadow-sm ring-1 ring-emerald-100 hover:shadow-md transition-all">
+                <div class="rounded-xl bg-linear-to-br from-white to-emerald-50 p-6 shadow-sm ring-1 ring-emerald-100 hover:shadow-md transition-all">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Status Aktif</p>
@@ -84,7 +84,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="rounded-xl bg-gradient-to-br from-white to-rose-50 p-6 shadow-sm ring-1 ring-rose-100 hover:shadow-md transition-all">
+                <div class="rounded-xl bg-linear-to-br from-white to-rose-50 p-6 shadow-sm ring-1 ring-rose-100 hover:shadow-md transition-all">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Status Nonaktif</p>
@@ -97,7 +97,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="rounded-xl bg-gradient-to-br from-white to-amber-50 p-6 shadow-sm ring-1 ring-amber-100 hover:shadow-md transition-all">
+                <div class="rounded-xl bg-linear-to-br from-white to-amber-50 p-6 shadow-sm ring-1 ring-amber-100 hover:shadow-md transition-all">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Profil Tak Lengkap</p>
@@ -110,7 +110,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="rounded-xl bg-gradient-to-br from-white to-purple-50 p-6 shadow-sm ring-1 ring-purple-100 hover:shadow-md transition-all">
+                <div class="rounded-xl bg-linear-to-br from-white to-purple-50 p-6 shadow-sm ring-1 ring-purple-100 hover:shadow-md transition-all">
                     <div class="flex items-start justify-between">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Import Terakhir</p>
@@ -134,23 +134,23 @@
                 <p class="mt-1 text-sm text-slate-500">Fondasi data periode, tempat, dan kuota untuk tahap pendaftaran berikutnya.</p>
             </div>
             <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-                <div class="rounded-xl bg-gradient-to-br from-white to-slate-50 p-6 shadow-sm ring-1 ring-slate-100">
+                <div class="rounded-xl bg-linear-to-br from-white to-slate-50 p-6 shadow-sm ring-1 ring-slate-100">
                     <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Total Periode</p>
                     <p class="mt-3 text-3xl font-bold text-slate-950">{{ $kpStats['total_periods'] }}</p>
                 </div>
-                <div class="rounded-xl bg-gradient-to-br from-white to-emerald-50 p-6 shadow-sm ring-1 ring-emerald-100">
+                <div class="rounded-xl bg-linear-to-br from-white to-emerald-50 p-6 shadow-sm ring-1 ring-emerald-100">
                     <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Periode Dibuka</p>
                     <p class="mt-3 text-3xl font-bold text-emerald-700">{{ $kpStats['open_periods'] }}</p>
                 </div>
-                <div class="rounded-xl bg-gradient-to-br from-white to-teal-50 p-6 shadow-sm ring-1 ring-teal-100">
+                <div class="rounded-xl bg-linear-to-br from-white to-teal-50 p-6 shadow-sm ring-1 ring-teal-100">
                     <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Tempat Aktif</p>
                     <p class="mt-3 text-3xl font-bold text-teal-700">{{ $kpStats['active_places'] }}</p>
                 </div>
-                <div class="rounded-xl bg-gradient-to-br from-white to-sky-50 p-6 shadow-sm ring-1 ring-sky-100">
+                <div class="rounded-xl bg-linear-to-br from-white to-sky-50 p-6 shadow-sm ring-1 ring-sky-100">
                     <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Total Kuota</p>
                     <p class="mt-3 text-3xl font-bold text-sky-700">{{ $kpStats['total_quota'] }}</p>
                 </div>
-                <div class="rounded-xl bg-gradient-to-br from-white to-amber-50 p-6 shadow-sm ring-1 ring-amber-100">
+                <div class="rounded-xl bg-linear-to-br from-white to-amber-50 p-6 shadow-sm ring-1 ring-amber-100">
                     <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Kuota Dibuka</p>
                     <p class="mt-3 text-3xl font-bold text-amber-700">{{ $kpStats['open_quotas'] }}</p>
                 </div>
@@ -197,6 +197,23 @@
                     <div class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
                         <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">{{ $label }}</p>
                         <p class="mt-3 text-3xl font-bold {{ $color }}">{{ $value }}</p>
+                    </div>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
+    @if($assignmentStats)
+        <section>
+            <div class="mb-6">
+                <h2 class="text-lg font-bold text-slate-950">Ringkasan Penempatan KP</h2>
+                <p class="mt-1 text-sm text-slate-500">Status penempatan dan pembimbing KP.</p>
+            </div>
+            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+                @foreach($assignmentStats as $label => $value)
+                    <div class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
+                        <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">{{ str_replace('_', ' ', ucfirst($label)) }}</p>
+                        <p class="mt-3 text-3xl font-bold text-teal-700">{{ $value }}</p>
                     </div>
                 @endforeach
             </div>
@@ -270,9 +287,9 @@
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             @foreach($features as $feature)
                 <div class="group relative overflow-hidden rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-100 hover:shadow-lg hover:ring-slate-200 transition-all cursor-not-allowed">
-                    <div class="absolute inset-0 bg-gradient-to-br from-transparent to-slate-50 opacity-0 group-hover:opacity-100 transition-opacity"/>
+                    <div class="absolute inset-0 bg-linear-to-br from-transparent to-slate-50 opacity-0 group-hover:opacity-100 transition-opacity"/>
                     <div class="relative z-10">
-                        <div class="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-teal-50 to-teal-100 text-sm font-bold text-teal-700 group-hover:from-teal-100 group-hover:to-teal-200 transition-all">
+                        <div class="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-linear-to-br from-teal-50 to-teal-100 text-sm font-bold text-teal-700 group-hover:from-teal-100 group-hover:to-teal-200 transition-all">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                             </svg>
@@ -281,7 +298,7 @@
                         <p class="mt-2 text-sm leading-6 text-slate-500">Modul ini sedang dalam tahap pengembangan dan akan diluncurkan pada iterasi berikutnya.</p>
                         <div class="mt-4 flex items-center gap-2">
                             <div class="h-1.5 flex-1 rounded-full bg-slate-200">
-                                <div class="h-full w-0 rounded-full bg-gradient-to-r from-teal-400 to-teal-600"/>
+                                <div class="h-full w-0 rounded-full bg-linear-to-r from-teal-400 to-teal-600"/>
                             </div>
                             <span class="text-xs font-semibold text-slate-500">Segera</span>
                         </div>

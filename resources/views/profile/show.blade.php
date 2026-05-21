@@ -8,7 +8,7 @@
     <!-- User Card -->
     <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 hover:shadow-md transition-all">
         <div class="flex items-center gap-4 mb-6 pb-6 border-b border-slate-200">
-            <div class="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 text-xl font-bold text-white shadow-md shadow-teal-500/25">
+            <div class="flex h-16 w-16 items-center justify-center rounded-xl bg-linear-to-br from-teal-500 to-teal-600 text-xl font-bold text-white shadow-md shadow-teal-500/25">
                 {{ strtoupper(substr($user->name, 0, 1)) }}
             </div>
             <div>
@@ -37,7 +37,7 @@
             </div>
         </div>
         
-        <a href="{{ route('profile.edit') }}" class="block w-full rounded-lg bg-gradient-to-r from-teal-600 to-teal-700 px-4 py-2.5 text-center text-sm font-bold text-white hover:from-teal-700 hover:to-teal-800 transition-all shadow-lg shadow-teal-600/30">
+        <a href="{{ route('profile.edit') }}" class="block w-full rounded-lg bg-linear-to-r from-teal-600 to-teal-700 px-4 py-2.5 text-center text-sm font-bold text-white hover:from-teal-700 hover:to-teal-800 transition-all shadow-lg shadow-teal-600/30">
             <span class="flex items-center justify-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -92,7 +92,7 @@
         @else
             <div class="rounded-lg border border-amber-200 bg-amber-50 px-5 py-4">
                 <div class="flex gap-3">
-                    <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                     </svg>
                     <p class="text-sm text-amber-800">Profil khusus {{ str_replace('_', ' ', ucwords($profileType, '_')) }} belum terdaftar dalam sistem.</p>

@@ -48,4 +48,14 @@ class Student extends Model
     {
         return $this->hasMany(KpWaitingList::class);
     }
+
+    public function assignments()
+    {
+        return $this->hasMany(KpAssignment::class);
+    }
+
+    public function activeAssignment()
+    {
+        return $this->hasOne(KpAssignment::class)->whereIn('status', ['menunggu_pembimbing', 'aktif', 'berjalan']);
+    }
 }

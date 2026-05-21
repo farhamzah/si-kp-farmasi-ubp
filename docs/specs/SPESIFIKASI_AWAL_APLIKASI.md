@@ -84,3 +84,15 @@ Sistem mendukung multi-role sehingga satu user dapat memiliki lebih dari satu pe
 - Mahasiswa dapat masuk daftar tunggu jika belum mendapat tempat karena kuota penuh.
 - Semua aksi pemilihan, kegagalan pemilihan, daftar tunggu, cancel, dan move dicatat di log pemilihan.
 - Proteksi race condition dilakukan dengan database transaction, `lockForUpdate()` pada row kuota, validasi ulang dalam transaksi, dan constraint `active_key` untuk mencegah dua pilihan aktif pada periode yang sama.
+
+## Fondasi Penempatan KP dan Pembimbing
+- Mahasiswa yang sudah memilih tempat KP dapat dibuatkan penempatan KP resmi.
+- Setiap penempatan memiliki satu tempat KP, satu Pembimbing Dalam/Dosen, dan satu Pembimbing Lapangan/Luar.
+- Koordinator KP menentukan Pembimbing Dalam.
+- Admin dan Koordinator KP dapat menentukan Pembimbing Lapangan.
+- Pembimbing Dalam harus memiliki role `pembimbing_dalam`.
+- Pembimbing Lapangan harus memiliki role `pembimbing_lapangan`.
+- Mahasiswa dapat melihat penempatan miliknya sendiri.
+- Pembimbing Dalam hanya melihat mahasiswa bimbingannya.
+- Pembimbing Lapangan hanya melihat mahasiswa KP yang ditugaskan kepadanya.
+- Assignment menjadi dasar Tahap 7 Logbook KP.

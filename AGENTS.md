@@ -84,3 +84,13 @@ Setiap fitur harus dibuat modular dan mudah dikembangkan. Pisahkan tanggung jawa
 - Mahasiswa tidak boleh cancel atau move selection sendiri.
 - Admin dan Koordinator KP dapat cancel/move dengan alasan dan semua aksi wajib masuk `kp_selection_logs`.
 - Daftar tunggu dibuat saat mahasiswa eligible belum mendapat tempat karena kuota penuh.
+
+## 15. Aturan Penempatan KP
+- Penempatan KP resmi dibuat dari selection tempat yang masih aktif.
+- Satu mahasiswa hanya boleh memiliki satu assignment non-batal per periode.
+- Penentuan dan perubahan pembimbing wajib melalui `KpAssignmentService`.
+- Pembimbing Dalam harus berasal dari `lecturers` yang user-nya memiliki role `pembimbing_dalam`.
+- Pembimbing Lapangan harus berasal dari `field_supervisors` yang user-nya memiliki role `pembimbing_lapangan`.
+- Jika pembimbing lapangan dipilih, mapping tempat-pembimbing di `kp_place_field_supervisors` harus dijaga.
+- Mahasiswa hanya melihat penempatannya sendiri; pembimbing hanya melihat assignment yang ditugaskan kepadanya.
+- Semua perubahan assignment wajib dicatat di `kp_assignment_logs`.

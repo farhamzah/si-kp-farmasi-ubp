@@ -66,6 +66,11 @@ class KpRegistration extends Model
         return $this->hasOne(KpWaitingList::class, 'kp_registration_id');
     }
 
+    public function assignment()
+    {
+        return $this->hasOne(KpAssignment::class, 'kp_registration_id');
+    }
+
     public function statusLabel(): string
     {
         return match ($this->status) {

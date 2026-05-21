@@ -4,6 +4,10 @@ use App\Http\Controllers\Admin\UserImportController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FieldSupervisor\FieldStudentController;
+use App\Http\Controllers\InternalSupervisor\SupervisedStudentController;
+use App\Http\Controllers\Management\KpAssignmentController;
+use App\Http\Controllers\Management\KpAssignmentLogController;
 use App\Http\Controllers\Management\KpPeriodController;
 use App\Http\Controllers\Management\KpPlaceController;
 use App\Http\Controllers\Management\KpPlaceQuotaController;
@@ -17,6 +21,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleSelectionController;
 use App\Http\Controllers\Student\KpDocumentUploadController;
 use App\Http\Controllers\Student\KpRegistrationController;
+use App\Http\Controllers\Student\AssignmentController;
 use App\Http\Controllers\Student\PlaceSelectionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -81,6 +86,12 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('waiting-lists', [WaitingListController::class, 'index'])->name('waiting-lists.index');
             Route::post('waiting-lists/{waitingList}/cancel', [WaitingListController::class, 'cancel'])->name('waiting-lists.cancel');
             Route::get('selection-logs', [SelectionLogController::class, 'index'])->name('selection-logs.index');
+            Route::resource('kp-assignments', KpAssignmentController::class)->except(['destroy']);
+            Route::post('kp-assignments/{assignment}/assign-internal-supervisor', [KpAssignmentController::class, 'assignInternalSupervisor'])->name('kp-assignments.assign-internal-supervisor');
+            Route::post('kp-assignments/{assignment}/assign-field-supervisor', [KpAssignmentController::class, 'assignFieldSupervisor'])->name('kp-assignments.assign-field-supervisor');
+            Route::post('kp-assignments/{assignment}/cancel', [KpAssignmentController::class, 'cancel'])->name('kp-assignments.cancel');
+            Route::post('place-selections/{selection}/create-assignment', [KpAssignmentController::class, 'createFromSelection'])->name('place-selections.create-assignment');
+            Route::get('kp-assignment-logs', [KpAssignmentLogController::class, 'index'])->name('kp-assignment-logs.index');
         });
 
         Route::middleware('role:mahasiswa')->prefix('mahasiswa')->name('student.')->group(function () {
@@ -96,6 +107,17 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('pemilihan-tempat/{period}', [PlaceSelectionController::class, 'show'])->name('place-selections.show');
             Route::post('pemilihan-tempat/{quota}/pilih', [PlaceSelectionController::class, 'select'])->name('place-selections.select');
             Route::post('pemilihan-tempat/daftar-tunggu', [PlaceSelectionController::class, 'joinWaitingList'])->name('place-selections.waiting-list');
+            Route::get('penempatan-kp', [AssignmentController::class, 'show'])->name('assignments.show');
+        });
+
+        Route::middleware('role:pembimbing_dalam')->prefix('pembimbing-dalam')->name('internal-supervisor.')->group(function () {
+            Route::get('mahasiswa-bimbingan', [SupervisedStudentController::class, 'index'])->name('assignments.index');
+            Route::get('mahasiswa-bimbingan/{assignment}', [SupervisedStudentController::class, 'show'])->name('assignments.show');
+        });
+
+        Route::middleware('role:pembimbing_lapangan')->prefix('pembimbing-lapangan')->name('field-supervisor.')->group(function () {
+            Route::get('mahasiswa-kp', [FieldStudentController::class, 'index'])->name('assignments.index');
+            Route::get('mahasiswa-kp/{assignment}', [FieldStudentController::class, 'show'])->name('assignments.show');
         });
 
         Route::get('/mahasiswa/dashboard', fn (DashboardController $controller, Request $request) => $controller->show($request, 'mahasiswa'))

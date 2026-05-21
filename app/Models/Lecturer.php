@@ -30,4 +30,9 @@ class Lecturer extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function internalAssignments()
+    {
+        return $this->hasMany(KpAssignment::class, 'internal_supervisor_id');
+    }
 }

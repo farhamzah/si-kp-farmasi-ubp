@@ -71,6 +71,11 @@ class KpPlaceSelection extends Model
         return $this->belongsTo(self::class, 'moved_from_selection_id');
     }
 
+    public function assignment()
+    {
+        return $this->hasOne(KpAssignment::class, 'kp_place_selection_id');
+    }
+
     public function statusLabel(): string
     {
         return match ($this->status) {

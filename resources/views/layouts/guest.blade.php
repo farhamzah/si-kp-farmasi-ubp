@@ -7,7 +7,7 @@
     <title>{{ config('app.name', 'SI-KP Farmasi UBP') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-gradient-to-br from-slate-50 via-teal-50/30 to-slate-50 font-sans text-slate-900">
+<body class="min-h-screen bg-linear-to-br from-slate-50 via-teal-50/30 to-slate-50 font-sans text-slate-900">
     <main class="min-h-screen flex items-center justify-center">
         {{ $slot ?? '' }}
         @yield('content')

@@ -1,0 +1,6 @@
+@extends('layouts.app')
+@section('title','Log Penempatan - '.config('app.name'))
+@section('page_title','Log Penempatan')
+@section('content')
+<section class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200"><div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-200 text-sm"><thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"><tr><th class="px-4 py-3">Waktu</th><th class="px-4 py-3">User</th><th class="px-4 py-3">Mahasiswa</th><th class="px-4 py-3">Tempat</th><th class="px-4 py-3">Action</th><th class="px-4 py-3">Catatan</th></tr></thead><tbody class="divide-y divide-slate-100">@forelse($logs as $log)<tr><td class="px-4 py-4">{{ $log->created_at->format('d M Y H:i') }}</td><td class="px-4 py-4">{{ $log->user?->name ?? 'Sistem' }}</td><td class="px-4 py-4">{{ $log->assignment->student->user->name }}</td><td class="px-4 py-4">{{ $log->assignment->place->name }}</td><td class="px-4 py-4 font-semibold">{{ $log->action }}</td><td class="px-4 py-4">{{ $log->note ?: '-' }}</td></tr>@empty<tr><td colspan="6" class="px-4 py-10 text-center text-slate-500">Belum ada log.</td></tr>@endforelse</tbody></table></div><div class="border-t px-4 py-3">{{ $logs->links() }}</div></section>
+@endsection

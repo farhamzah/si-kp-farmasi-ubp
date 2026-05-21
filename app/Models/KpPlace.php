@@ -38,6 +38,16 @@ class KpPlace extends Model
         return $this->hasMany(KpPlaceQuota::class);
     }
 
+    public function assignments()
+    {
+        return $this->hasMany(KpAssignment::class, 'kp_place_id');
+    }
+
+    public function fieldSupervisors()
+    {
+        return $this->belongsToMany(FieldSupervisor::class, 'kp_place_field_supervisors')->withPivot(['status'])->withTimestamps();
+    }
+
     public function typeLabel(): string
     {
         return match ($this->type) {

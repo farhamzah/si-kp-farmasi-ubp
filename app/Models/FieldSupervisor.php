@@ -27,4 +27,14 @@ class FieldSupervisor extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function fieldAssignments()
+    {
+        return $this->hasMany(KpAssignment::class, 'field_supervisor_id');
+    }
+
+    public function places()
+    {
+        return $this->belongsToMany(KpPlace::class, 'kp_place_field_supervisors')->withPivot(['status'])->withTimestamps();
+    }
 }
