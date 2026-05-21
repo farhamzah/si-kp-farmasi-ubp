@@ -158,6 +158,46 @@
         </section>
     @endif
 
+    @if($registrationStats)
+        <section>
+            <div class="mb-6">
+                <h2 class="text-lg font-bold text-slate-950">Ringkasan Pendaftaran KP</h2>
+                <p class="mt-1 text-sm text-slate-500">Monitoring status pendaftaran dan berkas mahasiswa.</p>
+            </div>
+            <div class="grid gap-4 md:grid-cols-5">
+                @foreach([
+                    ['Total', $registrationStats['total'], 'text-slate-950'],
+                    ['Menunggu', $registrationStats['pending'], 'text-sky-700'],
+                    ['Revisi', $registrationStats['revision'], 'text-amber-700'],
+                    ['Terverifikasi', $registrationStats['verified'], 'text-emerald-700'],
+                    ['Ditolak', $registrationStats['rejected'], 'text-rose-700'],
+                ] as [$label, $value, $color])
+                    <div class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
+                        <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">{{ $label }}</p>
+                        <p class="mt-3 text-3xl font-bold {{ $color }}">{{ $value }}</p>
+                    </div>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
+    @if($studentRegistration)
+        <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
+            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-950">Status Pendaftaran KP</h2>
+                    <p class="mt-1 text-sm text-slate-500">{{ $studentRegistration->period->name ?? '-' }}</p>
+                </div>
+                <span class="rounded-full {{ $studentRegistration->statusBadgeClass() }} px-3 py-1 text-xs font-semibold">{{ $studentRegistration->statusLabel() }}</span>
+            </div>
+            <div class="mt-5 grid gap-4 md:grid-cols-3">
+                <div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-500">Progress Berkas</p><p class="mt-2 text-2xl font-bold">{{ $studentRegistration->progressPercentage() }}%</p></div>
+                <div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-500">Verifikasi</p><p class="mt-2 text-sm font-bold">{{ $studentRegistration->isVerified() ? 'Terverifikasi' : 'Belum selesai' }}</p></div>
+                <div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-500">Pemilihan Tempat</p><p class="mt-2 text-sm font-bold">{{ $studentRegistration->isEligibleForPlaceSelection() ? 'Siap' : 'Belum siap' }}</p></div>
+            </div>
+        </section>
+    @endif
+
     <!-- User Status Cards -->
     <section class="grid gap-4 md:grid-cols-3">
         <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-100 hover:shadow-md transition-all">

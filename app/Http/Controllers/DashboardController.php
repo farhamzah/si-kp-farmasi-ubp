@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\KpPeriod;
 use App\Models\KpPlace;
 use App\Models\KpPlaceQuota;
+use App\Models\KpRegistration;
 use App\Models\User;
 use App\Models\UserImportBatch;
 use App\Support\RoleDashboard;
@@ -29,6 +30,8 @@ class DashboardController extends Controller
             'features' => RoleDashboard::dataFor($role)['features'],
             'adminStats' => $role === 'admin' ? $this->adminStats() : null,
             'kpStats' => in_array($role, ['admin', 'koordinator_kp'], true) ? $this->kpStats() : null,
+            'registrationStats' => in_array($role, ['admin', 'koordinator_kp'], true) ? $this->registrationStats() : null,
+            'studentRegistration' => $role === 'mahasiswa' ? $request->user()->student?->kpRegistrations()->with('documents')->latest()->first() : null,
         ]);
     }
 
@@ -51,6 +54,17 @@ class DashboardController extends Controller
             'active_places' => KpPlace::where('status', 'aktif')->count(),
             'total_quota' => KpPlaceQuota::sum('quota'),
             'open_quotas' => KpPlaceQuota::where('is_open', true)->count(),
+        ];
+    }
+
+    private function registrationStats(): array
+    {
+        return [
+            'total' => KpRegistration::count(),
+            'pending' => KpRegistration::where('status', 'menunggu_verifikasi')->count(),
+            'revision' => KpRegistration::where('status', 'revisi')->count(),
+            'verified' => KpRegistration::where('status', 'terverifikasi')->count(),
+            'rejected' => KpRegistration::where('status', 'ditolak')->count(),
         ];
     }
 }

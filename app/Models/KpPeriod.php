@@ -55,6 +55,16 @@ class KpPeriod extends Model
         return $this->hasMany(KpPlaceQuota::class);
     }
 
+    public function documentRequirements()
+    {
+        return $this->hasMany(KpDocumentRequirement::class, 'kp_period_id')->orderBy('sort_order')->orderBy('name');
+    }
+
+    public function registrations()
+    {
+        return $this->hasMany(KpRegistration::class, 'kp_period_id');
+    }
+
     public function places()
     {
         return $this->belongsToMany(KpPlace::class, 'kp_place_quotas')->withPivot(['quota', 'is_open', 'notes'])->withTimestamps();

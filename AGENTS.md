@@ -67,3 +67,11 @@ Setiap fitur harus dibuat modular dan mudah dikembangkan. Pisahkan tanggung jawa
 - Perubahan kuota wajib dicatat di `kp_quota_logs`.
 - Helper kuota seperti `filledCount`, `remainingQuota`, dan `isFull` harus tetap kompatibel dengan tahap pemilihan tempat berikutnya.
 - Tempat KP yang sudah memiliki kuota sebaiknya dinonaktifkan, bukan dihapus.
+
+## 13. Aturan Pendaftaran dan Berkas KP
+- Pendaftaran KP milik mahasiswa wajib dibatasi berdasarkan user login dan profil `students`.
+- Mahasiswa hanya boleh mengakses, upload, dan download dokumen pendaftarannya sendiri.
+- Admin dan Koordinator KP boleh mengelola persyaratan dokumen serta memverifikasi pendaftaran dan berkas.
+- File upload KP wajib divalidasi server-side, disimpan di storage non-public, dan diunduh melalui route protected.
+- Status pendaftaran dan dokumen tidak boleh diubah langsung dari request bebas; gunakan controller/form request yang mencatat log ke `kp_registration_logs`.
+- Mahasiswa hanya eligible untuk pemilihan tempat jika pendaftaran sudah `terverifikasi` dan semua dokumen wajib disetujui.

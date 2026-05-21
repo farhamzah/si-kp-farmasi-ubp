@@ -62,3 +62,14 @@ Sistem mendukung multi-role sehingga satu user dapat memiliki lebih dari satu pe
 - Kuota tempat KP unik berdasarkan kombinasi periode dan tempat.
 - Log perubahan kuota disimpan untuk audit perubahan kuota, status buka/tutup, dan user yang melakukan aksi.
 - Kuota ini akan dipakai pada tahap pemilihan tempat KP/war ticket.
+
+## Fondasi Pendaftaran KP dan Verifikasi Berkas
+- Admin dan Koordinator KP dapat mengatur persyaratan dokumen per periode KP.
+- Mahasiswa dapat membuat pendaftaran KP pada periode yang pendaftarannya sedang dibuka.
+- Mahasiswa wajib melengkapi profil sebelum mendaftar KP.
+- Mahasiswa dapat upload berkas persyaratan melalui storage Laravel non-public.
+- Download dokumen dilakukan melalui route yang dilindungi autentikasi dan role.
+- Admin dan Koordinator KP dapat review dokumen, memberi catatan revisi, menolak dokumen, dan memverifikasi pendaftaran.
+- Status pendaftaran meliputi `draft`, `menunggu_verifikasi`, `revisi`, `terverifikasi`, `ditolak`, dan `dibatalkan`.
+- Status dokumen meliputi `belum_upload`, `menunggu`, `disetujui`, `revisi`, dan `ditolak`.
+- Mahasiswa hanya dapat mengikuti pemilihan tempat KP/war ticket setelah pendaftarannya terverifikasi dan dokumen wajib disetujui.

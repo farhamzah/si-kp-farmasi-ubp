@@ -7,9 +7,13 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Management\KpPeriodController;
 use App\Http\Controllers\Management\KpPlaceController;
 use App\Http\Controllers\Management\KpPlaceQuotaController;
+use App\Http\Controllers\Management\KpDocumentRequirementController;
+use App\Http\Controllers\Management\KpRegistrationReviewController;
 use App\Http\Controllers\Management\KpQuotaLogController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleSelectionController;
+use App\Http\Controllers\Student\KpDocumentUploadController;
+use App\Http\Controllers\Student\KpRegistrationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -54,6 +58,27 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::resource('kp-place-quotas', KpPlaceQuotaController::class);
             Route::post('kp-place-quotas/{quota}/toggle-open', [KpPlaceQuotaController::class, 'toggleOpen'])->name('kp-place-quotas.toggle-open');
             Route::get('kp-quota-logs', [KpQuotaLogController::class, 'index'])->name('kp-quota-logs.index');
+            Route::resource('document-requirements', KpDocumentRequirementController::class)->except(['show']);
+            Route::get('kp-registrations', [KpRegistrationReviewController::class, 'index'])->name('kp-registrations.index');
+            Route::get('kp-registrations/{registration}', [KpRegistrationReviewController::class, 'show'])->name('kp-registrations.show');
+            Route::post('kp-registrations/{registration}/documents/{document}/approve', [KpRegistrationReviewController::class, 'approveDocument'])->name('kp-registrations.documents.approve');
+            Route::post('kp-registrations/{registration}/documents/{document}/revision', [KpRegistrationReviewController::class, 'revisionDocument'])->name('kp-registrations.documents.revision');
+            Route::post('kp-registrations/{registration}/documents/{document}/reject', [KpRegistrationReviewController::class, 'rejectDocument'])->name('kp-registrations.documents.reject');
+            Route::post('kp-registrations/{registration}/verify', [KpRegistrationReviewController::class, 'verify'])->name('kp-registrations.verify');
+            Route::post('kp-registrations/{registration}/revision', [KpRegistrationReviewController::class, 'revision'])->name('kp-registrations.revision');
+            Route::post('kp-registrations/{registration}/reject', [KpRegistrationReviewController::class, 'reject'])->name('kp-registrations.reject');
+            Route::get('kp-registrations/{registration}/documents/{document}/download', [KpRegistrationReviewController::class, 'download'])->name('kp-registrations.documents.download');
+        });
+
+        Route::middleware('role:mahasiswa')->prefix('mahasiswa')->name('student.')->group(function () {
+            Route::get('pendaftaran-kp', [KpRegistrationController::class, 'index'])->name('kp-registrations.index');
+            Route::get('pendaftaran-kp/create', [KpRegistrationController::class, 'create'])->name('kp-registrations.create');
+            Route::post('pendaftaran-kp', [KpRegistrationController::class, 'store'])->name('kp-registrations.store');
+            Route::get('pendaftaran-kp/{registration}', [KpRegistrationController::class, 'show'])->name('kp-registrations.show');
+            Route::post('pendaftaran-kp/{registration}/documents/{requirement}', [KpDocumentUploadController::class, 'store'])->name('kp-registrations.documents.store');
+            Route::post('pendaftaran-kp/{registration}/submit', [KpRegistrationController::class, 'submit'])->name('kp-registrations.submit');
+            Route::get('pendaftaran-kp/{registration}/documents/{document}/download', [KpRegistrationController::class, 'download'])->name('kp-registrations.documents.download');
+            Route::post('pendaftaran-kp/{registration}/cancel', [KpRegistrationController::class, 'cancel'])->name('kp-registrations.cancel');
         });
 
         Route::get('/mahasiswa/dashboard', fn (DashboardController $controller, Request $request) => $controller->show($request, 'mahasiswa'))

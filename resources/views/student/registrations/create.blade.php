@@ -1,0 +1,6 @@
+@extends('layouts.app')
+@section('title', 'Daftar KP - '.config('app.name'))
+@section('page_title', 'Daftar KP')
+@section('content')
+<form method="POST" action="{{ route('student.kp-registrations.store') }}" class="mx-auto max-w-3xl">@csrf<section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">@if($errors->any())<div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ $errors->first() }}</div>@endif<div><label class="text-sm font-semibold text-slate-700">Periode KP</label><select name="kp_period_id" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">@foreach($periods as $period)<option value="{{ $period->id }}">{{ $period->name }}</option>@endforeach</select></div><div class="mt-4"><label class="text-sm font-semibold text-slate-700">Catatan</label><textarea name="notes" rows="4" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">{{ old('notes') }}</textarea></div><div class="mt-6 flex justify-end gap-2"><a href="{{ route('student.kp-registrations.index') }}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Batal</a><button class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white">Buat Pendaftaran</button></div></section></form>
+@endsection
