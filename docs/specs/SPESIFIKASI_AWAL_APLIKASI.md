@@ -53,3 +53,12 @@ Sistem mendukung multi-role sehingga satu user dapat memiliki lebih dari satu pe
 - User melengkapi profil masing-masing setelah login.
 - Data profil dipisah ke tabel `students`, `lecturers`, dan `field_supervisors`.
 - Modul manajemen user dan profil menjadi fondasi untuk modul KP berikutnya seperti pendaftaran, tempat KP, logbook, sidang, dan penilaian.
+
+## Fondasi Periode, Tempat, dan Kuota KP
+- Admin dan Koordinator KP dapat mengelola Periode KP.
+- Periode KP menyimpan jadwal pendaftaran, verifikasi dokumen, pemilihan tempat, tanggal pelaksanaan KP, status, dan deskripsi.
+- Admin dan Koordinator KP dapat mengelola Tempat KP beserta tipe, alamat, kota, kontak, email, dan status aktif/nonaktif.
+- Admin dan Koordinator KP dapat mengelola Kuota Tempat KP per periode.
+- Kuota tempat KP unik berdasarkan kombinasi periode dan tempat.
+- Log perubahan kuota disimpan untuk audit perubahan kuota, status buka/tutup, dan user yang melakukan aksi.
+- Kuota ini akan dipakai pada tahap pemilihan tempat KP/war ticket.

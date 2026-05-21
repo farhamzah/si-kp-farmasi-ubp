@@ -60,3 +60,10 @@ Setiap fitur harus dibuat modular dan mudah dikembangkan. Pisahkan tanggung jawa
 - Password awal demo/development boleh `password`, tetapi tidak boleh direkomendasikan untuk production.
 - Profil user dipisah ke tabel `students`, `lecturers`, dan `field_supervisors`.
 - User mengisi dan memperbarui profil sendiri, sedangkan identitas kunci seperti NIM, NIDN/NIP, dan nomor pegawai dikelola Admin.
+
+## 12. Aturan Modul KP
+- Periode KP, Tempat KP, dan Kuota Tempat KP dikelola oleh Admin dan Koordinator KP.
+- Setiap kuota wajib unik berdasarkan kombinasi periode dan tempat.
+- Perubahan kuota wajib dicatat di `kp_quota_logs`.
+- Helper kuota seperti `filledCount`, `remainingQuota`, dan `isFull` harus tetap kompatibel dengan tahap pemilihan tempat berikutnya.
+- Tempat KP yang sudah memiliki kuota sebaiknya dinonaktifkan, bukan dihapus.

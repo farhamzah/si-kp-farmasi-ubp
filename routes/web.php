@@ -4,6 +4,10 @@ use App\Http\Controllers\Admin\UserImportController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Management\KpPeriodController;
+use App\Http\Controllers\Management\KpPlaceController;
+use App\Http\Controllers\Management\KpPlaceQuotaController;
+use App\Http\Controllers\Management\KpQuotaLogController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleSelectionController;
 use Illuminate\Http\Request;
@@ -42,6 +46,14 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('import-users/history', [UserImportController::class, 'history'])->name('import-users.history');
             Route::get('import-users/history/{batch}', [UserImportController::class, 'show'])->name('import-users.history.show');
             Route::get('import-users/template/{type}', [UserImportController::class, 'template'])->name('import-users.template');
+        });
+
+        Route::middleware('role:admin,koordinator_kp')->prefix('management')->name('management.')->group(function () {
+            Route::resource('kp-periods', KpPeriodController::class);
+            Route::resource('kp-places', KpPlaceController::class);
+            Route::resource('kp-place-quotas', KpPlaceQuotaController::class);
+            Route::post('kp-place-quotas/{quota}/toggle-open', [KpPlaceQuotaController::class, 'toggleOpen'])->name('kp-place-quotas.toggle-open');
+            Route::get('kp-quota-logs', [KpQuotaLogController::class, 'index'])->name('kp-quota-logs.index');
         });
 
         Route::get('/mahasiswa/dashboard', fn (DashboardController $controller, Request $request) => $controller->show($request, 'mahasiswa'))

@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\KpPeriod;
+use App\Models\KpPlace;
+use App\Models\KpPlaceQuota;
 use App\Models\User;
 use App\Models\UserImportBatch;
 use App\Support\RoleDashboard;
@@ -25,6 +28,7 @@ class DashboardController extends Controller
             'roleData' => RoleDashboard::dataFor($role),
             'features' => RoleDashboard::dataFor($role)['features'],
             'adminStats' => $role === 'admin' ? $this->adminStats() : null,
+            'kpStats' => in_array($role, ['admin', 'koordinator_kp'], true) ? $this->kpStats() : null,
         ]);
     }
 
@@ -36,6 +40,17 @@ class DashboardController extends Controller
             'inactive_users' => User::where('status', 'inactive')->count(),
             'incomplete_profiles' => User::where('profile_completed', false)->count(),
             'last_import' => UserImportBatch::latest()->first(),
+        ];
+    }
+
+    private function kpStats(): array
+    {
+        return [
+            'total_periods' => KpPeriod::count(),
+            'open_periods' => KpPeriod::where('status', 'dibuka')->count(),
+            'active_places' => KpPlace::where('status', 'aktif')->count(),
+            'total_quota' => KpPlaceQuota::sum('quota'),
+            'open_quotas' => KpPlaceQuota::where('is_open', true)->count(),
         ];
     }
 }
