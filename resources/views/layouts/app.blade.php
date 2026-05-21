@@ -12,9 +12,15 @@
     $activeRole = session('active_role');
     $roleData = $activeRole ? \App\Support\RoleDashboard::dataFor($activeRole) : null;
     $roleLabel = \App\Support\RoleDashboard::labelFor($activeRole);
+    $topbarRoleLabel = match ($activeRole) {
+        'pembimbing_dalam' => 'Pembimbing Dalam',
+        'pembimbing_lapangan' => 'Pembimbing Lapangan',
+        'koordinator_kp' => 'Koordinator KP',
+        default => $roleLabel,
+    };
     $ownedRoles = auth()->user()?->roles ?? collect();
 @endphp
-<div class="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_32%),radial-gradient(circle_at_80%_12%,rgba(20,184,166,0.14),transparent_28%),linear-gradient(135deg,#f8fdff,#eef9fb_45%,#f4f9fc)] lg:flex">
+<div class="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_32%),radial-gradient(circle_at_80%_12%,rgba(20,184,166,0.14),transparent_28%),linear-gradient(135deg,#f8fdff,#eef9fb_45%,#f4f9fc)] lg:flex">
     <!-- Sidebar Navigation -->
     <aside class="border-b border-sky-100 bg-white/92 text-slate-800 shadow-xl shadow-sky-900/8 backdrop-blur-xl lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:h-screen lg:w-72 lg:flex-col lg:overflow-hidden lg:border-b-0 lg:border-r lg:border-sky-100">
         <!-- Branding -->
@@ -156,32 +162,32 @@
     </aside>
 
     <!-- Main Content Area -->
-    <div class="flex min-h-screen flex-1 flex-col lg:pl-72">
+    <div class="flex min-h-screen min-w-0 flex-1 flex-col overflow-x-hidden lg:pl-72">
         <!-- Header -->
-        <header class="sticky top-0 z-20 border-b border-sky-100/90 bg-white/88 shadow-sm shadow-sky-900/5 backdrop-blur-xl">
-            <div class="mx-auto flex w-full max-w-7xl flex-col gap-4 px-5 py-4 md:flex-row md:items-center md:justify-between md:gap-3 lg:px-8">
+        <header class="sticky top-0 z-20 flex-none overflow-hidden border-b border-sky-100/90 bg-white/88 shadow-sm shadow-sky-900/5 backdrop-blur-xl">
+            <div class="mx-auto flex w-full max-w-screen-2xl min-w-0 flex-col gap-4 px-4 py-4 md:flex-row md:items-center md:justify-between md:gap-3 md:px-6 lg:px-8">
                 <!-- Page Title -->
-                <div>
+                <div class="min-w-0">
                     <p class="text-xs font-black uppercase tracking-widest text-cyan-700 mb-1">{{ config('app.name') }}</p>
-                    <h1 class="text-2xl font-black tracking-tight text-slate-950">@yield('page_title', 'Dashboard')</h1>
+                    <h1 class="truncate text-2xl font-black tracking-tight text-slate-950">@yield('page_title', 'Dashboard')</h1>
                 </div>
                 
                 <!-- Header Actions -->
-                <div class="flex flex-wrap items-center gap-2 md:gap-3">
-                    <!-- Role Badge -->
-                    <span class="inline-flex items-center gap-2 rounded-2xl bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-800 shadow-sm ring-1 ring-cyan-100">
-                        <span class="h-2 w-2 rounded-full bg-cyan-500"/>
-                        {{ $roleLabel }}
-                    </span>
-                    
-                    <!-- User Badge -->
-                    <span class="hidden md:inline-flex items-center rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-sky-100">
-                        {{ auth()->user()->name }}
-                    </span>
+                <div class="flex w-full min-w-0 flex-wrap items-center justify-start gap-2 md:w-auto md:flex-nowrap md:justify-end md:gap-3">
+                    <!-- User Pill -->
+                    <div class="flex min-w-0 max-w-[220px] items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs shadow-sm ring-1 ring-sky-100 sm:max-w-[260px]">
+                        <span class="flex h-8 w-8 flex-none items-center justify-center rounded-xl bg-cyan-50 text-[11px] font-black text-cyan-700 ring-1 ring-cyan-100">
+                            {{ str(auth()->user()->name)->substr(0, 1)->upper() }}
+                        </span>
+                        <span class="min-w-0 leading-tight">
+                            <span class="block truncate font-black text-slate-800">{{ auth()->user()->name }}</span>
+                            <span class="block truncate text-[11px] font-bold text-cyan-700">{{ $topbarRoleLabel }}</span>
+                        </span>
+                    </div>
                     
                     <!-- Role Switcher -->
                     @if($ownedRoles->count() > 1)
-                        <a href="{{ route('role.select') }}" class="flex items-center gap-2 rounded-2xl border border-cyan-200 bg-white px-3 py-2 text-xs font-bold text-cyan-700 shadow-sm transition-all hover:bg-cyan-50">
+                        <a href="{{ route('role.select') }}" class="flex flex-none items-center gap-2 rounded-2xl border border-cyan-200 bg-white px-3 py-2 text-xs font-bold text-cyan-700 shadow-sm transition-all hover:bg-cyan-50">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                             </svg>
@@ -190,9 +196,9 @@
                     @endif
                     
                     <!-- Logout Button -->
-                    <form method="POST" action="{{ route('logout') }}" class="inline">
+                    <form method="POST" action="{{ route('logout') }}" class="inline flex-none">
                         @csrf
-                        <button type="submit" class="flex items-center gap-2 rounded-2xl bg-cyan-900 px-3 py-2 text-xs font-bold text-white shadow-lg shadow-cyan-900/20 transition-all hover:bg-cyan-800 ring-1 ring-cyan-800">
+                        <button type="submit" class="flex flex-none items-center gap-2 rounded-2xl bg-cyan-900 px-3 py-2 text-xs font-bold text-white shadow-lg shadow-cyan-900/20 transition-all hover:bg-cyan-800 ring-1 ring-cyan-800">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                             </svg>
@@ -204,7 +210,7 @@
         </header>
 
         <!-- Main Content -->
-        <main class="mx-auto w-full max-w-7xl flex-1 px-5 py-6 md:px-8">
+        <main class="mx-auto w-full max-w-screen-2xl min-w-0 flex-1 overflow-x-hidden px-4 py-6 md:px-6 lg:px-8">
             <!-- Status Message -->
             @if(session('status'))
                 <div class="mb-6 rounded-2xl border border-emerald-200 bg-linear-to-r from-emerald-50 to-cyan-50 px-5 py-4 text-sm font-medium text-emerald-800 shadow-sm">

@@ -87,7 +87,7 @@
     }
 
     .si-table-wrap {
-        @apply overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-sm shadow-sky-900/5;
+        @apply w-full overflow-x-auto overflow-y-hidden rounded-2xl border border-sky-100 bg-white shadow-sm shadow-sky-900/5;
     }
 
     .si-sidebar-scroll {
@@ -114,7 +114,12 @@
     }
 
     main table {
-        @apply min-w-full text-sm;
+        @apply min-w-max text-sm;
+    }
+
+    main .overflow-x-auto,
+    main .si-table-wrap {
+        -webkit-overflow-scrolling: touch;
     }
 
     main thead {
