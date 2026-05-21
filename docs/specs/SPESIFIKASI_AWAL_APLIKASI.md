@@ -157,3 +157,12 @@ Sistem mendukung multi-role sehingga satu user dapat memiliki lebih dari satu pe
 - Panduan penggunaan dibuat untuk Admin/Koordinator, Mahasiswa, Pembimbing Dalam, Pembimbing Lapangan, dan Penguji.
 - Panduan deployment lokal/hosting tersedia sebagai dasar instalasi production.
 - Dengan modul Tahap 1-11, aplikasi dinyatakan siap demo sebagai MVP internal jika data demo dan UAT sudah disiapkan.
+
+## Fondasi Stabilization, Seed Demo, dan UAT
+- Aplikasi memiliki seed demo end-to-end melalui `DemoEndToEndSeeder` untuk data dari pendaftaran KP sampai nilai akhir published.
+- Akun demo development tersedia untuk Admin, Koordinator KP, Mahasiswa, Pembimbing Dalam, Pembimbing Lapangan, dan Penguji dengan password development yang tidak boleh digunakan untuk production.
+- UAT checklist tersedia per role sebagai panduan validasi demo internal.
+- Error handling dibuat user-friendly untuk 403, 404, 419, dan 500.
+- Alur login diperkuat untuk mengurangi risiko token stale/419 pada demo lokal, termasuk header no-cache pada halaman login dan contoh konfigurasi session lokal di `.env.example`.
+- Route permission audit dilakukan untuk memastikan area management, mahasiswa, pembimbing, dan penguji tetap dilindungi middleware auth/role.
+- Status stabilisasi Tahap 12 menyatakan aplikasi siap UAT/demo internal jika seed, migrate, test, dan build berhasil.

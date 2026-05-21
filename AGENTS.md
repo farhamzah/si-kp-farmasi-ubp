@@ -144,3 +144,11 @@ Setiap fitur harus dibuat modular dan mudah dikembangkan. Pisahkan tanggung jawa
 - Setiap tahap besar wajib menjalankan `php artisan migrate`, `php artisan test`, dan `npm run build`.
 - UI/UX harus dijaga konsisten: route aktif tidak overlap, menu yang sudah dibuat tidak diberi badge "Segera", table responsive, dan empty state informatif.
 - Report tahap wajib mencatat hasil test/build, kendala, dan status git.
+
+## 21. Aturan Stabilisasi dan Demo
+- Sebelum commit, wajib menjalankan test dan build yang relevan; untuk tahap akhir gunakan `php artisan test` dan `npm run build`.
+- Bugfix tidak boleh menghapus atau melemahkan fitur existing tanpa alasan yang dicatat di report.
+- Error page 403, 404, 419, dan 500 harus user-friendly, berbahasa Indonesia, dan tidak menampilkan detail teknis.
+- Route baru wajib memiliki middleware `auth` dan role middleware sesuai kebutuhan.
+- Seeder demo wajib idempotent, aman dijalankan berulang, dan tidak menjadi rekomendasi password production.
+- Route download file baru wajib tetap melewati controller protected dan validasi ownership/role.
