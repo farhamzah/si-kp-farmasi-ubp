@@ -114,12 +114,17 @@
     }
 
     main table {
-        @apply min-w-max text-sm;
+        @apply w-full min-w-full text-sm;
     }
 
     main .overflow-x-auto,
     main .si-table-wrap {
         -webkit-overflow-scrolling: touch;
+    }
+
+    main .overflow-x-auto > table,
+    main .si-table-wrap > table {
+        min-width: max(100%, 56rem);
     }
 
     main thead {
