@@ -16,9 +16,9 @@
 @endphp
 <div class="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_32%),radial-gradient(circle_at_80%_12%,rgba(20,184,166,0.14),transparent_28%),linear-gradient(135deg,#f8fdff,#eef9fb_45%,#f4f9fc)] lg:flex">
     <!-- Sidebar Navigation -->
-    <aside class="border-b border-sky-100 bg-white/92 text-slate-800 shadow-xl shadow-sky-900/8 backdrop-blur-xl lg:fixed lg:inset-y-0 lg:left-0 lg:w-72 lg:border-b-0 lg:border-r lg:border-sky-100">
+    <aside class="border-b border-sky-100 bg-white/92 text-slate-800 shadow-xl shadow-sky-900/8 backdrop-blur-xl lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:h-screen lg:w-72 lg:flex-col lg:overflow-hidden lg:border-b-0 lg:border-r lg:border-sky-100">
         <!-- Branding -->
-        <div class="relative overflow-hidden border-b border-sky-100 px-5 py-6 lg:py-7">
+        <div class="relative flex-none overflow-hidden border-b border-sky-100 px-5 py-6 lg:py-7">
             <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.22),transparent_46%),linear-gradient(135deg,rgba(20,184,166,0.16),transparent)]"></div>
             <div class="relative flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
@@ -39,7 +39,7 @@
         </div>
         
         <!-- Navigation Menu -->
-        <nav class="flex gap-2 overflow-x-auto px-4 py-4 lg:block lg:space-y-1.5 lg:overflow-visible lg:p-4">
+        <nav class="flex gap-2 overflow-x-auto px-4 py-4 lg:block lg:min-h-0 lg:flex-1 lg:space-y-1.5 lg:overflow-x-hidden lg:overflow-y-auto lg:overscroll-contain lg:p-4 lg:pr-3 si-sidebar-scroll">
             <p class="mb-3 hidden px-3 text-[11px] font-black uppercase tracking-widest text-sky-700/70 lg:block">Menu Kerja Praktek</p>
             @foreach(($roleData['menu'] ?? ['Dashboard', 'Profil Saya']) as $item)
                 @php
@@ -148,7 +148,7 @@
         </nav>
 
         <!-- User Info (Mobile) -->
-        <div class="border-t border-sky-100 px-4 py-4 lg:hidden">
+        <div class="flex-none border-t border-sky-100 px-4 py-4 lg:hidden">
             <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Pengguna</p>
             <p class="text-sm font-semibold text-slate-900 truncate">{{ auth()->user()->name }}</p>
             <p class="text-xs text-cyan-700 mt-1">{{ $roleLabel }}</p>
