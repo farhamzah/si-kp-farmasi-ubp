@@ -75,3 +75,12 @@ Setiap fitur harus dibuat modular dan mudah dikembangkan. Pisahkan tanggung jawa
 - File upload KP wajib divalidasi server-side, disimpan di storage non-public, dan diunduh melalui route protected.
 - Status pendaftaran dan dokumen tidak boleh diubah langsung dari request bebas; gunakan controller/form request yang mencatat log ke `kp_registration_logs`.
 - Mahasiswa hanya eligible untuk pemilihan tempat jika pendaftaran sudah `terverifikasi` dan semua dokumen wajib disetujui.
+
+## 14. Aturan Pemilihan Tempat KP
+- Pemilihan tempat KP menggunakan first come first served berdasarkan waktu server.
+- Mahasiswa hanya boleh memilih jika pendaftaran KP sudah `terverifikasi` dan jadwal pemilihan periode sedang dibuka.
+- Logic pemilihan wajib melalui `KpPlaceSelectionService`, memakai transaction dan `lockForUpdate()` pada kuota.
+- Satu mahasiswa hanya boleh punya satu selection aktif per periode; gunakan validasi aplikasi dan constraint `active_key`.
+- Mahasiswa tidak boleh cancel atau move selection sendiri.
+- Admin dan Koordinator KP dapat cancel/move dengan alasan dan semua aksi wajib masuk `kp_selection_logs`.
+- Daftar tunggu dibuat saat mahasiswa eligible belum mendapat tempat karena kuota penuh.

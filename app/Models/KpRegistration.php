@@ -51,6 +51,21 @@ class KpRegistration extends Model
         return $this->hasMany(KpRegistrationLog::class, 'kp_registration_id');
     }
 
+    public function placeSelections()
+    {
+        return $this->hasMany(KpPlaceSelection::class, 'kp_registration_id');
+    }
+
+    public function activePlaceSelection()
+    {
+        return $this->hasOne(KpPlaceSelection::class, 'kp_registration_id')->where('status', 'aktif');
+    }
+
+    public function waitingList()
+    {
+        return $this->hasOne(KpWaitingList::class, 'kp_registration_id');
+    }
+
     public function statusLabel(): string
     {
         return match ($this->status) {
@@ -92,6 +107,24 @@ class KpRegistration extends Model
     public function isEligibleForPlaceSelection(): bool
     {
         return $this->isVerified() && $this->allRequiredDocumentsApproved();
+    }
+
+    public function selectedPlace(): ?KpPlace
+    {
+        return $this->activePlaceSelection()->with('place')->first()?->place;
+    }
+
+    public function selectionStatusLabel(): string
+    {
+        if ($this->activePlaceSelection()->exists()) {
+            return 'Sudah memilih tempat';
+        }
+
+        if ($this->waitingList()->where('status', 'menunggu')->exists()) {
+            return 'Daftar tunggu';
+        }
+
+        return $this->isEligibleForPlaceSelection() ? 'Siap memilih' : 'Belum eligible';
     }
 
     public function requiredDocumentsCompleted(): bool

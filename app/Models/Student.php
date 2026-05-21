@@ -38,4 +38,14 @@ class Student extends Model
     {
         return $this->hasMany(KpRegistration::class);
     }
+
+    public function placeSelections()
+    {
+        return $this->hasMany(KpPlaceSelection::class);
+    }
+
+    public function waitingLists()
+    {
+        return $this->hasMany(KpWaitingList::class);
+    }
 }

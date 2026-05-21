@@ -1,0 +1,6 @@
+@extends('layouts.app')
+@section('title', 'Pindahkan Pilihan - '.config('app.name'))
+@section('page_title', 'Pindahkan Pilihan Tempat')
+@section('content')
+<section class="max-w-3xl rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">@if($errors->any())<div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ $errors->first() }}</div>@endif<h2 class="text-xl font-bold">{{ $selection->student->user->name }}</h2><p class="mt-1 text-sm text-slate-500">Dari {{ $selection->place->name }} · {{ $selection->period->name }}</p><form method="POST" action="{{ route('management.place-selections.move.store', $selection) }}" class="mt-5 space-y-4">@csrf<select name="kp_place_quota_id" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"><option value="">Pilih tempat tujuan</option>@foreach($quotas as $quota)<option value="{{ $quota->id }}">{{ $quota->place->name }} - sisa {{ $quota->remainingQuota() }}</option>@endforeach</select><textarea name="reason" rows="3" placeholder="Alasan pemindahan" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"></textarea><button class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white" onclick="return confirm('Pindahkan pilihan mahasiswa ini?')">Pindahkan</button></form></section>
+@endsection

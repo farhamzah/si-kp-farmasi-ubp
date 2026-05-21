@@ -48,9 +48,14 @@ class KpPlaceQuota extends Model
         return $this->hasMany(KpQuotaLog::class, 'kp_place_quota_id');
     }
 
+    public function selections()
+    {
+        return $this->hasMany(KpPlaceSelection::class, 'kp_place_quota_id');
+    }
+
     public function filledCount(): int
     {
-        return 0;
+        return $this->selections()->where('status', 'aktif')->count();
     }
 
     public function remainingQuota(): int
@@ -60,7 +65,7 @@ class KpPlaceQuota extends Model
 
     public function isFull(): bool
     {
-        return $this->quota > 0 && $this->remainingQuota() <= 0;
+        return $this->remainingQuota() <= 0;
     }
 
     public function statusLabel(): string

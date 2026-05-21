@@ -10,10 +10,14 @@ use App\Http\Controllers\Management\KpPlaceQuotaController;
 use App\Http\Controllers\Management\KpDocumentRequirementController;
 use App\Http\Controllers\Management\KpRegistrationReviewController;
 use App\Http\Controllers\Management\KpQuotaLogController;
+use App\Http\Controllers\Management\PlaceSelectionMonitoringController;
+use App\Http\Controllers\Management\SelectionLogController;
+use App\Http\Controllers\Management\WaitingListController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleSelectionController;
 use App\Http\Controllers\Student\KpDocumentUploadController;
 use App\Http\Controllers\Student\KpRegistrationController;
+use App\Http\Controllers\Student\PlaceSelectionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -68,6 +72,15 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('kp-registrations/{registration}/revision', [KpRegistrationReviewController::class, 'revision'])->name('kp-registrations.revision');
             Route::post('kp-registrations/{registration}/reject', [KpRegistrationReviewController::class, 'reject'])->name('kp-registrations.reject');
             Route::get('kp-registrations/{registration}/documents/{document}/download', [KpRegistrationReviewController::class, 'download'])->name('kp-registrations.documents.download');
+
+            Route::get('place-selections', [PlaceSelectionMonitoringController::class, 'index'])->name('place-selections.index');
+            Route::get('place-selections/{selection}', [PlaceSelectionMonitoringController::class, 'show'])->name('place-selections.show');
+            Route::post('place-selections/{selection}/cancel', [PlaceSelectionMonitoringController::class, 'cancel'])->name('place-selections.cancel');
+            Route::get('place-selections/{selection}/move', [PlaceSelectionMonitoringController::class, 'move'])->name('place-selections.move');
+            Route::post('place-selections/{selection}/move', [PlaceSelectionMonitoringController::class, 'moveStore'])->name('place-selections.move.store');
+            Route::get('waiting-lists', [WaitingListController::class, 'index'])->name('waiting-lists.index');
+            Route::post('waiting-lists/{waitingList}/cancel', [WaitingListController::class, 'cancel'])->name('waiting-lists.cancel');
+            Route::get('selection-logs', [SelectionLogController::class, 'index'])->name('selection-logs.index');
         });
 
         Route::middleware('role:mahasiswa')->prefix('mahasiswa')->name('student.')->group(function () {
@@ -79,6 +92,10 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('pendaftaran-kp/{registration}/submit', [KpRegistrationController::class, 'submit'])->name('kp-registrations.submit');
             Route::get('pendaftaran-kp/{registration}/documents/{document}/download', [KpRegistrationController::class, 'download'])->name('kp-registrations.documents.download');
             Route::post('pendaftaran-kp/{registration}/cancel', [KpRegistrationController::class, 'cancel'])->name('kp-registrations.cancel');
+            Route::get('pemilihan-tempat', [PlaceSelectionController::class, 'index'])->name('place-selections.index');
+            Route::get('pemilihan-tempat/{period}', [PlaceSelectionController::class, 'show'])->name('place-selections.show');
+            Route::post('pemilihan-tempat/{quota}/pilih', [PlaceSelectionController::class, 'select'])->name('place-selections.select');
+            Route::post('pemilihan-tempat/daftar-tunggu', [PlaceSelectionController::class, 'joinWaitingList'])->name('place-selections.waiting-list');
         });
 
         Route::get('/mahasiswa/dashboard', fn (DashboardController $controller, Request $request) => $controller->show($request, 'mahasiswa'))

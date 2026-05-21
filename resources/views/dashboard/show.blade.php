@@ -181,6 +181,28 @@
         </section>
     @endif
 
+    @if($selectionStats)
+        <section>
+            <div class="mb-6">
+                <h2 class="text-lg font-bold text-slate-950">Ringkasan Pemilihan Tempat</h2>
+                <p class="mt-1 text-sm text-slate-500">Monitoring hasil war ticket dan daftar tunggu.</p>
+            </div>
+            <div class="grid gap-4 md:grid-cols-4">
+                @foreach([
+                    ['Sudah Memilih', $selectionStats['selected'], 'text-emerald-700'],
+                    ['Daftar Tunggu', $selectionStats['waiting'], 'text-amber-700'],
+                    ['Sisa Kuota', $selectionStats['remaining_quota'], 'text-teal-700'],
+                    ['Tempat Penuh', $selectionStats['full_places'], 'text-rose-700'],
+                ] as [$label, $value, $color])
+                    <div class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
+                        <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">{{ $label }}</p>
+                        <p class="mt-3 text-3xl font-bold {{ $color }}">{{ $value }}</p>
+                    </div>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
     @if($studentRegistration)
         <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -193,7 +215,7 @@
             <div class="mt-5 grid gap-4 md:grid-cols-3">
                 <div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-500">Progress Berkas</p><p class="mt-2 text-2xl font-bold">{{ $studentRegistration->progressPercentage() }}%</p></div>
                 <div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-500">Verifikasi</p><p class="mt-2 text-sm font-bold">{{ $studentRegistration->isVerified() ? 'Terverifikasi' : 'Belum selesai' }}</p></div>
-                <div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-500">Pemilihan Tempat</p><p class="mt-2 text-sm font-bold">{{ $studentRegistration->isEligibleForPlaceSelection() ? 'Siap' : 'Belum siap' }}</p></div>
+                <div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-500">Pemilihan Tempat</p><p class="mt-2 text-sm font-bold">{{ $studentRegistration->selectionStatusLabel() }}</p>@if($studentRegistration->activePlaceSelection)<p class="mt-1 text-xs text-slate-500">{{ $studentRegistration->activePlaceSelection->place->name }}</p>@endif</div>
             </div>
         </section>
     @endif

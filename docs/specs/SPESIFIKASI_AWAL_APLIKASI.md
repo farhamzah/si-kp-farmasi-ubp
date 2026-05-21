@@ -73,3 +73,14 @@ Sistem mendukung multi-role sehingga satu user dapat memiliki lebih dari satu pe
 - Status pendaftaran meliputi `draft`, `menunggu_verifikasi`, `revisi`, `terverifikasi`, `ditolak`, dan `dibatalkan`.
 - Status dokumen meliputi `belum_upload`, `menunggu`, `disetujui`, `revisi`, dan `ditolak`.
 - Mahasiswa hanya dapat mengikuti pemilihan tempat KP/war ticket setelah pendaftarannya terverifikasi dan dokumen wajib disetujui.
+
+## Fondasi Pemilihan Tempat KP / War Ticket
+- Pemilihan tempat KP menggunakan model first come first served berbasis kuota.
+- Hanya mahasiswa dengan pendaftaran `terverifikasi` yang dapat memilih tempat.
+- Mahasiswa hanya dapat memilih pada rentang `selection_start_at` sampai `selection_end_at` periode terkait.
+- Pilihan tempat terkunci untuk mahasiswa dan tidak dapat diubah sendiri.
+- Admin dan Koordinator KP dapat membatalkan atau memindahkan pilihan dengan alasan.
+- Kuota penuh atau ditutup tidak dapat dipilih.
+- Mahasiswa dapat masuk daftar tunggu jika belum mendapat tempat karena kuota penuh.
+- Semua aksi pemilihan, kegagalan pemilihan, daftar tunggu, cancel, dan move dicatat di log pemilihan.
+- Proteksi race condition dilakukan dengan database transaction, `lockForUpdate()` pada row kuota, validasi ulang dalam transaksi, dan constraint `active_key` untuk mencegah dua pilihan aktif pada periode yang sama.

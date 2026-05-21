@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\KpPeriod;
 use App\Models\KpPlace;
 use App\Models\KpPlaceQuota;
+use App\Models\KpPlaceSelection;
 use App\Models\KpRegistration;
+use App\Models\KpWaitingList;
 use App\Models\User;
 use App\Models\UserImportBatch;
 use App\Support\RoleDashboard;
@@ -31,7 +33,8 @@ class DashboardController extends Controller
             'adminStats' => $role === 'admin' ? $this->adminStats() : null,
             'kpStats' => in_array($role, ['admin', 'koordinator_kp'], true) ? $this->kpStats() : null,
             'registrationStats' => in_array($role, ['admin', 'koordinator_kp'], true) ? $this->registrationStats() : null,
-            'studentRegistration' => $role === 'mahasiswa' ? $request->user()->student?->kpRegistrations()->with('documents')->latest()->first() : null,
+            'selectionStats' => in_array($role, ['admin', 'koordinator_kp'], true) ? $this->selectionStats() : null,
+            'studentRegistration' => $role === 'mahasiswa' ? $request->user()->student?->kpRegistrations()->with(['documents', 'activePlaceSelection.place', 'waitingList'])->latest()->first() : null,
         ]);
     }
 
@@ -65,6 +68,19 @@ class DashboardController extends Controller
             'revision' => KpRegistration::where('status', 'revisi')->count(),
             'verified' => KpRegistration::where('status', 'terverifikasi')->count(),
             'rejected' => KpRegistration::where('status', 'ditolak')->count(),
+        ];
+    }
+
+    private function selectionStats(): array
+    {
+        $totalQuota = KpPlaceQuota::sum('quota');
+        $selected = KpPlaceSelection::where('status', 'aktif')->count();
+
+        return [
+            'selected' => $selected,
+            'waiting' => KpWaitingList::where('status', 'menunggu')->count(),
+            'remaining_quota' => max(0, $totalQuota - $selected),
+            'full_places' => KpPlaceQuota::get()->filter->isFull()->count(),
         ];
     }
 }

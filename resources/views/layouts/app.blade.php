@@ -53,6 +53,10 @@
                         'Verifikasi Pendaftaran' => 'management.kp-registrations.index',
                         'Pendaftaran KP' => 'student.kp-registrations.index',
                         'Berkas KP' => 'student.kp-registrations.index',
+                        'Pemilihan Tempat KP' => 'student.place-selections.index',
+                        'Monitoring Pemilihan' => 'management.place-selections.index',
+                        'Daftar Tunggu' => 'management.waiting-lists.index',
+                        'Log Pemilihan' => 'management.selection-logs.index',
                     ];
                     $mappedRoute = $routeMap[$item] ?? null;
                     $href = $isDashboard ? route($roleData['route'] ?? 'dashboard') : ($isProfile ? route('profile.show') : ($mappedRoute && Route::has($mappedRoute) ? route($mappedRoute) : '#'));
