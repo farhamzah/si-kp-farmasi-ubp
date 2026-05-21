@@ -61,6 +61,49 @@ class KpRegistrationAndDocumentVerificationTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_mahasiswa_can_open_kp_documents_page_and_empty_state_without_registration(): void
+    {
+        $response = $this->actingAs($this->mahasiswa)
+            ->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/berkas-kp');
+
+        $response->assertOk()
+            ->assertSee('Anda belum memiliki pendaftaran KP')
+            ->assertSee('Berkas KP');
+        $this->assertSame(1, substr_count($response->getContent(), 'bg-cyan-700 text-white'));
+    }
+
+    public function test_mahasiswa_with_registration_can_view_kp_documents_and_upload_rules_still_apply(): void
+    {
+        Storage::fake('local');
+        [$registration, $requirement] = $this->registrationWithRequirement();
+
+        $this->actingAs($this->mahasiswa)
+            ->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/berkas-kp')
+            ->assertOk()
+            ->assertSee('KRS')
+            ->assertSee('Belum Upload');
+
+        $this->actingAs($this->mahasiswa)
+            ->withSession(['active_role' => 'mahasiswa'])
+            ->post("/mahasiswa/pendaftaran-kp/{$registration->id}/documents/{$requirement->id}", [
+                'document' => UploadedFile::fake()->create('krs.pdf', 100, 'application/pdf'),
+            ])
+            ->assertRedirect();
+
+        $document = KpDocument::where('kp_registration_id', $registration->id)->firstOrFail();
+        $document->update(['status' => 'disetujui']);
+        $registration->update(['status' => 'terverifikasi']);
+
+        $this->actingAs($this->mahasiswa)
+            ->withSession(['active_role' => 'mahasiswa'])
+            ->post("/mahasiswa/pendaftaran-kp/{$registration->id}/documents/{$requirement->id}", [
+                'document' => UploadedFile::fake()->create('krs-baru.pdf', 100, 'application/pdf'),
+            ])
+            ->assertSessionHasErrors('document');
+    }
+
     public function test_mahasiswa_cannot_register_when_profile_is_incomplete(): void
     {
         $this->mahasiswa->forceFill(['profile_completed' => false])->save();

@@ -32,6 +32,7 @@ use App\Http\Controllers\Management\WaitingListController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleSelectionController;
 use App\Http\Controllers\Student\KpDocumentUploadController;
+use App\Http\Controllers\Student\KpDocumentController;
 use App\Http\Controllers\Student\KpRegistrationController;
 use App\Http\Controllers\Student\AssignmentController;
 use App\Http\Controllers\Student\ExamRequestController as StudentExamRequestController;
@@ -134,6 +135,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
         Route::middleware('role:mahasiswa')->prefix('mahasiswa')->name('student.')->group(function () {
             Route::get('pendaftaran-kp', [KpRegistrationController::class, 'index'])->name('kp-registrations.index');
+            Route::get('berkas-kp', [KpDocumentController::class, 'index'])->name('kp-documents.index');
             Route::get('pendaftaran-kp/create', [KpRegistrationController::class, 'create'])->name('kp-registrations.create');
             Route::post('pendaftaran-kp', [KpRegistrationController::class, 'store'])->name('kp-registrations.store');
             Route::get('pendaftaran-kp/{registration}', [KpRegistrationController::class, 'show'])->name('kp-registrations.show');

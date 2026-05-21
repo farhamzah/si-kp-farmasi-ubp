@@ -9,6 +9,7 @@ use App\Models\KpDocumentRequirement;
 use App\Models\KpRegistration;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class KpDocumentUploadController extends Controller
 {
@@ -20,6 +21,15 @@ class KpDocumentUploadController extends Controller
             'kp_registration_id' => $registration->id,
             'kp_document_requirement_id' => $requirement->id,
         ]);
+
+        $canUpload = in_array($registration->status, ['draft', 'revisi'], true)
+            || in_array($document->status, [null, 'belum_upload', 'revisi', 'ditolak'], true);
+
+        if ($registration->isVerified() || ! $canUpload) {
+            throw ValidationException::withMessages([
+                'document' => 'Dokumen ini tidak dapat diupload ulang pada status saat ini.',
+            ]);
+        }
 
         if ($document->file_path) {
             Storage::disk($document->file_disk)->delete($document->file_path);

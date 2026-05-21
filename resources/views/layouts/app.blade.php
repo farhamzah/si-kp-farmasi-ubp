@@ -56,7 +56,7 @@
                         'Persyaratan Dokumen' => 'management.document-requirements.index',
                         'Verifikasi Pendaftaran' => 'management.kp-registrations.index',
                         'Pendaftaran KP' => 'student.kp-registrations.index',
-                        'Berkas KP' => 'student.kp-registrations.index',
+                        'Berkas KP' => 'student.kp-documents.index',
                         'Pemilihan Tempat KP' => 'student.place-selections.index',
                         'Monitoring Pemilihan' => 'management.place-selections.index',
                         'Daftar Tunggu' => 'management.waiting-lists.index',
@@ -83,7 +83,7 @@
                         'Dashboard' => [$roleData['route'] ?? 'dashboard'],
                         'Profil Saya' => ['profile.show', 'profile.edit'],
                         'Pendaftaran KP' => ['student.kp-registrations.index', 'student.kp-registrations.create', 'student.kp-registrations.store'],
-                        'Berkas KP' => ['student.kp-registrations.show', 'student.kp-registrations.documents.*', 'student.kp-registrations.submit', 'student.kp-registrations.cancel'],
+                        'Berkas KP' => ['student.kp-documents.*', 'student.kp-registrations.show', 'student.kp-registrations.documents.*', 'student.kp-registrations.submit', 'student.kp-registrations.cancel'],
                         'Pemilihan Tempat KP' => ['student.place-selections.*'],
                         'Penempatan KP' => ['student.assignments.*', 'management.kp-assignments.*'],
                         'Logbook KP' => ['student.logbooks.*'],
@@ -208,7 +208,7 @@
         <!-- Footer -->
         <footer class="border-t border-sky-100 bg-white/70 px-5 py-5 text-center text-xs text-slate-500 md:px-8">
             <p class="font-bold text-slate-700">SI-KP Farmasi UBP</p>
-            <p class="mt-1">Sistem Informasi Portal Akademik Kerja Praktek Farmasi Universitas Bhakti Pensada</p>
+            <p class="mt-1">Sistem Informasi Portal Akademik Kerja Praktek Farmasi Universitas Buana Perjuangan Karawang</p>
         </footer>
     </div>
 </div>
