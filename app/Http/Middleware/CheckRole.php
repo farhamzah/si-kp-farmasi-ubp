@@ -1,0 +1,21 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+class CheckRole
+{
+    public function handle(Request $request, Closure $next, string $role): Response
+    {
+        $activeRole = $request->session()->get('active_role');
+
+        if ($activeRole !== $role || ! $request->user()?->hasRole($role)) {
+            abort(403, 'Anda tidak memiliki akses ke dashboard ini.');
+        }
+
+        return $next($request);
+    }
+}
