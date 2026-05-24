@@ -46,6 +46,8 @@ class UserImportAndProfileTest extends TestCase
 
     public function test_user_can_open_and_update_own_profile(): void
     {
+        config(['core_farmasi.profile_url' => 'https://core.test/profile?token=secret']);
+
         $user = User::create([
             'name' => 'Mahasiswa',
             'email' => 'mhs@test.local',
@@ -60,7 +62,10 @@ class UserImportAndProfileTest extends TestCase
             ->withSession(['active_role' => 'mahasiswa'])
             ->get('/profil-saya')
             ->assertOk()
-            ->assertSee('Profil Saya');
+            ->assertSee('Profil Saya')
+            ->assertSee('Profil utama dikelola di Core Farmasi')
+            ->assertSee('https://core.test/profile/edit', false)
+            ->assertDontSee('token=secret', false);
 
         $response = $this->actingAs($user)
             ->withSession(['active_role' => 'mahasiswa'])

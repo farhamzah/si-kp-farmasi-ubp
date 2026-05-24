@@ -17,12 +17,17 @@ class Lecturer extends Model
         'address',
         'status',
         'profile_completed_at',
+        'core_lecturer_id',
+        'core_synced_at',
+        'core_sync_status',
+        'core_sync_note',
     ];
 
     protected function casts(): array
     {
         return [
             'profile_completed_at' => 'datetime',
+            'core_synced_at' => 'datetime',
         ];
     }
 

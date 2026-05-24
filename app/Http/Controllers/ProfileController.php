@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\CoreFarmasiClient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -12,6 +13,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProfileController extends Controller
 {
+    public function __construct(
+        private readonly CoreFarmasiClient $coreFarmasi,
+    ) {
+    }
+
     public function show(Request $request): View
     {
         $user = $request->user()->load(['roles', 'student', 'lecturer', 'fieldSupervisor']);
@@ -20,6 +26,7 @@ class ProfileController extends Controller
             'user' => $user,
             'profileType' => $user->primaryProfileType(),
             'profile' => $user->profileModel(),
+            'coreProfileUrl' => $this->coreFarmasi->profileEditUrl(),
         ]);
     }
 
@@ -31,6 +38,7 @@ class ProfileController extends Controller
             'user' => $user,
             'profileType' => $user->primaryProfileType(),
             'profile' => $user->profileModel(),
+            'coreProfileUrl' => $this->coreFarmasi->profileEditUrl(),
         ]);
     }
 

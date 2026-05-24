@@ -5,6 +5,20 @@
 
 @section('content')
 <div class="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
+    @if($coreProfileUrl)
+        <section class="rounded-2xl border border-blue-200 bg-blue-50 p-5 shadow-sm xl:col-span-2">
+            <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <h2 class="text-base font-bold text-blue-950">Profil utama dikelola di Core Farmasi</h2>
+                    <p class="mt-1 text-sm leading-6 text-blue-900">Data identitas utama, nomor HP, dan alamat diperbarui melalui Core. KP tetap menyimpan data operasional KP seperti berkas, penilaian, dan workflow.</p>
+                </div>
+                <a href="{{ $coreProfileUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center rounded-xl bg-blue-700 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-700/20 transition hover:bg-blue-800">
+                    Ubah Profil di Core
+                </a>
+            </div>
+        </section>
+    @endif
+
     <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
         <div class="mb-6 flex items-center gap-4 border-b border-slate-200 pb-6">
             <x-ui.avatar :user="$user" size="lg" class="shadow-md shadow-teal-500/15" />
@@ -29,7 +43,7 @@
             </div>
         </div>
 
-        <a href="{{ route('profile.edit') }}" class="block w-full rounded-lg bg-linear-to-r from-teal-600 to-teal-700 px-4 py-2.5 text-center text-sm font-bold text-white shadow-lg shadow-teal-600/30 transition hover:from-teal-700 hover:to-teal-800">Edit Data Profil</a>
+        <a href="{{ route('profile.edit') }}" class="block w-full rounded-lg bg-linear-to-r from-teal-600 to-teal-700 px-4 py-2.5 text-center text-sm font-bold text-white shadow-lg shadow-teal-600/30 transition hover:from-teal-700 hover:to-teal-800">Edit Data Operasional KP</a>
     </section>
 
     <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">

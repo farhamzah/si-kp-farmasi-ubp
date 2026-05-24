@@ -2,6 +2,7 @@
 @section('title', 'Detail Verifikasi Pendaftaran KP - '.config('app.name'))
 @section('page_title', 'Detail Verifikasi Pendaftaran KP')
 @section('content')
+@php($studentDisplay = app(\App\Services\KpMasterDataReadService::class)->getStudentDisplayData($registration->student))
 <div class="space-y-5">
     @if(session('status'))
         <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('status') }}</div>
@@ -13,8 +14,8 @@
     <div class="grid gap-5 xl:grid-cols-[0.85fr_1.15fr]">
         <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <span class="rounded-full {{ $registration->statusBadgeClass() }} px-3 py-1 text-xs font-semibold">{{ $registration->statusLabel() }}</span>
-            <h2 class="mt-4 text-2xl font-bold text-slate-950">{{ $registration->student->user->name }}</h2>
-            <p class="mt-1 text-sm text-slate-500">{{ $registration->student->nim ?: '-' }} · {{ $registration->student->user->email }}</p>
+            <h2 class="mt-4 text-2xl font-bold text-slate-950">{{ $studentDisplay->name }}</h2>
+            <p class="mt-1 text-sm text-slate-500">{{ $studentDisplay->studentNumber ?: '-' }} - {{ $studentDisplay->email }}</p>
 
             <dl class="mt-6 grid gap-3 text-sm">
                 <div class="rounded-lg bg-slate-50 p-3">

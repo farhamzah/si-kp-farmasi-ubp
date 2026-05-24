@@ -64,6 +64,26 @@ return [
             ]) : [],
         ],
 
+        'core' => [
+            'driver' => env('CORE_DB_CONNECTION', 'mysql'),
+            'url' => env('CORE_DB_URL'),
+            'host' => env('CORE_DB_HOST', '127.0.0.1'),
+            'port' => env('CORE_DB_PORT', '3306'),
+            'database' => env('CORE_DB_DATABASE', 'core_farmasi_ubp'),
+            'username' => env('CORE_DB_USERNAME', 'root'),
+            'password' => env('CORE_DB_PASSWORD', ''),
+            'unix_socket' => env('CORE_DB_SOCKET', ''),
+            'charset' => env('CORE_DB_CHARSET', 'utf8mb4'),
+            'collation' => env('CORE_DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('CORE_MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),

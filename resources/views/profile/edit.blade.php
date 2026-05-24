@@ -5,6 +5,20 @@
 
 @section('content')
 <div class="mx-auto max-w-4xl space-y-6">
+@if($coreProfileUrl)
+    <section class="rounded-2xl border border-blue-200 bg-blue-50 p-5 shadow-sm">
+        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+                <h2 class="text-base font-bold text-blue-950">Profil utama dikelola di Core Farmasi</h2>
+                <p class="mt-1 text-sm leading-6 text-blue-900">Gunakan Core untuk memperbarui data utama seperti nomor HP dan alamat. Form KP ini dipertahankan untuk data operasional KP.</p>
+            </div>
+            <a href="{{ $coreProfileUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center rounded-xl bg-blue-700 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-700/20 transition hover:bg-blue-800">
+                Ubah Profil di Core
+            </a>
+        </div>
+    </section>
+@endif
+
 <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
     <div class="flex flex-col gap-5 sm:flex-row sm:items-center">
         <x-ui.avatar :user="$user" size="xl" class="shadow-xl shadow-cyan-900/10" />

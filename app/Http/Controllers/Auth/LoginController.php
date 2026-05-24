@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Services\CoreBridgeAuthService;
 use App\Support\RoleDashboard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,7 +23,7 @@ class LoginController extends Controller
             ->header('Expires', 'Sat, 01 Jan 2000 00:00:00 GMT');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, CoreBridgeAuthService $authBridge): RedirectResponse
     {
         $credentials = $request->validate([
             'email' => ['required', 'email'],
@@ -37,17 +38,28 @@ class LoginController extends Controller
                 ->onlyInput('email');
         }
 
-        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+        $authResult = $authBridge->attempt(
+            $credentials['email'],
+            $credentials['password'],
+            $request->boolean('remember')
+        );
+
+        if (! $authResult['ok']) {
             RateLimiter::hit($key);
 
             return back()
-                ->withErrors(['email' => 'Email atau password tidak sesuai.'])
+                ->withErrors(['email' => $this->loginFailureMessage($authResult['reason'] ?? null)])
                 ->onlyInput('email');
         }
 
         RateLimiter::clear($key);
         $request->session()->regenerate();
 
+        return $this->redirectAuthenticatedUser($request);
+    }
+
+    private function redirectAuthenticatedUser(Request $request): RedirectResponse
+    {
         $user = $request->user()->load('roles');
 
         if (! $user->isActive()) {
@@ -76,6 +88,18 @@ class LoginController extends Controller
         }
 
         return redirect()->route('role.select');
+    }
+
+    private function loginFailureMessage(?string $reason): string
+    {
+        return match ($reason) {
+            'core_app_access_denied' => 'Akun Core Anda belum memiliki akses aplikasi KP Farmasi.',
+            'core_user_inactive' => 'Akun Core Anda tidak aktif. Silakan hubungi Admin.',
+            'legacy_bridge_user_missing' => 'Akun Core valid, tetapi belum terhubung ke akun KP legacy.',
+            'legacy_user_inactive' => 'Akun KP Anda tidak aktif. Silakan hubungi Admin.',
+            'core_unavailable' => 'Koneksi Core belum tersedia. Silakan coba lagi atau hubungi Admin.',
+            default => 'Email atau password tidak sesuai.',
+        };
     }
 
     public function destroy(Request $request): RedirectResponse

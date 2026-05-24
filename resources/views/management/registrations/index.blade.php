@@ -51,11 +51,12 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @forelse($registrations as $registration)
+                        @php($studentDisplay = app(\App\Services\KpMasterDataReadService::class)->getStudentDisplayData($registration->student))
                         <tr>
                             <td class="px-4 py-4 font-semibold text-slate-900">{{ $registration->registration_number ?: '-' }}</td>
                             <td class="px-4 py-4">
-                                <div class="font-semibold text-slate-950">{{ $registration->student->user->name }}</div>
-                                <div class="text-xs text-slate-500">{{ $registration->student->nim ?: '-' }} · {{ $registration->student->user->email }}</div>
+                                <div class="font-semibold text-slate-950">{{ $studentDisplay->name }}</div>
+                                <div class="text-xs text-slate-500">{{ $studentDisplay->studentNumber ?: '-' }} - {{ $studentDisplay->email }}</div>
                             </td>
                             <td class="px-4 py-4">{{ $registration->period->name }}</td>
                             <td class="px-4 py-4">

@@ -19,6 +19,10 @@ class Student extends Model
         'birth_date',
         'status',
         'profile_completed_at',
+        'core_student_id',
+        'core_synced_at',
+        'core_sync_status',
+        'core_sync_note',
     ];
 
     protected function casts(): array
@@ -26,6 +30,7 @@ class Student extends Model
         return [
             'birth_date' => 'date',
             'profile_completed_at' => 'datetime',
+            'core_synced_at' => 'datetime',
         ];
     }
 

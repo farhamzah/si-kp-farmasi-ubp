@@ -33,6 +33,10 @@ class User extends Authenticatable
         'avatar_original_filename',
         'avatar_mime',
         'avatar_size',
+        'core_user_id',
+        'core_synced_at',
+        'core_sync_status',
+        'core_sync_note',
     ];
 
     /**
@@ -58,6 +62,7 @@ class User extends Authenticatable
             'must_change_password' => 'boolean',
             'profile_completed' => 'boolean',
             'password' => 'hashed',
+            'core_synced_at' => 'datetime',
         ];
     }
 

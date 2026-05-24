@@ -4,7 +4,15 @@
         <table class="min-w-full divide-y divide-slate-100 text-sm">
             <tbody class="divide-y divide-slate-100">
                 @forelse($assignments as $assignment)
-                    <tr><td class="px-5 py-4"><p class="font-bold">{{ $assignment->student->user->name }}</p><p class="text-xs text-slate-500">{{ $assignment->student->nim }} · {{ $assignment->period->name }}</p></td><td class="px-5 py-4">{{ $assignment->place->name }}</td><td class="px-5 py-4"><a href="{{ route($routeName,$assignment) }}" class="font-bold text-cyan-700">Input Nilai</a></td></tr>
+                    @php($studentDisplay = app(\App\Services\KpMasterDataReadService::class)->getStudentDisplayData($assignment->student))
+                    <tr>
+                        <td class="px-5 py-4">
+                            <p class="font-bold">{{ $studentDisplay->name }}</p>
+                            <p class="text-xs text-slate-500">{{ $studentDisplay->studentNumber }} - {{ $assignment->period->name }}</p>
+                        </td>
+                        <td class="px-5 py-4">{{ $assignment->place->name }}</td>
+                        <td class="px-5 py-4"><a href="{{ route($routeName,$assignment) }}" class="font-bold text-cyan-700">Input Nilai</a></td>
+                    </tr>
                 @empty
                     <tr><td class="px-5 py-10 text-center text-slate-500">Belum ada mahasiswa untuk dinilai.</td></tr>
                 @endforelse
