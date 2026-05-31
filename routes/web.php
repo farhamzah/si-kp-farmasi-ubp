@@ -28,6 +28,7 @@ use App\Http\Controllers\Management\ExamLogController;
 use App\Http\Controllers\Management\ExamRequestController as ManagementExamRequestController;
 use App\Http\Controllers\Management\ExamScheduleController as ManagementExamScheduleController;
 use App\Http\Controllers\Management\ExportController;
+use App\Http\Controllers\Management\IntegrationReviewController;
 use App\Http\Controllers\Management\AssessmentComponentController;
 use App\Http\Controllers\Management\LogbookLogController;
 use App\Http\Controllers\Management\LogbookMonitoringController;
@@ -158,6 +159,10 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('recaps/exams', [RecapController::class, 'exams'])->name('recaps.exams');
             Route::get('recaps/scores', [RecapController::class, 'scores'])->name('recaps.scores');
             Route::get('exports/{type}', ExportController::class)->name('exports.download');
+            Route::get('integration/tu-payload-preview', [IntegrationReviewController::class, 'tuPayloadPreview'])->name('integration.tu-payload-preview');
+            Route::get('integration/tu-payload-preview.json', [IntegrationReviewController::class, 'tuPayloadPreviewJson'])->name('integration.tu-payload-preview.json');
+            Route::get('integration/safa-public-info-preview', [IntegrationReviewController::class, 'safaPublicInfoPreview'])->name('integration.safa-public-info-preview');
+            Route::get('integration/safa-public-info-preview.json', [IntegrationReviewController::class, 'safaPublicInfoPreviewJson'])->name('integration.safa-public-info-preview.json');
         });
 
         Route::middleware('role:mahasiswa')->prefix('mahasiswa')->name('student.')->group(function () {

@@ -17,6 +17,21 @@ php artisan kp:tu-document-payload-preview --assignment-id=1
 php artisan kp:tu-document-payload-preview --document-type=placement_letter
 ```
 
+## Browser Review KP-17
+Halaman review Admin/Koordinator:
+
+```text
+GET /management/integration/tu-payload-preview
+```
+
+Endpoint JSON preview tersanitasi:
+
+```text
+GET /management/integration/tu-payload-preview.json
+```
+
+Keduanya dilindungi middleware `auth`, `active`, `role.selected`, dan `role:admin,koordinator_kp`. Endpoint JSON tidak membuat file permanen dan tidak mengirim request ke TU.
+
 ## Struktur Root Payload
 ```json
 {
@@ -78,4 +93,3 @@ Preview memberi warning untuk kondisi yang belum siap generate, misalnya:
 
 ## Read-only Guarantee
 Command hanya membaca tabel KP yang terkait assignment, exam, final report, dan final score. Tidak ada request HTTP ke TU dan tidak ada insert/update/delete. Count sebelum dan sesudah ditampilkan dalam `read_only_counts`.
-

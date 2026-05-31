@@ -16,14 +16,14 @@ class RoleDashboard
             'label' => 'Admin',
             'route' => 'admin.dashboard',
             'path' => '/admin/dashboard',
-            'menu' => ['Dashboard', 'Profil Saya', 'Manajemen User', 'Import User', 'Riwayat Import', 'Periode KP', 'Tempat KP', 'Kuota Tempat KP', 'Log Kuota', 'Persyaratan Dokumen', 'Verifikasi Pendaftaran', 'Monitoring Pemilihan', 'Daftar Tunggu', 'Log Pemilihan', 'Penempatan KP', 'Log Penempatan', 'Monitoring Logbook', 'Log Aktivitas Logbook', 'Monitoring Laporan', 'Log Laporan', 'Pengajuan Sidang', 'Jadwal Sidang', 'Log Sidang', 'Komponen Penilaian', 'Monitoring Nilai', 'Log Nilai', 'Rekap KP'],
+            'menu' => ['Dashboard', 'Profil Saya', 'Manajemen User', 'Import User', 'Riwayat Import', 'Periode KP', 'Tempat KP', 'Kuota Tempat KP', 'Log Kuota', 'Persyaratan Dokumen', 'Verifikasi Pendaftaran', 'Monitoring Pemilihan', 'Daftar Tunggu', 'Log Pemilihan', 'Penempatan KP', 'Log Penempatan', 'Monitoring Logbook', 'Log Aktivitas Logbook', 'Monitoring Laporan', 'Log Laporan', 'Pengajuan Sidang', 'Jadwal Sidang', 'Log Sidang', 'Komponen Penilaian', 'Monitoring Nilai', 'Log Nilai', 'Rekap KP', 'Review Integrasi'],
             'features' => ['Manajemen User', 'Import Excel', 'Periode KP', 'Tempat KP', 'Kuota Tempat KP', 'Verifikasi Berkas', 'Rekap'],
         ],
         'koordinator_kp' => [
             'label' => 'Koordinator KP',
             'route' => 'koordinator.dashboard',
             'path' => '/koordinator/dashboard',
-            'menu' => ['Dashboard', 'Profil Saya', 'Periode KP', 'Tempat KP', 'Kuota Tempat KP', 'Log Kuota', 'Persyaratan Dokumen', 'Verifikasi Pendaftaran', 'Monitoring Pemilihan', 'Daftar Tunggu', 'Log Pemilihan', 'Penempatan KP', 'Log Penempatan', 'Monitoring Logbook', 'Log Aktivitas Logbook', 'Monitoring Laporan', 'Log Laporan', 'Pengajuan Sidang', 'Jadwal Sidang', 'Log Sidang', 'Komponen Penilaian', 'Monitoring Nilai', 'Log Nilai', 'Rekap KP'],
+            'menu' => ['Dashboard', 'Profil Saya', 'Periode KP', 'Tempat KP', 'Kuota Tempat KP', 'Log Kuota', 'Persyaratan Dokumen', 'Verifikasi Pendaftaran', 'Monitoring Pemilihan', 'Daftar Tunggu', 'Log Pemilihan', 'Penempatan KP', 'Log Penempatan', 'Monitoring Logbook', 'Log Aktivitas Logbook', 'Monitoring Laporan', 'Log Laporan', 'Pengajuan Sidang', 'Jadwal Sidang', 'Log Sidang', 'Komponen Penilaian', 'Monitoring Nilai', 'Log Nilai', 'Rekap KP', 'Review Integrasi'],
             'features' => ['Periode KP', 'Tempat KP', 'Kuota Tempat KP', 'Monitoring Pemilihan Tempat', 'Penentuan Pembimbing', 'Penentuan Penguji', 'Finalisasi Nilai'],
         ],
         'pembimbing_dalam' => [

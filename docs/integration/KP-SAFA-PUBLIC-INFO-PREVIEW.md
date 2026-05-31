@@ -15,6 +15,21 @@ Opsi:
 php artisan kp:safa-public-info-preview --period-id=1
 ```
 
+## Browser Review KP-17
+Halaman review Admin/Koordinator:
+
+```text
+GET /management/integration/safa-public-info-preview
+```
+
+Endpoint JSON preview tersanitasi:
+
+```text
+GET /management/integration/safa-public-info-preview.json
+```
+
+Keduanya dilindungi middleware `auth`, `active`, `role.selected`, dan `role:admin,koordinator_kp`. Endpoint JSON tidak membuat file permanen dan tidak mengirim request ke SAFA.
+
 ## Struktur Payload
 ```json
 {
@@ -59,4 +74,3 @@ php artisan kp:safa-public-info-preview --period-id=1
 
 ## Read-only Guarantee
 Command hanya membaca `kp_periods` dan `kp_document_requirements` untuk output public-safe. Tidak ada request HTTP ke SAFA dan tidak ada insert/update/delete. Count sebelum dan sesudah ditampilkan dalam `read_only_counts`.
-
