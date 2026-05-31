@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureRoleSelected;
 use App\Console\Commands\CoreHealthCheckCommand;
 use App\Console\Commands\CoreMappingCoverageCommand;
 use App\Console\Commands\CoreModePreflightCommand;
+use App\Console\Commands\ExternalDocumentReferencePreviewCommand;
 use App\Console\Commands\SyncCoreMappingCommand;
 use App\Console\Commands\AuthBridgeCheckCommand;
 use App\Console\Commands\AuthBridgeSmokeTestCommand;
@@ -37,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
         CoreMappingCoverageCommand::class,
         CoreModePreflightCommand::class,
         DisplayAdapterCheckCommand::class,
+        ExternalDocumentReferencePreviewCommand::class,
         IntegrationGapCheckCommand::class,
         MasterDataReadCheckCommand::class,
         SafaPublicInfoPreviewCommand::class,
