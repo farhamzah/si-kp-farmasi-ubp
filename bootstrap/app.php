@@ -4,13 +4,17 @@ use App\Http\Middleware\CheckRole;
 use App\Http\Middleware\CheckUserActive;
 use App\Http\Middleware\EnsureRoleSelected;
 use App\Console\Commands\CoreHealthCheckCommand;
+use App\Console\Commands\CoreMappingCoverageCommand;
 use App\Console\Commands\CoreModePreflightCommand;
 use App\Console\Commands\SyncCoreMappingCommand;
 use App\Console\Commands\AuthBridgeCheckCommand;
 use App\Console\Commands\AuthBridgeSmokeTestCommand;
 use App\Console\Commands\AuthModeCommand;
 use App\Console\Commands\DisplayAdapterCheckCommand;
+use App\Console\Commands\IntegrationGapCheckCommand;
 use App\Console\Commands\MasterDataReadCheckCommand;
+use App\Console\Commands\SafaPublicInfoPreviewCommand;
+use App\Console\Commands\TuDocumentPayloadPreviewCommand;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -30,10 +34,14 @@ return Application::configure(basePath: dirname(__DIR__))
         AuthBridgeSmokeTestCommand::class,
         AuthModeCommand::class,
         CoreHealthCheckCommand::class,
+        CoreMappingCoverageCommand::class,
         CoreModePreflightCommand::class,
         DisplayAdapterCheckCommand::class,
+        IntegrationGapCheckCommand::class,
         MasterDataReadCheckCommand::class,
+        SafaPublicInfoPreviewCommand::class,
         SyncCoreMappingCommand::class,
+        TuDocumentPayloadPreviewCommand::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
