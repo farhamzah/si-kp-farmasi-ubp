@@ -46,7 +46,7 @@ class KpExternalDocumentReferenceTest extends TestCase
             'source_module' => 'assignment',
             'source_reference_type' => 'kp_assignment',
             'source_reference_id' => '1',
-            'external_status' => 'local_draft',
+            'external_status' => 'draft',
             'metadata' => ['safe' => true],
             'last_payload_snapshot' => ['service_code' => 'KP_PLACEMENT_LETTER'],
         ]);
@@ -90,14 +90,17 @@ class KpExternalDocumentReferenceTest extends TestCase
 
         $result = $service->persistLocalDrafts($preview);
 
-        $this->assertSame(['persisted' => true, 'created_or_updated' => 1, 'reference_ids' => [1]], $result);
+        $this->assertSame(1, $result['created']);
+        $this->assertSame(0, $result['updated']);
+        $this->assertSame(1, $result['created_or_updated']);
+        $this->assertSame([1], $result['reference_ids']);
         $this->assertDatabaseHas('kp_external_document_references', [
             'external_app' => 'tu-farmasi',
             'document_type' => 'placement_letter',
             'service_code' => 'KP_PLACEMENT_LETTER',
             'source_reference_type' => 'kp_assignment',
             'source_reference_id' => '9',
-            'external_status' => 'local_draft',
+            'external_status' => 'draft',
         ]);
 
         $reference = KpExternalDocumentReference::firstOrFail();

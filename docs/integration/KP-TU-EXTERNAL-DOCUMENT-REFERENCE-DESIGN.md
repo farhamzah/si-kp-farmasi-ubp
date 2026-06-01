@@ -85,6 +85,26 @@ Default command adalah read-only:
 ## Local Draft Persistence
 KP-18 menyediakan method eksplisit `persistLocalDrafts()` pada service untuk fondasi tahap berikutnya. Method ini tidak dipanggil oleh command default. Jika kelak dipakai, penyimpanan tetap hanya ke database lokal KP, bukan ke TU.
 
+## Local Draft Management KP-19
+KP-19 menambahkan halaman management lokal:
+
+```text
+GET /management/integration/external-document-references
+POST /management/integration/external-document-references/drafts
+```
+
+Route dilindungi middleware `auth`, `active`, `role.selected`, dan `role:admin,koordinator_kp`.
+
+Aksi POST bersifat eksplisit dan hanya membuat/memperbarui draft lokal di tabel `kp_external_document_references`. Tidak ada request HTTP ke TU, tidak ada upload file, dan tidak ada write ke Core/TU/SAFA.
+
+Status draft lokal menggunakan `draft`. Status lanjutan yang disiapkan:
+- `pending_external`
+- `linked`
+- `failed`
+- `archived`
+
+Duplicate dicegah oleh unique key `external_app + document_type + source_reference_type + source_reference_id` dan service menggunakan `updateOrCreate()`.
+
 ## Guardrails
 - Tidak ada duplicate upload.
 - Tidak ada write bridge aktif ke TU.

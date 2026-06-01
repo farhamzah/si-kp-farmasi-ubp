@@ -8,6 +8,8 @@ use Illuminate\Support\Str;
 
 class KpExternalDocumentReference extends Model
 {
+    public const STATUSES = ['draft', 'pending_external', 'linked', 'failed', 'archived'];
+
     protected $fillable = [
         'uuid',
         'source_app',
@@ -71,5 +73,27 @@ class KpExternalDocumentReference extends Model
         }
 
         return ! preg_match('/token|signature|signed|password|secret|storage\/app|private|temporary/', $url);
+    }
+
+    public function statusLabel(): string
+    {
+        return [
+            'draft' => 'Draft lokal',
+            'pending_external' => 'Menunggu TU',
+            'linked' => 'Tertaut',
+            'failed' => 'Gagal',
+            'archived' => 'Diarsipkan',
+        ][$this->external_status] ?? ucfirst((string) $this->external_status);
+    }
+
+    public function statusBadgeClass(): string
+    {
+        return [
+            'draft' => 'bg-slate-100 text-slate-700 ring-slate-200',
+            'pending_external' => 'bg-amber-50 text-amber-700 ring-amber-100',
+            'linked' => 'bg-emerald-50 text-emerald-700 ring-emerald-100',
+            'failed' => 'bg-rose-50 text-rose-700 ring-rose-100',
+            'archived' => 'bg-zinc-100 text-zinc-700 ring-zinc-200',
+        ][$this->external_status] ?? 'bg-slate-100 text-slate-700 ring-slate-200';
     }
 }

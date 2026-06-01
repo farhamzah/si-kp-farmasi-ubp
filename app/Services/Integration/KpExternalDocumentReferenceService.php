@@ -35,23 +35,31 @@ class KpExternalDocumentReferenceService
     {
         $references = collect($referencePreview['references'] ?? []);
 
-        $created = $references->map(function (array $draft) use ($userId): KpExternalDocumentReference {
+        $created = 0;
+        $updated = 0;
+        $models = $references->map(function (array $draft) use ($userId, &$created, &$updated): KpExternalDocumentReference {
             $attributes = Arr::except($draft, ['dry_run', 'local_draft_only', 'safe_to_persist']);
             $attributes['created_by'] = $userId;
             $attributes['updated_by'] = $userId;
 
-            return KpExternalDocumentReference::query()->updateOrCreate([
+            $model = KpExternalDocumentReference::query()->updateOrCreate([
                 'external_app' => $attributes['external_app'],
                 'document_type' => $attributes['document_type'],
                 'source_reference_type' => $attributes['source_reference_type'],
                 'source_reference_id' => $attributes['source_reference_id'],
             ], $attributes);
+
+            $model->wasRecentlyCreated ? $created++ : $updated++;
+
+            return $model;
         });
 
         return [
             'persisted' => true,
-            'created_or_updated' => $created->count(),
-            'reference_ids' => $created->pluck('id')->all(),
+            'created' => $created,
+            'updated' => $updated,
+            'created_or_updated' => $models->count(),
+            'reference_ids' => $models->pluck('id')->all(),
         ];
     }
 
@@ -69,7 +77,7 @@ class KpExternalDocumentReferenceService
             'source_reference_id' => $referenceId,
             'external_document_id' => null,
             'external_document_number' => null,
-            'external_status' => 'local_draft',
+            'external_status' => 'draft',
             'reference_url' => null,
             'file_hash' => null,
             'metadata' => [

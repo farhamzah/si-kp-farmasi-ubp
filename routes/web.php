@@ -27,6 +27,7 @@ use App\Http\Controllers\Management\FinalReportMonitoringController;
 use App\Http\Controllers\Management\ExamLogController;
 use App\Http\Controllers\Management\ExamRequestController as ManagementExamRequestController;
 use App\Http\Controllers\Management\ExamScheduleController as ManagementExamScheduleController;
+use App\Http\Controllers\Management\ExternalDocumentReferenceController;
 use App\Http\Controllers\Management\ExportController;
 use App\Http\Controllers\Management\IntegrationReviewController;
 use App\Http\Controllers\Management\AssessmentComponentController;
@@ -163,6 +164,8 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('integration/tu-payload-preview.json', [IntegrationReviewController::class, 'tuPayloadPreviewJson'])->name('integration.tu-payload-preview.json');
             Route::get('integration/safa-public-info-preview', [IntegrationReviewController::class, 'safaPublicInfoPreview'])->name('integration.safa-public-info-preview');
             Route::get('integration/safa-public-info-preview.json', [IntegrationReviewController::class, 'safaPublicInfoPreviewJson'])->name('integration.safa-public-info-preview.json');
+            Route::get('integration/external-document-references', [ExternalDocumentReferenceController::class, 'index'])->name('integration.external-document-references.index');
+            Route::post('integration/external-document-references/drafts', [ExternalDocumentReferenceController::class, 'storeDrafts'])->name('integration.external-document-references.store-drafts');
         });
 
         Route::middleware('role:mahasiswa')->prefix('mahasiswa')->name('student.')->group(function () {

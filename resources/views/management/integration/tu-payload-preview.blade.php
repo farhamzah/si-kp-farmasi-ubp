@@ -11,6 +11,7 @@
                 <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">Halaman ini hanya membaca payload preview lokal. Tidak ada pengiriman request keluar dan tidak ada perubahan data lintas aplikasi.</p>
             </div>
             <div class="flex flex-wrap gap-2">
+                <a href="{{ route('management.integration.external-document-references.index') }}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Draft Reference</a>
                 <a href="{{ route('management.integration.safa-public-info-preview') }}" class="rounded-lg border border-cyan-200 px-4 py-2 text-sm font-semibold text-cyan-700">Review SAFA</a>
                 <a href="{{ route('management.integration.tu-payload-preview.json', request()->query()) }}" class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Preview JSON</a>
             </div>
