@@ -37,14 +37,14 @@ class RoleDashboard
             'label' => 'Pembimbing Luar / Lapangan',
             'route' => 'pembimbing-lapangan.dashboard',
             'path' => '/pembimbing-lapangan/dashboard',
-            'menu' => ['Dashboard', 'Profil Saya', 'Mahasiswa KP', 'Validasi Logbook', 'Catatan Lapangan', 'Penilaian Lapangan'],
+            'menu' => ['Dashboard', 'Profil Saya', 'Mahasiswa KP', 'Validasi Logbook', 'Penilaian Lapangan'],
             'features' => ['Mahasiswa KP', 'Validasi Logbook', 'Catatan Lapangan', 'Penilaian Lapangan'],
         ],
         'penguji' => [
             'label' => 'Penguji',
             'route' => 'penguji.dashboard',
             'path' => '/penguji/dashboard',
-            'menu' => ['Dashboard', 'Profil Saya', 'Jadwal Sidang', 'Detail Mahasiswa', 'Penilaian Sidang'],
+            'menu' => ['Dashboard', 'Profil Saya', 'Jadwal Sidang', 'Penilaian Sidang'],
             'features' => ['Jadwal Sidang', 'Detail Mahasiswa Sidang', 'Penilaian Sidang'],
         ],
     ];

@@ -21,6 +21,7 @@ use App\Console\Commands\ReleaseSensitiveScanCommand;
 use App\Console\Commands\SafaPublicInfoPreviewCommand;
 use App\Console\Commands\StagingRehearsalCheckCommand;
 use App\Console\Commands\TuDocumentPayloadPreviewCommand;
+use App\Console\Commands\UiReadinessCheckCommand;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -54,6 +55,7 @@ return Application::configure(basePath: dirname(__DIR__))
         StagingRehearsalCheckCommand::class,
         SyncCoreMappingCommand::class,
         TuDocumentPayloadPreviewCommand::class,
+        UiReadinessCheckCommand::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
