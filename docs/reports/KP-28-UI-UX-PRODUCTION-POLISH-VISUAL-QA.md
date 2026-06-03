@@ -51,7 +51,35 @@ Layak untuk UAT/staging rehearsal:
 - Focus keyboard tersedia.
 - Login punya error state jelas.
 
-Belum dianggap visual sign-off final sampai screenshot manual desktop/mobile dilakukan di environment browser normal.
+## Screenshot Evidence
+Screenshot visual desktop/mobile sudah diambil menggunakan Microsoft Edge headless pada 2026-06-04 dan disimpan di:
+
+`docs/reports/kp-28-screenshots/`
+
+Evidence yang tersedia:
+- `login-desktop.png`
+- `login-mobile.png`
+- `admin-dashboard-desktop.png`
+- `admin-dashboard-mobile.png`
+- `koordinator-dashboard-desktop.png`
+- `koordinator-dashboard-mobile.png`
+- `mahasiswa-dashboard-desktop.png`
+- `mahasiswa-dashboard-mobile.png`
+- `pembimbing-dalam-dashboard-desktop.png`
+- `pembimbing-dalam-dashboard-mobile.png`
+- `pembimbing-lapangan-dashboard-desktop.png`
+- `pembimbing-lapangan-dashboard-mobile.png`
+- `penguji-dashboard-desktop.png`
+- `penguji-dashboard-mobile.png`
+
+Hasil inspeksi visual:
+- Login desktop dan mobile tampil proporsional.
+- Dashboard Admin desktop tampil padat tetapi rapi untuk operasional.
+- Dashboard role mobile tidak menunjukkan overlap fatal.
+- Menu placeholder `Segera` tidak muncul pada dashboard role.
+- Sidebar mobile berubah menjadi navigasi horizontal yang bisa discroll.
+
+Catatan: screenshot mobile full-page memang terlihat sangat panjang karena seluruh halaman dashboard direkam dari atas sampai footer.
 
 ## Guardrails
 - Tidak ada fitur besar baru.

@@ -12,8 +12,8 @@ class UiReadinessCheckCommandTest extends TestCase
             ->expectsOutputToContain('KP UI readiness check')
             ->expectsOutputToContain('Read-only: yes')
             ->expectsOutputToContain('Blockers: 0')
+            ->expectsOutputToContain('Warnings: 0')
             ->expectsOutputToContain('Ready for UI/UX UAT: yes')
-            ->expectsOutputToContain('visual_browser_screenshot_required')
             ->assertSuccessful();
     }
 }

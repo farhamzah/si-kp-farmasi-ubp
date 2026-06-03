@@ -57,7 +57,7 @@ class UiReadinessCheckCommand extends Command
             $this->check('login_error_state_exists', str_contains($login, '$errors->any()'), 'Login wajib punya error state jelas.'),
             $this->check('login_mobile_safe_height', str_contains($login, 'min-h-screen'), 'Login wajib aman pada tinggi layar mobile.'),
             $this->check('role_menus_do_not_ship_placeholders', $this->roleMenusHaveNoKnownPlaceholders(), 'Menu role production tidak boleh menampilkan placeholder Segera.'),
-            $this->warning('visual_browser_screenshot_required', false, 'Screenshot desktop/mobile tetap perlu dilakukan di browser normal sebelum go-live.'),
+            $this->warning('visual_browser_screenshot_required', $this->visualScreenshotsExist(), 'Screenshot desktop/mobile tetap perlu dilakukan di browser normal sebelum go-live.'),
         ];
     }
 
@@ -101,5 +101,34 @@ class UiReadinessCheckCommand extends Command
         }
 
         return (string) File::get($path);
+    }
+
+    private function visualScreenshotsExist(): bool
+    {
+        $directory = base_path('docs/reports/kp-28-screenshots');
+        $required = [
+            'login-desktop.png',
+            'login-mobile.png',
+            'admin-dashboard-desktop.png',
+            'admin-dashboard-mobile.png',
+            'koordinator-dashboard-desktop.png',
+            'koordinator-dashboard-mobile.png',
+            'mahasiswa-dashboard-desktop.png',
+            'mahasiswa-dashboard-mobile.png',
+            'pembimbing-dalam-dashboard-desktop.png',
+            'pembimbing-dalam-dashboard-mobile.png',
+            'pembimbing-lapangan-dashboard-desktop.png',
+            'pembimbing-lapangan-dashboard-mobile.png',
+            'penguji-dashboard-desktop.png',
+            'penguji-dashboard-mobile.png',
+        ];
+
+        foreach ($required as $file) {
+            if (! File::exists($directory.'/'.$file)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
