@@ -14,7 +14,10 @@ use App\Console\Commands\AuthModeCommand;
 use App\Console\Commands\DisplayAdapterCheckCommand;
 use App\Console\Commands\IntegrationGapCheckCommand;
 use App\Console\Commands\MasterDataReadCheckCommand;
+use App\Console\Commands\ProductionReadinessGateCommand;
+use App\Console\Commands\ProvisionCoreBridgeUserCommand;
 use App\Console\Commands\SafaPublicInfoPreviewCommand;
+use App\Console\Commands\StagingRehearsalCheckCommand;
 use App\Console\Commands\TuDocumentPayloadPreviewCommand;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -41,7 +44,10 @@ return Application::configure(basePath: dirname(__DIR__))
         ExternalDocumentReferencePreviewCommand::class,
         IntegrationGapCheckCommand::class,
         MasterDataReadCheckCommand::class,
+        ProductionReadinessGateCommand::class,
+        ProvisionCoreBridgeUserCommand::class,
         SafaPublicInfoPreviewCommand::class,
+        StagingRehearsalCheckCommand::class,
         SyncCoreMappingCommand::class,
         TuDocumentPayloadPreviewCommand::class,
     ])

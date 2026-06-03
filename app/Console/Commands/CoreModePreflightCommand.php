@@ -258,6 +258,10 @@ class CoreModePreflightCommand extends Command
             $blockers[] = "Core user {$email} is inactive.";
         }
 
+        if ($coreUser && $coreUser->must_change_password) {
+            $blockers[] = "Core user {$email} must change password in Core Profile Portal before KP login.";
+        }
+
         if ($coreUser && ! $hasKpAccess) {
             $blockers[] = "Core user {$email} has no active kp-farmasi app access.";
         }
@@ -274,6 +278,7 @@ class CoreModePreflightCommand extends Command
             'email' => $email,
             'core_user_exists' => (bool) $coreUser,
             'core_user_active' => (bool) ($coreUser?->active),
+            'core_must_change_password' => (bool) ($coreUser?->must_change_password),
             'core_kp_app_access_active' => $hasKpAccess,
             'legacy_mapped_user_exists' => (bool) $legacyUser,
             'legacy_user_active' => $legacyUser?->status === 'active',

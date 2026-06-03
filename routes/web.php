@@ -166,6 +166,8 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('integration/safa-public-info-preview.json', [IntegrationReviewController::class, 'safaPublicInfoPreviewJson'])->name('integration.safa-public-info-preview.json');
             Route::get('integration/external-document-references', [ExternalDocumentReferenceController::class, 'index'])->name('integration.external-document-references.index');
             Route::post('integration/external-document-references/drafts', [ExternalDocumentReferenceController::class, 'storeDrafts'])->name('integration.external-document-references.store-drafts');
+            Route::get('integration/external-document-references/{reference}/edit', [ExternalDocumentReferenceController::class, 'edit'])->name('integration.external-document-references.edit');
+            Route::patch('integration/external-document-references/{reference}', [ExternalDocumentReferenceController::class, 'update'])->name('integration.external-document-references.update');
         });
 
         Route::middleware('role:mahasiswa')->prefix('mahasiswa')->name('student.')->group(function () {

@@ -105,6 +105,35 @@ Status draft lokal menggunakan `draft`. Status lanjutan yang disiapkan:
 
 Duplicate dicegah oleh unique key `external_app + document_type + source_reference_type + source_reference_id` dan service menggunakan `updateOrCreate()`.
 
+## Manual Linking & Status Lifecycle KP-20
+KP-20 menambahkan pengelolaan manual reference yang tetap local-only:
+
+```text
+GET /management/integration/external-document-references/{reference}/edit
+PATCH /management/integration/external-document-references/{reference}
+```
+
+Admin/Koordinator KP dapat mengisi:
+- `external_document_id`
+- `external_document_number`
+- `external_status`
+- `reference_url`
+- `last_error`
+- `synced_at`
+
+Status lifecycle:
+- `draft`: draft lokal dari preview payload TU.
+- `pending_external`: sedang/akan diproses manual oleh TU.
+- `linked`: sudah memiliki nomor/reference URL aman.
+- `failed`: proses/linking bermasalah.
+- `archived`: reference tidak aktif tetapi disimpan untuk riwayat.
+
+`reference_url` nullable. Jika diisi, URL harus normal `http`/`https` dan tidak boleh mengandung token, access token, signature, signed URL, secret, password, private path, storage path, `file_path`, path Windows seperti `C:\`/`E:\`, `/storage/`, atau `/private/`.
+
+Field teks manual seperti `external_document_id`, `external_document_number`, dan `last_error` juga menolak marker sensitif tersebut agar operator tidak menyimpan credential/path internal di catatan lokal KP.
+
+Update manual hanya menulis ke tabel lokal `kp_external_document_references`. Tidak ada HTTP request ke TU/SAFA, tidak ada write ke Core/TU/SAFA, dan tidak ada upload/duplicate file.
+
 ## Guardrails
 - Tidak ada duplicate upload.
 - Tidak ada write bridge aktif ke TU.

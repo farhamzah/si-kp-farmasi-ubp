@@ -69,6 +69,13 @@ class CoreBridgeAuthService
             return null;
         }
 
+        if ($coreUser->must_change_password) {
+            $this->failureReason = 'core_password_must_change';
+            Log::warning('KP auth Core user must change password before KP login.', ['email' => $this->normalize($email)]);
+
+            return null;
+        }
+
         if (! Hash::check($password, $coreUser->password)) {
             $this->failureReason = 'invalid_credentials';
 

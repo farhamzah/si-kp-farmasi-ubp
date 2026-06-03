@@ -5,404 +5,376 @@
 
 @section('content')
 @php
-    $firstName = explode(' ', auth()->user()->name)[0];
+    $user = auth()->user();
+    $firstName = explode(' ', trim($user->name))[0] ?: $user->name;
+    $activeRole = session('active_role');
+
+    $formatLabel = fn (string $label): string => str($label)->replace('_', ' ')->headline()->toString();
+    $formatValue = fn ($value): string => is_numeric($value) ? number_format((int) $value, 0, ',', '.') : (string) ($value ?: '-');
+
     $featureDescriptions = [
-        'Pendaftaran KP' => 'Mulai pengajuan kerja praktek dan pantau status verifikasi.',
-        'Berkas Persyaratan' => 'Kelola dokumen wajib sebelum pemilihan tempat KP.',
-        'Berkas KP' => 'Simpan dan lengkapi berkas administrasi kerja praktek.',
-        'Pemilihan Tempat KP' => 'Pilih tempat KP sesuai periode dan kuota yang tersedia.',
-        'Logbook' => 'Catat aktivitas harian selama pelaksanaan kerja praktek.',
-        'Laporan Akhir' => 'Susun dan ajukan laporan akhir untuk proses review.',
-        'Sidang' => 'Pantau jadwal sidang dan kelengkapan sebelum presentasi.',
-        'Nilai' => 'Lihat rekap penilaian dari pembimbing dan penguji.',
+        'Pendaftaran KP' => 'Pengajuan dan status verifikasi pendaftaran.',
+        'Berkas Persyaratan' => 'Kelengkapan dokumen awal mahasiswa.',
+        'Berkas KP' => 'Berkas administrasi Kerja Praktek.',
+        'Pemilihan Tempat KP' => 'Pilihan tempat dan kuota KP.',
+        'Logbook' => 'Catatan aktivitas harian KP.',
+        'Laporan Akhir' => 'Review dan approval laporan akhir.',
+        'Sidang' => 'Pengajuan, jadwal, dan pelaksanaan sidang.',
+        'Nilai' => 'Input dan publikasi nilai KP.',
+        'Mahasiswa Bimbingan' => 'Daftar mahasiswa yang dibimbing.',
+        'Logbook Mahasiswa' => 'Monitoring logbook mahasiswa bimbingan.',
+        'Review Laporan' => 'Pemeriksaan laporan akhir mahasiswa.',
+        'Jadwal Sidang' => 'Agenda sidang yang terkait dengan peran Anda.',
+        'Penilaian Pembimbing' => 'Input nilai pembimbing dalam.',
+        'Mahasiswa KP' => 'Daftar mahasiswa KP lapangan.',
+        'Validasi Logbook' => 'Validasi aktivitas harian mahasiswa.',
+        'Catatan Lapangan' => 'Catatan pembimbing lapangan.',
+        'Penilaian Lapangan' => 'Input nilai pembimbing lapangan.',
+        'Detail Mahasiswa Sidang' => 'Data mahasiswa yang diuji.',
+        'Penilaian Sidang' => 'Input nilai penguji sidang.',
+        'Manajemen User' => 'Kelola akun dan peran pengguna KP.',
+        'Import Excel' => 'Impor data pengguna secara terstruktur.',
+        'Periode KP' => 'Pengaturan periode Kerja Praktek.',
+        'Tempat KP' => 'Master tempat dan mitra KP.',
+        'Kuota Tempat KP' => 'Kuota pendaftaran tiap tempat KP.',
+        'Verifikasi Berkas' => 'Pemeriksaan berkas pendaftaran.',
+        'Rekap' => 'Rekap operasional dan ekspor data KP.',
+    ];
+
+    $featureRoutes = [
+        'Pendaftaran KP' => 'student.kp-registrations.index',
+        'Berkas Persyaratan' => 'student.kp-documents.index',
+        'Berkas KP' => 'student.kp-documents.index',
+        'Pemilihan Tempat KP' => 'student.place-selections.index',
+        'Logbook' => 'student.logbooks.index',
+        'Laporan Akhir' => 'student.final-reports.show',
+        'Sidang' => 'student.exams.index',
+        'Nilai' => 'student.scores.show',
+        'Mahasiswa Bimbingan' => 'internal-supervisor.assignments.index',
+        'Logbook Mahasiswa' => 'internal-supervisor.logbooks.index',
+        'Review Laporan' => 'internal-supervisor.final-reports.index',
+        'Jadwal Sidang' => $activeRole === 'penguji' ? 'examiner.exams.index' : ($activeRole === 'pembimbing_dalam' ? 'internal-supervisor.exams.index' : 'management.exams.index'),
+        'Penilaian Pembimbing' => 'internal-supervisor.assessments.index',
+        'Mahasiswa KP' => 'field-supervisor.assignments.index',
+        'Validasi Logbook' => 'field-supervisor.logbooks.index',
+        'Penilaian Lapangan' => 'field-supervisor.assessments.index',
+        'Penilaian Sidang' => 'examiner.assessments.index',
+        'Manajemen User' => 'admin.users.index',
+        'Import Excel' => 'admin.import-users.index',
+        'Periode KP' => 'management.kp-periods.index',
+        'Tempat KP' => 'management.kp-places.index',
+        'Kuota Tempat KP' => 'management.kp-place-quotas.index',
+        'Verifikasi Berkas' => 'management.kp-registrations.index',
+        'Rekap' => 'management.recaps.index',
+    ];
+
+    $summarySections = collect([
+        ['title' => 'Ringkasan Kerja Praktek', 'description' => 'Periode, tempat, dan kuota yang sedang tersedia.', 'stats' => $kpStats, 'tone' => 'sky'],
+        ['title' => 'Ringkasan Pendaftaran KP', 'description' => 'Status pendaftaran dan verifikasi berkas mahasiswa.', 'stats' => $registrationStats, 'tone' => 'indigo'],
+        ['title' => 'Ringkasan Pemilihan Tempat', 'description' => 'Pilihan tempat, daftar tunggu, dan sisa kuota.', 'stats' => $selectionStats, 'tone' => 'cyan'],
+        ['title' => 'Ringkasan Penempatan KP', 'description' => 'Status penempatan dan pembimbing Kerja Praktek.', 'stats' => $assignmentStats, 'tone' => 'teal'],
+        ['title' => 'Ringkasan Logbook KP', 'description' => 'Aktivitas harian dan validasi kegiatan KP.', 'stats' => $logbookStats, 'tone' => 'emerald'],
+        ['title' => 'Ringkasan Laporan Akhir', 'description' => 'Upload, review, revisi, dan approval laporan.', 'stats' => $finalReportStats, 'tone' => 'amber'],
+        ['title' => 'Ringkasan Sidang KP', 'description' => 'Pengajuan, jadwal, dan status pelaksanaan sidang.', 'stats' => $examStats, 'tone' => 'violet'],
+        ['title' => 'Ringkasan Nilai KP', 'description' => 'Kelengkapan input, finalisasi, dan publikasi nilai.', 'stats' => $scoreStats, 'tone' => 'rose'],
+    ])->filter(fn ($section) => filled($section['stats']))->values();
+
+    $primaryStats = $summarySections
+        ->flatMap(fn ($section) => collect($section['stats'])->map(fn ($value, $key) => [
+            'label' => $formatLabel($key),
+            'value' => $value,
+            'section' => $section['title'],
+            'tone' => $section['tone'],
+        ]))
+        ->filter(fn ($stat) => is_numeric($stat['value']))
+        ->sortByDesc(fn ($stat) => (int) $stat['value'])
+        ->take(4)
+        ->values();
+
+    if ($primaryStats->isEmpty()) {
+        $primaryStats = collect([
+            ['label' => 'Status akun', 'value' => 'Aktif', 'section' => 'Akun', 'tone' => 'emerald'],
+            ['label' => 'Peran aktif', 'value' => $roleData['label'], 'section' => 'Peran', 'tone' => 'sky'],
+            ['label' => 'Profil', 'value' => $user->profile_completed ? 'Lengkap' : 'Belum lengkap', 'section' => 'Profil', 'tone' => $user->profile_completed ? 'emerald' : 'amber'],
+        ]);
+    }
+
+    $priorityItems = collect([
+        [
+            'label' => 'Pendaftaran menunggu verifikasi',
+            'value' => (int) ($registrationStats['pending'] ?? 0),
+            'route' => 'management.kp-registrations.index',
+            'visible' => in_array($role, ['admin', 'koordinator_kp'], true),
+        ],
+        [
+            'label' => 'Penempatan menunggu pembimbing',
+            'value' => (int) ($assignmentStats['waiting'] ?? 0),
+            'route' => 'management.kp-assignments.index',
+            'visible' => in_array($role, ['admin', 'koordinator_kp'], true),
+        ],
+        [
+            'label' => 'Logbook menunggu validasi',
+            'value' => (int) ($logbookStats['menunggu_validasi'] ?? 0),
+            'route' => $role === 'pembimbing_lapangan' ? 'field-supervisor.logbooks.index' : 'management.logbooks.index',
+            'visible' => in_array($role, ['admin', 'koordinator_kp', 'pembimbing_lapangan'], true),
+        ],
+        [
+            'label' => 'Laporan menunggu review',
+            'value' => (int) ($finalReportStats['menunggu_review'] ?? 0),
+            'route' => $role === 'pembimbing_dalam' ? 'internal-supervisor.final-reports.index' : 'management.final-reports.index',
+            'visible' => in_array($role, ['admin', 'koordinator_kp', 'pembimbing_dalam'], true),
+        ],
+        [
+            'label' => 'Sidang terjadwal',
+            'value' => (int) ($examStats['sidang_terjadwal'] ?? $examStats['sidang_mendatang'] ?? $examStats['dijadwalkan'] ?? 0),
+            'route' => $activeRole === 'penguji' ? 'examiner.exams.index' : ($activeRole === 'pembimbing_dalam' ? 'internal-supervisor.exams.index' : 'management.exams.index'),
+            'visible' => in_array($role, ['admin', 'koordinator_kp', 'pembimbing_dalam', 'penguji'], true),
+        ],
+        [
+            'label' => 'Nilai belum submit',
+            'value' => (int) ($scoreStats['belum_submit'] ?? $scoreStats['sidang_belum_submit'] ?? 0),
+            'route' => $role === 'penguji' ? 'examiner.assessments.index' : ($role === 'pembimbing_lapangan' ? 'field-supervisor.assessments.index' : 'internal-supervisor.assessments.index'),
+            'visible' => in_array($role, ['pembimbing_dalam', 'pembimbing_lapangan', 'penguji'], true),
+        ],
+    ])->filter(fn ($item) => $item['visible'])->values();
+
+    $urgentItems = $priorityItems->filter(fn ($item) => $item['value'] > 0)->values();
+
+    $toneClasses = [
+        'sky' => ['text' => 'text-sky-700', 'bg' => 'bg-sky-50', 'ring' => 'ring-sky-100'],
+        'indigo' => ['text' => 'text-indigo-700', 'bg' => 'bg-indigo-50', 'ring' => 'ring-indigo-100'],
+        'cyan' => ['text' => 'text-cyan-700', 'bg' => 'bg-cyan-50', 'ring' => 'ring-cyan-100'],
+        'teal' => ['text' => 'text-teal-700', 'bg' => 'bg-teal-50', 'ring' => 'ring-teal-100'],
+        'emerald' => ['text' => 'text-emerald-700', 'bg' => 'bg-emerald-50', 'ring' => 'ring-emerald-100'],
+        'amber' => ['text' => 'text-amber-700', 'bg' => 'bg-amber-50', 'ring' => 'ring-amber-100'],
+        'violet' => ['text' => 'text-violet-700', 'bg' => 'bg-violet-50', 'ring' => 'ring-violet-100'],
+        'rose' => ['text' => 'text-rose-700', 'bg' => 'bg-rose-50', 'ring' => 'ring-rose-100'],
     ];
 @endphp
-<div class="space-y-6">
-    <!-- Welcome Banner -->
-    <section class="relative overflow-hidden rounded-[1.75rem] border border-cyan-100 bg-white p-7 shadow-2xl shadow-sky-900/8 md:p-8">
-        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.18),transparent_34%),linear-gradient(135deg,rgba(236,254,255,0.95),rgba(255,255,255,0.72)_48%,rgba(240,249,255,0.92))]"></div>
-        <div class="relative grid gap-7 lg:grid-cols-[minmax(0,1fr)_330px] lg:items-center">
-            <div>
-                <div class="flex items-center gap-4">
-                    <x-ui.avatar :user="auth()->user()" size="lg" class="shadow-lg shadow-cyan-800/10" />
-                    <div class="min-w-0">
-                        <span class="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-1.5 text-xs font-black uppercase tracking-widest text-cyan-800">
-                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M6 4a2 2 0 11-4 0 2 2 0 014 0zM15 4a2 2 0 11-4 0 2 2 0 014 0zM13 13a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            </svg>
-                            {{ auth()->user()->displayRoleLabel(session('active_role')) }}
-                        </span>
-                        <h1 class="mt-4 max-w-3xl text-3xl font-black tracking-tight text-slate-950 md:text-4xl">Selamat datang kembali, {{ $firstName }}</h1>
+
+<div class="space-y-5">
+    <section class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div class="grid gap-0 lg:grid-cols-[minmax(0,1fr)_360px]">
+            <div class="border-b border-slate-100 p-6 md:p-7 lg:border-b-0 lg:border-r">
+                <div class="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+                    <div class="flex min-w-0 items-start gap-4">
+                        <x-ui.avatar :user="$user" size="lg" class="ring-4 ring-white shadow-sm" />
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="rounded-md bg-cyan-50 px-2.5 py-1 text-[11px] font-black uppercase tracking-widest text-cyan-700 ring-1 ring-cyan-100">{{ $roleData['label'] }}</span>
+                                <span class="rounded-md {{ $user->profile_completed ? 'bg-emerald-50 text-emerald-700 ring-emerald-100' : 'bg-amber-50 text-amber-700 ring-amber-100' }} px-2.5 py-1 text-[11px] font-bold ring-1">
+                                    {{ $user->profile_completed ? 'Profil lengkap' : 'Profil perlu dilengkapi' }}
+                                </span>
+                            </div>
+                            <h2 class="mt-3 text-2xl font-black tracking-tight text-slate-950 md:text-3xl">Selamat datang, {{ $firstName }}</h2>
+                            <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Fokus hari ini ditampilkan di bagian prioritas. Data transaksi tetap memakai ID legacy KP, sementara label profil dapat mengikuti integrasi Core sesuai mode aplikasi.</p>
+                        </div>
+                    </div>
+                    <div class="flex shrink-0 gap-2">
+                        <a href="{{ route('profile.show') }}" class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">Profil</a>
+                        @if($features)
+                            @php
+                                $firstFeatureRoute = $featureRoutes[$features[0]] ?? null;
+                            @endphp
+                            @if($firstFeatureRoute && Route::has($firstFeatureRoute))
+                                <a href="{{ route($firstFeatureRoute) }}" class="inline-flex items-center justify-center rounded-lg bg-cyan-700 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-cyan-800">Buka Modul</a>
+                            @endif
+                        @endif
                     </div>
                 </div>
-                <p class="mt-4 max-w-3xl text-base leading-8 text-slate-600">Pantau proses Kerja Praktek Farmasi dari pendaftaran, berkas, pemilihan tempat, bimbingan, laporan, hingga sidang dalam satu dashboard yang rapi.</p>
-            </div>
-            <div class="rounded-3xl border border-cyan-100 bg-white/80 p-5 shadow-xl shadow-sky-900/8 backdrop-blur">
-                <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Alur Kerja Praktek</p>
-                <div class="mt-4 space-y-3">
-                    @foreach([['01', 'Pendaftaran'], ['02', 'Pemilihan Tempat'], ['03', 'Bimbingan & Sidang']] as [$number, $label])
-                        <div class="flex items-center gap-3 rounded-2xl bg-sky-50 px-4 py-3">
-                            <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-700 text-xs font-black text-white">{{ $number }}</span>
-                            <span class="text-sm font-black text-slate-800">{{ $label }}</span>
+
+                <div class="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    @foreach($primaryStats as $stat)
+                        @php
+                            $tone = $toneClasses[$stat['tone']] ?? $toneClasses['sky'];
+                        @endphp
+                        <div class="rounded-lg bg-white p-4 ring-1 {{ $tone['ring'] }}">
+                            <p class="text-[11px] font-black uppercase tracking-widest text-slate-500">{{ $stat['label'] }}</p>
+                            <p class="mt-2 truncate text-2xl font-black {{ $tone['text'] }}">{{ $formatValue($stat['value']) }}</p>
+                            <p class="mt-1 truncate text-xs text-slate-500">{{ $stat['section'] }}</p>
                         </div>
                     @endforeach
                 </div>
             </div>
+
+            <aside class="bg-slate-50 p-6 md:p-7">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-widest text-slate-500">Prioritas Hari Ini</p>
+                        <h3 class="mt-1 text-lg font-black text-slate-950">Antrian kerja</h3>
+                    </div>
+                    <span class="rounded-md {{ $urgentItems->isEmpty() ? 'bg-emerald-50 text-emerald-700 ring-emerald-100' : 'bg-amber-50 text-amber-700 ring-amber-100' }} px-2.5 py-1 text-xs font-black ring-1">
+                        {{ $urgentItems->isEmpty() ? 'Tenang' : $urgentItems->count().' aktif' }}
+                    </span>
+                </div>
+
+                <div class="mt-4 space-y-2">
+                    @forelse($urgentItems as $item)
+                        @php
+                            $href = Route::has($item['route']) ? route($item['route']) : '#';
+                        @endphp
+                        <a href="{{ $href }}" class="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-3 text-sm shadow-sm ring-1 ring-slate-200 transition hover:ring-cyan-200">
+                            <span class="font-bold text-slate-700">{{ $item['label'] }}</span>
+                            <span class="rounded-md bg-cyan-700 px-2 py-1 text-xs font-black text-white">{{ $item['value'] }}</span>
+                        </a>
+                    @empty
+                        <div class="rounded-lg border border-dashed border-emerald-200 bg-white px-4 py-5">
+                            <div class="flex gap-3">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
+                                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.25 7.25a1 1 0 01-1.42 0L3.29 9.216a1 1 0 111.42-1.42l4.034 4.035 6.54-6.54a1 1 0 011.42 0z" clip-rule="evenodd"/></svg>
+                                </span>
+                                <div>
+                                    <p class="font-bold text-slate-800">Tidak ada antrian mendesak.</p>
+                                    <p class="mt-1 text-xs leading-5 text-slate-500">Gunakan modul akademik di bawah untuk membuka pekerjaan rutin.</p>
+                                </div>
+                            </div>
+                        </div>
+                    @endforelse
+                </div>
+            </aside>
         </div>
     </section>
 
-    <!-- Alerts Section -->
-    @if(! auth()->user()->profile_completed)
-        <div class="rounded-2xl border border-amber-200 bg-linear-to-r from-amber-50 to-white px-5 py-4 text-sm text-amber-900 shadow-lg shadow-amber-900/5">
-            <div class="flex items-start gap-3">
-                <svg class="w-5 h-5 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                </svg>
+    @if(! $user->profile_completed || $user->must_change_password)
+        <section class="grid gap-3 md:grid-cols-2">
+            @if(! $user->profile_completed)
+                <a href="{{ route('profile.edit') }}" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm transition hover:bg-amber-100">
+                    <span class="font-black">Profil belum lengkap.</span>
+                    <span class="ml-1 underline">Lengkapi profil</span>
+                </a>
+            @endif
+            @if($user->must_change_password)
+                <div class="rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-900 shadow-sm">
+                    <span class="font-black">Password awal perlu diganti.</span>
+                    <span class="ml-1">Buka menu profil untuk memperbarui password.</span>
+                </div>
+            @endif
+        </section>
+    @endif
+
+    <section class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p class="font-semibold">Profil Akademik Belum Lengkap</p>
-                    <p class="mt-1 text-xs text-amber-800 opacity-75">Silakan <a href="{{ route('profile.edit') }}" class="font-semibold underline hover:opacity-100 transition">lengkapi data profil</a> Anda untuk akses fitur utama.</p>
+                    <p class="text-[11px] font-black uppercase tracking-widest text-cyan-700">Alur KP</p>
+                    <h2 class="mt-1 text-lg font-black text-slate-950">Tahapan utama</h2>
+                </div>
+                <p class="text-xs text-slate-500">Dari pendaftaran sampai nilai akhir.</p>
+            </div>
+            <div class="mt-5 grid gap-3 md:grid-cols-4">
+                @foreach([
+                    ['01', 'Pendaftaran', 'Berkas dan verifikasi awal'],
+                    ['02', 'Tempat', 'Pilihan tempat dan kuota'],
+                    ['03', 'Bimbingan', 'Logbook dan laporan akhir'],
+                    ['04', 'Sidang & Nilai', 'Jadwal, ujian, dan finalisasi'],
+                ] as [$number, $label, $description])
+                    <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-700 text-xs font-black text-white">{{ $number }}</span>
+                        <p class="mt-3 font-black text-slate-900">{{ $label }}</p>
+                        <p class="mt-1 text-xs leading-5 text-slate-500">{{ $description }}</p>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+
+        <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+            <p class="text-[11px] font-black uppercase tracking-widest text-slate-500">Status Akun</p>
+            <div class="mt-4 space-y-3 text-sm">
+                <div class="flex items-center justify-between gap-3">
+                    <span class="text-slate-600">Role aktif</span>
+                    <span class="text-right font-black text-slate-950">{{ $roleData['label'] }}</span>
+                </div>
+                <div class="flex items-center justify-between gap-3">
+                    <span class="text-slate-600">Akun</span>
+                    <span class="rounded-md bg-emerald-50 px-2 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-100">Aktif</span>
+                </div>
+                <div class="flex items-center justify-between gap-3">
+                    <span class="text-slate-600">Profil akademik</span>
+                    <span class="rounded-md {{ $user->profile_completed ? 'bg-emerald-50 text-emerald-700 ring-emerald-100' : 'bg-amber-50 text-amber-700 ring-amber-100' }} px-2 py-1 text-xs font-black ring-1">
+                        {{ $user->profile_completed ? 'Lengkap' : 'Perlu cek' }}
+                    </span>
                 </div>
             </div>
         </div>
-    @endif
-
-    @if(auth()->user()->must_change_password)
-        <div class="rounded-2xl border border-cyan-200 bg-linear-to-r from-cyan-50 to-white px-5 py-4 text-sm text-cyan-900 shadow-lg shadow-cyan-900/5">
-            <div class="flex items-start gap-3">
-                <svg class="w-5 h-5 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
-                </svg>
-                <div>
-                    <p class="font-semibold">Pembaruan Kata Sandi Diperlukan</p>
-                    <p class="mt-1 text-xs text-sky-800 opacity-75">Untuk keamanan akun, silakan perbarui kata sandi awal Anda pada tahap berikutnya.</p>
-                </div>
-            </div>
-        </div>
-    @endif
-
-    <!-- Statistics Section for Admin -->
-    @if($adminStats)
-        <section>
-            <div class="mb-6">
-                <h2 class="text-lg font-bold text-slate-950">Metrik Administrasi</h2>
-                <p class="mt-1 text-sm text-slate-500">Ringkasan data pengguna dan status sistem.</p>
-            </div>
-            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-                <div class="rounded-xl bg-linear-to-br from-white to-slate-50 p-6 shadow-sm ring-1 ring-slate-100 hover:shadow-md transition-all">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Total Pengguna</p>
-                            <p class="mt-3 text-3xl font-bold text-slate-950">{{ $adminStats['total_users'] }}</p>
-                        </div>
-                        <div class="rounded-lg bg-blue-50 p-2.5 text-blue-600">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-                <div class="rounded-xl bg-linear-to-br from-white to-emerald-50 p-6 shadow-sm ring-1 ring-emerald-100 hover:shadow-md transition-all">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Status Aktif</p>
-                            <p class="mt-3 text-3xl font-bold text-emerald-700">{{ $adminStats['active_users'] }}</p>
-                        </div>
-                        <div class="rounded-lg bg-emerald-100 p-2.5 text-emerald-600">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-                <div class="rounded-xl bg-linear-to-br from-white to-rose-50 p-6 shadow-sm ring-1 ring-rose-100 hover:shadow-md transition-all">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Status Nonaktif</p>
-                            <p class="mt-3 text-3xl font-bold text-rose-700">{{ $adminStats['inactive_users'] }}</p>
-                        </div>
-                        <div class="rounded-lg bg-rose-100 p-2.5 text-rose-600">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-                <div class="rounded-xl bg-linear-to-br from-white to-amber-50 p-6 shadow-sm ring-1 ring-amber-100 hover:shadow-md transition-all">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Profil Tak Lengkap</p>
-                            <p class="mt-3 text-3xl font-bold text-amber-700">{{ $adminStats['incomplete_profiles'] }}</p>
-                        </div>
-                        <div class="rounded-lg bg-amber-100 p-2.5 text-amber-600">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M13.816 4.477a.75.75 0 01.504.692v7.018A2.25 2.25 0 015.5 15H2.75A.75.75 0 012 14.25v-8.5a.75.75 0 011.072-.7l10.944 7.062z" clip-rule="evenodd"/>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-                <div class="rounded-xl bg-linear-to-br from-white to-purple-50 p-6 shadow-sm ring-1 ring-purple-100 hover:shadow-md transition-all">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Import Terakhir</p>
-                            <p class="mt-3 text-lg font-bold text-purple-700">{{ $adminStats['last_import']?->created_at?->format('d M Y') ?? 'Belum' }}</p>
-                        </div>
-                        <div class="rounded-lg bg-purple-100 p-2.5 text-purple-600">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M12 2a1 1 0 01.22.032l.312.052a1 1 0 01.16.05c.7.24 1.45.642 2.05 1.238.6.597 1 1.35 1.24 2.05a1 1 0 01.05.16l.052.312A1 1 0 0117 6v8a1 1 0 01-.032.22l-.052.312a1 1 0 01-.05.16c-.24.7-.642 1.45-1.238 2.05-.597.6-1.35 1-2.05 1.24a1 1 0 01-.16.05l-.312.052A1 1 0 0113 18H7a1 1 0 01-.22-.032l-.312-.052a1 1 0 01-.16-.05c-.7-.24-1.45-.642-2.05-1.238-.6-.597-1-1.35-1.24-2.05a1 1 0 01-.05-.16l-.052-.312A1 1 0 013 14V6a1 1 0 01.032-.22l.052-.312a1 1 0 01.05-.16c.24-.7.642-1.45 1.238-2.05.597-.6 1.35-1 2.05-1.24a1 1 0 01.16-.05l.312-.052A1 1 0 017 2h6z" clip-rule="evenodd"/>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-    @endif
-
-    @if($kpStats)
-        <section>
-            <div class="mb-6">
-                <h2 class="text-lg font-bold text-slate-950">Ringkasan Kerja Praktek</h2>
-                <p class="mt-1 text-sm text-slate-500">Fondasi data periode, tempat, dan kuota untuk tahap pendaftaran berikutnya.</p>
-            </div>
-            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-                <div class="rounded-xl bg-linear-to-br from-white to-slate-50 p-6 shadow-sm ring-1 ring-slate-100">
-                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Total Periode</p>
-                    <p class="mt-3 text-3xl font-bold text-slate-950">{{ $kpStats['total_periods'] }}</p>
-                </div>
-                <div class="rounded-xl bg-linear-to-br from-white to-emerald-50 p-6 shadow-sm ring-1 ring-emerald-100">
-                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Periode Dibuka</p>
-                    <p class="mt-3 text-3xl font-bold text-emerald-700">{{ $kpStats['open_periods'] }}</p>
-                </div>
-                <div class="rounded-xl bg-linear-to-br from-white to-teal-50 p-6 shadow-sm ring-1 ring-teal-100">
-                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Tempat Aktif</p>
-                    <p class="mt-3 text-3xl font-bold text-teal-700">{{ $kpStats['active_places'] }}</p>
-                </div>
-                <div class="rounded-xl bg-linear-to-br from-white to-sky-50 p-6 shadow-sm ring-1 ring-sky-100">
-                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Total Kuota</p>
-                    <p class="mt-3 text-3xl font-bold text-sky-700">{{ $kpStats['total_quota'] }}</p>
-                </div>
-                <div class="rounded-xl bg-linear-to-br from-white to-amber-50 p-6 shadow-sm ring-1 ring-amber-100">
-                    <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Kuota Dibuka</p>
-                    <p class="mt-3 text-3xl font-bold text-amber-700">{{ $kpStats['open_quotas'] }}</p>
-                </div>
-            </div>
-        </section>
-    @endif
-
-    @if($registrationStats)
-        <section>
-            <div class="mb-6">
-                <h2 class="text-lg font-bold text-slate-950">Ringkasan Pendaftaran KP</h2>
-                <p class="mt-1 text-sm text-slate-500">Monitoring status pendaftaran dan berkas mahasiswa.</p>
-            </div>
-            <div class="grid gap-4 md:grid-cols-5">
-                @foreach([
-                    ['Total', $registrationStats['total'], 'text-slate-950'],
-                    ['Menunggu', $registrationStats['pending'], 'text-sky-700'],
-                    ['Revisi', $registrationStats['revision'], 'text-amber-700'],
-                    ['Terverifikasi', $registrationStats['verified'], 'text-emerald-700'],
-                    ['Ditolak', $registrationStats['rejected'], 'text-rose-700'],
-                ] as [$label, $value, $color])
-                    <div class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
-                        <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">{{ $label }}</p>
-                        <p class="mt-3 text-3xl font-bold {{ $color }}">{{ $value }}</p>
-                    </div>
-                @endforeach
-            </div>
-        </section>
-    @endif
-
-    @if($selectionStats)
-        <section>
-            <div class="mb-6">
-                <h2 class="text-lg font-bold text-slate-950">Ringkasan Pemilihan Tempat</h2>
-                <p class="mt-1 text-sm text-slate-500">Monitoring hasil war ticket dan daftar tunggu.</p>
-            </div>
-            <div class="grid gap-4 md:grid-cols-4">
-                @foreach([
-                    ['Sudah Memilih', $selectionStats['selected'], 'text-emerald-700'],
-                    ['Daftar Tunggu', $selectionStats['waiting'], 'text-amber-700'],
-                    ['Sisa Kuota', $selectionStats['remaining_quota'], 'text-teal-700'],
-                    ['Tempat Penuh', $selectionStats['full_places'], 'text-rose-700'],
-                ] as [$label, $value, $color])
-                    <div class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
-                        <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">{{ $label }}</p>
-                        <p class="mt-3 text-3xl font-bold {{ $color }}">{{ $value }}</p>
-                    </div>
-                @endforeach
-            </div>
-        </section>
-    @endif
-
-    @if($assignmentStats)
-        <section>
-            <div class="mb-6">
-                <h2 class="text-lg font-bold text-slate-950">Ringkasan Penempatan KP</h2>
-                <p class="mt-1 text-sm text-slate-500">Status penempatan dan pembimbing KP.</p>
-            </div>
-            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-                @foreach($assignmentStats as $label => $value)
-                    <div class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
-                        <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">{{ str_replace('_', ' ', ucfirst($label)) }}</p>
-                        <p class="mt-3 text-3xl font-bold text-teal-700">{{ $value }}</p>
-                    </div>
-                @endforeach
-            </div>
-        </section>
-    @endif
-
-    @if($logbookStats)
-        <section>
-            <div class="mb-6">
-                <h2 class="text-lg font-bold text-slate-950">Ringkasan Logbook KP</h2>
-                <p class="mt-1 text-sm text-slate-500">Pemantauan aktivitas harian dan validasi kegiatan KP.</p>
-            </div>
-            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-                @foreach($logbookStats as $label => $value)
-                    <div class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
-                        <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">{{ str_replace('_', ' ', ucfirst($label)) }}</p>
-                        <p class="mt-3 text-3xl font-bold text-teal-700">{{ $value }}</p>
-                    </div>
-                @endforeach
-            </div>
-        </section>
-    @endif
-
-    @if($finalReportStats)
-        <section>
-            <div class="mb-6">
-                <h2 class="text-lg font-bold text-slate-950">Ringkasan Laporan Akhir</h2>
-                <p class="mt-1 text-sm text-slate-500">Status upload, review, dan approval laporan akhir KP.</p>
-            </div>
-            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                @foreach($finalReportStats as $label => $value)
-                    <div class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
-                        <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">{{ str_replace('_', ' ', ucfirst($label)) }}</p>
-                        <p class="mt-3 text-2xl font-bold text-teal-700">{{ $value }}</p>
-                    </div>
-                @endforeach
-            </div>
-        </section>
-    @endif
-
-    @if($examStats)
-        <section>
-            <div class="mb-6">
-                <h2 class="text-lg font-bold text-slate-950">Ringkasan Sidang KP</h2>
-                <p class="mt-1 text-sm text-slate-500">Status pengajuan, penjadwalan, dan pelaksanaan sidang Kerja Praktek.</p>
-            </div>
-            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                @foreach($examStats as $label => $value)
-                    <div class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
-                        <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">{{ str_replace('_', ' ', ucfirst($label)) }}</p>
-                        <p class="mt-3 text-2xl font-bold text-cyan-700">{{ $value ?: '-' }}</p>
-                    </div>
-                @endforeach
-            </div>
-        </section>
-    @endif
-
-    @if($scoreStats)
-        <section>
-            <div class="mb-6">
-                <h2 class="text-lg font-bold text-slate-950">Ringkasan Nilai KP</h2>
-                <p class="mt-1 text-sm text-slate-500">Status kelengkapan, finalisasi, dan publikasi nilai Kerja Praktek.</p>
-            </div>
-            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                @foreach($scoreStats as $label => $value)
-                    <div class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
-                        <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">{{ str_replace('_', ' ', ucfirst($label)) }}</p>
-                        <p class="mt-3 text-2xl font-bold text-emerald-700">{{ $value ?: '-' }}</p>
-                    </div>
-                @endforeach
-            </div>
-        </section>
-    @endif
+    </section>
 
     @if($studentRegistration)
-        <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
+        <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <h2 class="text-lg font-bold text-slate-950">Status Pendaftaran KP</h2>
+                    <p class="text-[11px] font-black uppercase tracking-widest text-cyan-700">Status Mahasiswa</p>
+                    <h2 class="mt-1 text-lg font-black text-slate-950">Status Pendaftaran KP</h2>
                     <p class="mt-1 text-sm text-slate-500">{{ $studentRegistration->period->name ?? '-' }}</p>
                 </div>
-                <span class="rounded-full {{ $studentRegistration->statusBadgeClass() }} px-3 py-1 text-xs font-semibold">{{ $studentRegistration->statusLabel() }}</span>
+                <span class="rounded-md {{ $studentRegistration->statusBadgeClass() }} px-3 py-1 text-xs font-black">{{ $studentRegistration->statusLabel() }}</span>
             </div>
-            <div class="mt-5 grid gap-4 md:grid-cols-3">
-                <div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-500">Progress Berkas</p><p class="mt-2 text-2xl font-bold">{{ $studentRegistration->progressPercentage() }}%</p></div>
-                <div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-500">Verifikasi</p><p class="mt-2 text-sm font-bold">{{ $studentRegistration->isVerified() ? 'Terverifikasi' : 'Belum selesai' }}</p></div>
-                <div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-500">Pemilihan Tempat</p><p class="mt-2 text-sm font-bold">{{ $studentRegistration->selectionStatusLabel() }}</p>@if($studentRegistration->activePlaceSelection)<p class="mt-1 text-xs text-slate-500">{{ $studentRegistration->activePlaceSelection->place->name }}</p>@endif</div>
+            <div class="mt-5 grid gap-3 md:grid-cols-3">
+                <div class="rounded-lg bg-slate-50 p-4 ring-1 ring-slate-100"><p class="text-xs font-bold text-slate-500">Progress Berkas</p><p class="mt-2 text-2xl font-black text-slate-950">{{ $studentRegistration->progressPercentage() }}%</p></div>
+                <div class="rounded-lg bg-slate-50 p-4 ring-1 ring-slate-100"><p class="text-xs font-bold text-slate-500">Verifikasi</p><p class="mt-2 font-black text-slate-950">{{ $studentRegistration->isVerified() ? 'Terverifikasi' : 'Belum selesai' }}</p></div>
+                <div class="rounded-lg bg-slate-50 p-4 ring-1 ring-slate-100"><p class="text-xs font-bold text-slate-500">Pemilihan Tempat</p><p class="mt-2 font-black text-slate-950">{{ $studentRegistration->selectionStatusLabel() }}</p>@if($studentRegistration->activePlaceSelection)<p class="mt-1 text-xs text-slate-500">{{ $studentRegistration->activePlaceSelection->place->name }}</p>@endif</div>
             </div>
         </section>
     @endif
 
-    <!-- User Status Cards -->
-    <section class="grid gap-4 md:grid-cols-3">
-        <div class="rounded-3xl bg-white p-6 shadow-xl shadow-sky-900/6 ring-1 ring-sky-100 transition-all hover:-translate-y-0.5 hover:shadow-2xl">
-            <div class="flex items-center justify-between mb-4">
-                <p class="text-xs font-black text-slate-500 uppercase tracking-widest">Status Profil Akademik</p>
-                <div class="rounded-2xl {{ auth()->user()->profile_completed ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600' }} p-3">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
-                    </svg>
-                </div>
+    <section>
+        <div class="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <h2 class="text-lg font-black text-slate-950">Modul Akademik</h2>
+                <p class="text-sm text-slate-500">Akses cepat sesuai peran aktif.</p>
             </div>
-            <p class="text-2xl font-black text-slate-950">{{ auth()->user()->profile_completed ? 'Lengkap' : 'Belum Lengkap' }}</p>
-            <span class="mt-4 inline-flex rounded-full {{ auth()->user()->profile_completed ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }} px-3 py-1 text-xs font-black">{{ auth()->user()->profile_completed ? 'Terpenuhi' : 'Tindakan Diperlukan' }}</span>
         </div>
-        <div class="rounded-3xl bg-white p-6 shadow-xl shadow-sky-900/6 ring-1 ring-sky-100 transition-all hover:-translate-y-0.5 hover:shadow-2xl">
-            <div class="flex items-center justify-between mb-4">
-                <p class="text-xs font-black text-slate-500 uppercase tracking-widest">Peran Aktif</p>
-                <div class="rounded-2xl bg-cyan-50 text-cyan-700 p-3">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-1a4 4 0 00-4-4l-.5-.5-4 4v1h8.5z"/>
-                    </svg>
-                </div>
-            </div>
-            <p class="text-2xl font-black text-slate-950">{{ $roleData['label'] }}</p>
-            <p class="mt-2 text-xs text-slate-500">Peran saat ini dalam sistem akademik.</p>
-        </div>
-        <div class="rounded-3xl bg-white p-6 shadow-xl shadow-sky-900/6 ring-1 ring-sky-100 transition-all hover:-translate-y-0.5 hover:shadow-2xl">
-            <div class="flex items-center justify-between mb-4">
-                <p class="text-xs font-black text-slate-500 uppercase tracking-widest">Status Akun</p>
-                <div class="rounded-2xl bg-emerald-50 text-emerald-600 p-3">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                    </svg>
-                </div>
-            </div>
-            <p class="text-2xl font-black text-slate-950">Aktif</p>
-            <p class="mt-2 text-xs text-slate-500">Akun Anda siap digunakan.</p>
+        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            @foreach($features as $feature)
+                @php
+                    $routeName = $featureRoutes[$feature] ?? null;
+                    $href = $routeName && Route::has($routeName) ? route($routeName) : null;
+                @endphp
+                @if($href)
+                    <a href="{{ $href }}" class="group rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-200 hover:shadow-md">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <h3 class="font-black text-slate-950 group-hover:text-cyan-800">{{ $feature }}</h3>
+                                <p class="mt-1 text-sm leading-6 text-slate-500">{{ $featureDescriptions[$feature] ?? 'Modul kerja sesuai peran Anda.' }}</p>
+                            </div>
+                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-50 text-cyan-700 ring-1 ring-cyan-100 transition group-hover:bg-cyan-700 group-hover:text-white">
+                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 10a1 1 0 011-1h5.586L9.293 6.707a1 1 0 111.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L11.586 11H6a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+                            </span>
+                        </div>
+                    </a>
+                @else
+                    <div class="rounded-lg border border-dashed border-slate-200 bg-white p-4">
+                        <h3 class="font-black text-slate-700">{{ $feature }}</h3>
+                        <p class="mt-1 text-sm leading-6 text-slate-500">{{ $featureDescriptions[$feature] ?? 'Modul ini sedang disiapkan.' }}</p>
+                        <span class="mt-3 inline-flex rounded-md bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-500">Disiapkan</span>
+                    </div>
+                @endif
+            @endforeach
         </div>
     </section>
 
-    <!-- Features Overview -->
-    <section>
-        <div class="mb-6">
-            <h2 class="text-xl font-black text-slate-950">Modul Akademik</h2>
-            <p class="mt-1 text-sm leading-6 text-slate-500">Fitur-fitur utama untuk mengelola proses Kerja Praktek Farmasi secara bertahap.</p>
-        </div>
-        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            @foreach($features as $feature)
-                <div class="group relative overflow-hidden rounded-3xl bg-white p-6 shadow-xl shadow-sky-900/6 ring-1 ring-sky-100 transition-all hover:-translate-y-0.5 hover:shadow-2xl hover:ring-cyan-100">
-                    <div class="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-cyan-500 via-sky-400 to-teal-400"></div>
-                    <div class="absolute inset-0 bg-linear-to-br from-cyan-50/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"/>
-                    <div class="relative z-10">
-                        <div class="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-sm font-bold text-cyan-700 ring-1 ring-cyan-100 transition-all group-hover:bg-cyan-700 group-hover:text-white">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                            </svg>
-                        </div>
-                        <h4 class="font-black text-slate-950 group-hover:text-cyan-800 transition-colors">{{ $feature }}</h4>
-                        <p class="mt-2 text-sm leading-6 text-slate-500">{{ $featureDescriptions[$feature] ?? 'Modul ini sedang disiapkan untuk mendukung proses kerja praktek.' }}</p>
-                        <div class="mt-5 flex items-center justify-between gap-3">
-                            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">Segera tersedia</span>
-                            <span class="text-xs font-black uppercase tracking-widest text-cyan-700">SI-KP</span>
-                        </div>
+    <section class="space-y-3">
+        @foreach($summarySections as $section)
+            @php
+                $tone = $toneClasses[$section['tone']] ?? $toneClasses['sky'];
+            @endphp
+            <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+                <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <h2 class="text-lg font-black text-slate-950">{{ $section['title'] }}</h2>
+                        <p class="text-sm text-slate-500">{{ $section['description'] }}</p>
                     </div>
+                    <span class="rounded-md {{ $tone['bg'] }} {{ $tone['text'] }} px-2.5 py-1 text-[11px] font-black uppercase tracking-widest ring-1 {{ $tone['ring'] }}">Live</span>
                 </div>
-            @endforeach
-        </div>
+                <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+                    @foreach($section['stats'] as $label => $value)
+                        <div class="rounded-lg bg-slate-50 p-4 ring-1 ring-slate-100">
+                            <p class="text-[11px] font-black uppercase tracking-widest text-slate-500">{{ $formatLabel($label) }}</p>
+                            <p class="mt-2 truncate text-2xl font-black {{ $tone['text'] }}">{{ $formatValue($value) }}</p>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endforeach
     </section>
 </div>
 @endsection

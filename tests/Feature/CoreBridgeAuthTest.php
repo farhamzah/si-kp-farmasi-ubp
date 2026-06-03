@@ -109,6 +109,21 @@ class CoreBridgeAuthTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_core_bridge_rejects_core_user_that_must_change_password(): void
+    {
+        config()->set('kp_auth.mode', 'core_bridge');
+        $this->legacyUser('must-change@sikp.test', 'legacy-pass', ['mahasiswa'], ['core_user_id' => 16]);
+        $this->coreUser(16, 'must-change@sikp.test', 'core-pass', true, ['mahasiswa'], ['mahasiswa'], true);
+
+        $response = $this->post('/login', [
+            'email' => 'must-change@sikp.test',
+            'password' => 'core-pass',
+        ]);
+
+        $response->assertSessionHasErrors('email');
+        $this->assertGuest();
+    }
+
     public function test_core_bridge_rejects_missing_legacy_mapping(): void
     {
         config()->set('kp_auth.mode', 'core_bridge');
@@ -160,6 +175,7 @@ class CoreBridgeAuthTest extends TestCase
             $table->string('email');
             $table->string('password');
             $table->boolean('active')->default(true);
+            $table->boolean('must_change_password')->default(false);
             $table->timestamps();
         });
 
@@ -204,7 +220,7 @@ class CoreBridgeAuthTest extends TestCase
         return $user;
     }
 
-    private function coreUser(int $id, string $email, string $password, bool $active, array $roles, array $accessRoles): void
+    private function coreUser(int $id, string $email, string $password, bool $active, array $roles, array $accessRoles, bool $mustChangePassword = false): void
     {
         DB::connection('core')->table('users')->insert([
             'id' => $id,
@@ -212,6 +228,7 @@ class CoreBridgeAuthTest extends TestCase
             'email' => $email,
             'password' => Hash::make($password),
             'active' => $active,
+            'must_change_password' => $mustChangePassword,
         ]);
 
         foreach ($roles as $index => $roleName) {

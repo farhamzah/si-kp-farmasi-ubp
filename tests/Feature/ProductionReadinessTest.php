@@ -30,6 +30,34 @@ class ProductionReadinessTest extends TestCase
         $this->assertStringContainsString('MAIL_MAILER=log', $envExample);
     }
 
+    public function test_production_env_example_is_safe_and_matches_readiness_requirements(): void
+    {
+        $envExample = file_get_contents(base_path('.env.production.example'));
+
+        $this->assertStringContainsString('APP_ENV=production', $envExample);
+        $this->assertStringContainsString('APP_DEBUG=false', $envExample);
+        $this->assertStringContainsString('APP_URL=https://kp-farmasi.example.ac.id', $envExample);
+        $this->assertStringContainsString('SESSION_SECURE_COOKIE=true', $envExample);
+        $this->assertStringContainsString('SESSION_ENCRYPT=true', $envExample);
+        $this->assertStringContainsString('KP_CORE_VERIFY_SSL=true', $envExample);
+        $this->assertStringContainsString('QUEUE_CONNECTION=database', $envExample);
+        $this->assertStringContainsString('CACHE_STORE=database', $envExample);
+        $this->assertStringContainsString('MAIL_MAILER=smtp', $envExample);
+
+        foreach ([
+            'DB_PASSWORD=secret',
+            'CORE_DB_PASSWORD=secret',
+            'KP_CORE_CLIENT_SECRET=secret',
+            'AWS_SECRET_ACCESS_KEY=secret',
+            'password123',
+            'token=',
+            'access_token=',
+            'signed=',
+        ] as $unsafeValue) {
+            $this->assertStringNotContainsString($unsafeValue, strtolower($envExample));
+        }
+    }
+
     public function test_error_pages_and_login_page_render_for_release_readiness(): void
     {
         $this->get('/login')

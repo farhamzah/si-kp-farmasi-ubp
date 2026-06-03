@@ -1,0 +1,248 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Role;
+use App\Models\User;
+use Database\Seeders\RoleSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
+use Tests\TestCase;
+
+class CoreBridgeProvisioningCommandTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private string $coreDatabasePath;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seed(RoleSeeder::class);
+
+        $this->coreDatabasePath = tempnam(sys_get_temp_dir(), 'core-provision-');
+        config()->set('database.connections.core', [
+            'driver' => 'sqlite',
+            'database' => $this->coreDatabasePath,
+            'prefix' => '',
+            'foreign_key_constraints' => false,
+        ]);
+
+        DB::purge('core');
+        $this->createCoreSchema();
+    }
+
+    protected function tearDown(): void
+    {
+        DB::purge('core');
+
+        if (isset($this->coreDatabasePath) && file_exists($this->coreDatabasePath)) {
+            unlink($this->coreDatabasePath);
+        }
+
+        parent::tearDown();
+    }
+
+    public function test_dry_run_does_not_create_legacy_user(): void
+    {
+        $this->coreUser(21, 'farhamzah@ubpkarawang.ac.id', ['dosen', 'pembimbing-dalam']);
+
+        $this->artisan('kp:provision-core-bridge-user --email=farhamzah@ubpkarawang.ac.id')
+            ->expectsOutputToContain('dry-run only; no writes performed')
+            ->expectsOutputToContain('Action: create')
+            ->assertSuccessful();
+
+        $this->assertDatabaseMissing('users', ['email' => 'farhamzah@ubpkarawang.ac.id']);
+    }
+
+    public function test_execute_requires_confirmation(): void
+    {
+        $this->coreUser(21, 'farhamzah@ubpkarawang.ac.id', ['dosen']);
+
+        $this->artisan('kp:provision-core-bridge-user --email=farhamzah@ubpkarawang.ac.id --execute')
+            ->expectsOutputToContain('Execute refused: missing --confirm-execute.')
+            ->assertFailed();
+
+        $this->assertDatabaseMissing('users', ['email' => 'farhamzah@ubpkarawang.ac.id']);
+    }
+
+    public function test_execute_creates_legacy_bridge_user_without_copying_core_password(): void
+    {
+        $this->coreUser(21, 'farhamzah@ubpkarawang.ac.id', ['dosen', 'pembimbing-dalam', 'penguji']);
+
+        $this->artisan('kp:provision-core-bridge-user --email=farhamzah@ubpkarawang.ac.id --execute --confirm-execute')
+            ->expectsOutputToContain('Action: created')
+            ->assertSuccessful();
+
+        $user = User::where('email', 'farhamzah@ubpkarawang.ac.id')->firstOrFail();
+
+        $this->assertSame(21, (int) $user->core_user_id);
+        $this->assertSame('active', $user->status);
+        $this->assertFalse($user->must_change_password);
+        $this->assertTrue($user->profile_completed);
+        $this->assertFalse(Hash::check('core-secret', $user->password));
+        $this->assertEqualsCanonicalizing(
+            ['pembimbing_dalam', 'penguji'],
+            $user->roles()->pluck('name')->all(),
+        );
+    }
+
+    public function test_execute_creates_legacy_lecturer_profile_when_core_lecturer_exists(): void
+    {
+        $this->coreUser(21, 'farhamzah@ubpkarawang.ac.id', ['dosen', 'pembimbing-dalam']);
+        $this->coreLecturer(8, 21, '0430037804', 'farhamzah@ubpkarawang.ac.id');
+
+        $this->artisan('kp:provision-core-bridge-user --email=farhamzah@ubpkarawang.ac.id --execute --confirm-execute')
+            ->expectsOutputToContain('Legacy KP lecturer profile: found/synced')
+            ->assertSuccessful();
+
+        $user = User::where('email', 'farhamzah@ubpkarawang.ac.id')->firstOrFail();
+
+        $this->assertDatabaseHas('lecturers', [
+            'user_id' => $user->id,
+            'nidn_nip' => '0430037804',
+            'core_lecturer_id' => 8,
+            'core_sync_status' => 'synced',
+        ]);
+    }
+
+
+    public function test_admin_core_is_not_translated_to_kp_role(): void
+    {
+        $this->coreUser(21, 'farhamzah@ubpkarawang.ac.id', ['admin-core']);
+
+        $this->artisan('kp:provision-core-bridge-user --email=farhamzah@ubpkarawang.ac.id')
+            ->expectsOutputToContain('belum punya role yang bisa diterjemahkan ke role KP')
+            ->assertFailed();
+
+        $this->assertDatabaseMissing('users', ['email' => 'farhamzah@ubpkarawang.ac.id']);
+    }
+
+    public function test_core_user_that_must_change_password_is_blocked_from_provisioning(): void
+    {
+        $this->coreUser(21, 'farhamzah@ubpkarawang.ac.id', ['dosen'], true);
+
+        $this->artisan('kp:provision-core-bridge-user --email=farhamzah@ubpkarawang.ac.id')
+            ->expectsOutputToContain('must_change_password: yes')
+            ->expectsOutputToContain('harus mengganti password')
+            ->assertFailed();
+
+        $this->assertDatabaseMissing('users', ['email' => 'farhamzah@ubpkarawang.ac.id']);
+    }
+
+    public function test_existing_legacy_user_is_linked_and_roles_are_added(): void
+    {
+        $legacy = User::create([
+            'name' => 'Farhamzah Lama',
+            'email' => 'farhamzah@ubpkarawang.ac.id',
+            'password' => Hash::make('legacy-pass'),
+            'status' => 'inactive',
+            'must_change_password' => true,
+            'profile_completed' => false,
+        ]);
+        $legacyPassword = $legacy->password;
+        $this->coreUser(21, 'farhamzah@ubpkarawang.ac.id', ['dosen', 'penguji']);
+
+        $this->artisan('kp:provision-core-bridge-user --email=farhamzah@ubpkarawang.ac.id --execute --confirm-execute')
+            ->expectsOutputToContain('Action: synced')
+            ->assertSuccessful();
+
+        $legacy->refresh();
+
+        $this->assertSame(21, (int) $legacy->core_user_id);
+        $this->assertSame('active', $legacy->status);
+        $this->assertSame($legacyPassword, $legacy->password);
+        $this->assertEqualsCanonicalizing(
+            ['pembimbing_dalam', 'penguji'],
+            $legacy->roles()->pluck('name')->all(),
+        );
+    }
+
+    private function createCoreSchema(): void
+    {
+        Schema::connection('core')->create('users', function ($table): void {
+            $table->id();
+            $table->string('name');
+            $table->string('email');
+            $table->string('password');
+            $table->boolean('active')->default(true);
+            $table->boolean('must_change_password')->default(false);
+            $table->timestamps();
+        });
+
+        Schema::connection('core')->create('roles', function ($table): void {
+            $table->id();
+            $table->string('name');
+            $table->string('label');
+            $table->boolean('active')->default(true);
+            $table->timestamps();
+        });
+
+        Schema::connection('core')->create('user_roles', function ($table): void {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('role_id');
+            $table->timestamps();
+        });
+
+        Schema::connection('core')->create('user_app_accesses', function ($table): void {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->string('app_code');
+            $table->string('role_slug')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+
+        Schema::connection('core')->create('lecturers', function ($table): void {
+            $table->id();
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->string('lecturer_number');
+            $table->string('nidn')->nullable();
+            $table->string('nip')->nullable();
+            $table->string('email')->nullable();
+            $table->unsignedBigInteger('department_id')->nullable();
+            $table->unsignedBigInteger('study_program_id')->nullable();
+            $table->boolean('active')->default(true);
+            $table->timestamps();
+        });
+    }
+
+    private function coreUser(int $id, string $email, array $accessRoles, bool $mustChangePassword = false): void
+    {
+        DB::connection('core')->table('users')->insert([
+            'id' => $id,
+            'name' => 'Farhamzah',
+            'email' => $email,
+            'password' => Hash::make('core-secret'),
+            'active' => true,
+            'must_change_password' => $mustChangePassword,
+        ]);
+
+        foreach ($accessRoles as $index => $roleSlug) {
+            DB::connection('core')->table('user_app_accesses')->insert([
+                'id' => $id * 10 + $index,
+                'user_id' => $id,
+                'app_code' => 'kp-farmasi',
+                'role_slug' => $roleSlug,
+                'is_active' => true,
+            ]);
+        }
+    }
+
+    private function coreLecturer(int $id, int $userId, string $lecturerNumber, string $email): void
+    {
+        DB::connection('core')->table('lecturers')->insert([
+            'id' => $id,
+            'user_id' => $userId,
+            'lecturer_number' => $lecturerNumber,
+            'nidn' => $lecturerNumber,
+            'nip' => '416200165',
+            'email' => $email,
+            'active' => true,
+        ]);
+    }
+}

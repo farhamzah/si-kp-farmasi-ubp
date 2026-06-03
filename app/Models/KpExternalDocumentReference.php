@@ -10,6 +10,23 @@ class KpExternalDocumentReference extends Model
 {
     public const STATUSES = ['draft', 'pending_external', 'linked', 'failed', 'archived'];
 
+    public const SENSITIVE_REFERENCE_URL_MARKERS = [
+        'access_token',
+        'file_path',
+        'signature',
+        'storage/app',
+        '/storage/',
+        '/private/',
+        'password',
+        'private',
+        'secret',
+        'signed',
+        'storage',
+        'token',
+        'c:\\',
+        'e:\\',
+    ];
+
     protected $fillable = [
         'uuid',
         'source_app',
@@ -66,13 +83,28 @@ class KpExternalDocumentReference extends Model
             return true;
         }
 
-        $url = strtolower($this->reference_url);
+        return ! self::hasUnsafeReferenceUrl($this->reference_url);
+    }
 
-        if (! str_starts_with($url, 'https://') && ! str_starts_with($url, 'http://')) {
+    public static function hasUnsafeReferenceUrl(?string $referenceUrl): bool
+    {
+        if (! $referenceUrl) {
             return false;
         }
 
-        return ! preg_match('/token|signature|signed|password|secret|storage\/app|private|temporary/', $url);
+        $url = strtolower(trim($referenceUrl));
+
+        if (! str_starts_with($url, 'https://') && ! str_starts_with($url, 'http://')) {
+            return true;
+        }
+
+        foreach (self::SENSITIVE_REFERENCE_URL_MARKERS as $marker) {
+            if (str_contains($url, $marker)) {
+                return true;
+            }
+        }
+
+        return (bool) preg_match('/^[a-z]:[\\\\\/]/i', $referenceUrl);
     }
 
     public function statusLabel(): string

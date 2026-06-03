@@ -48,6 +48,7 @@ class AuthBridgeCheckCommand extends Command
 
         $this->line('  core_user_id: '.$coreUser->id);
         $this->line('  active: '.($coreUser->active ? 'yes' : 'no'));
+        $this->line('  must_change_password: '.($coreUser->must_change_password ? 'yes' : 'no'));
         $this->line('  Core roles: '.($coreRoles ? implode(', ', $coreRoles) : 'none'));
         $this->line('  kp-farmasi app access roles: '.($kpAccesses ? implode(', ', $kpAccesses) : 'none'));
         $this->line('  has admin-core: '.(in_array('admin-core', $coreRoles, true) || in_array('admin-core', $kpAccesses, true) ? 'yes' : 'no'));
@@ -60,7 +61,7 @@ class AuthBridgeCheckCommand extends Command
             $this->line('  roles: '.($legacyUser->roles()->pluck('name')->implode(', ') ?: 'none'));
         }
 
-        if (! $coreUser->active || ! $legacyUser || $legacyUser->status !== 'active' || ! $kpAccesses) {
+        if (! $coreUser->active || $coreUser->must_change_password || ! $legacyUser || $legacyUser->status !== 'active' || ! $kpAccesses) {
             $this->error('Auth bridge diagnostic failed.');
 
             return self::FAILURE;

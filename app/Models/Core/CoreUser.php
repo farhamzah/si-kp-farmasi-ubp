@@ -20,6 +20,7 @@ class CoreUser extends ReadOnlyCoreModel
     {
         return [
             'active' => 'boolean',
+            'must_change_password' => 'boolean',
             'email_verified_at' => 'datetime',
         ];
     }

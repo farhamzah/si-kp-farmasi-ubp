@@ -118,6 +118,7 @@
                         <th class="px-4 py-3">Reference URL</th>
                         <th class="px-4 py-3">Synced</th>
                         <th class="px-4 py-3">Created</th>
+                        <th class="px-4 py-3">Aksi</th>
                     </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
@@ -140,9 +141,12 @@
                             </td>
                             <td class="px-4 py-4">{{ $reference->synced_at?->format('d M Y H:i') ?? '-' }}</td>
                             <td class="px-4 py-4">{{ $reference->created_at?->format('d M Y H:i') ?? '-' }}</td>
+                            <td class="px-4 py-4">
+                                <a href="{{ route('management.integration.external-document-references.edit', $reference) }}" class="rounded-lg border border-cyan-200 px-3 py-2 text-xs font-semibold text-cyan-700">Edit Link</a>
+                            </td>
                         </tr>
                     @empty
-                        <tr><td colspan="8" class="px-4 py-10 text-center text-slate-500">Belum ada draft reference lokal.</td></tr>
+                        <tr><td colspan="9" class="px-4 py-10 text-center text-slate-500">Belum ada draft reference lokal.</td></tr>
                     @endforelse
                     </tbody>
                 </table>
