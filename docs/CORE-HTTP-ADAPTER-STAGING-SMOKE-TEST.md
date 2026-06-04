@@ -3,6 +3,17 @@
 ## Purpose
 Checklist ini dipakai untuk menguji koneksi KP Farmasi ke Core Farmasi API di staging secara read-only. Tujuannya memastikan adapter HTTP KP bisa membaca endpoint Core app-client tanpa cutover, tanpa mengganti auth KP, dan tanpa write-back.
 
+## Decision 2026-06-04
+Core HTTP adapter tetap **disabled by default** sampai Core staging menyediakan app-client credential resmi untuk `kp-farmasi`.
+
+Status ini tidak memblokir integrasi DB read-only KP-Core karena master-data target berjalan melalui:
+
+```env
+KP_MASTER_DATA_READ_MODE=core_preferred
+```
+
+HTTP smoke baru wajib PASS bila requirement integrasi runtime menyatakan KP harus membaca Core melalui API HTTP. Sampai keputusan itu ada, `php artisan kp:core-smoke-test` yang melaporkan disabled/missing env adalah status expected untuk local environment.
+
 Rencana eksekusi gabungan KP/TU dan SOP credential tersedia di Core:
 - `apps/core-farmasi/docs/CORE-APP-CLIENT-CREDENTIAL-SOP.md`
 - `apps/core-farmasi/docs/CORE-KP-TU-STAGING-SMOKE-EXECUTION-PLAN.md`
@@ -23,7 +34,7 @@ Rencana eksekusi gabungan KP/TU dan SOP credential tersedia di Core:
 - Client secret dicatat aman oleh admin/devops dan tidak masuk repository, report, screenshot, atau log.
 - KP env staging sudah diisi.
 - `KP_CORE_HTTP_ENABLED=true` hanya di staging.
-- `KP_CORE_READ_MODE=legacy` untuk smoke awal. Jika ingin shadow mode, gunakan nilai operasional yang disepakati, bukan `core_only`.
+- `KP_CORE_READ_MODE=legacy` untuk smoke awal. Jika ingin shadow mode HTTP, gunakan nilai operasional yang disepakati, bukan `core_only`.
 - Backup/snapshot staging tersedia bila dibutuhkan oleh SOP lingkungan.
 
 ## Environment Variables

@@ -66,10 +66,11 @@ Core user yang masih `must_change_password` wajib menyelesaikan perubahan passwo
 - `APP_URL=https://...`.
 - `APP_KEY` terisi dan aman.
 - `SESSION_SECURE_COOKIE=true`.
+- Jika `KP_AUTH_MODE` memakai Core bridge, `KP_MASTER_DATA_READ_MODE` wajib `core_preferred` atau `core_only`.
+- Target awal staging/production: `KP_MASTER_DATA_READ_MODE=core_preferred`.
 - Queue worker production aktif.
 - Cache production tidak memakai `file` untuk traffic nyata.
 - Mailer production tidak memakai `log` bila notifikasi aktif.
 - Migration production selesai.
 - `php artisan kp:production-readiness-gate` tanpa blocker.
 - `php artisan test` dan `npm run build` berhasil.
-
