@@ -127,7 +127,7 @@ class DemoEndToEndSeeder extends Seeder
                 'nidn_nip' => $nidn,
                 'employee_number' => $nidn,
                 'study_program' => 'Farmasi',
-                'department' => 'Fakultas Farmasi',
+                'department' => 'Farmakologi dan Farmasi Klinik',
                 'expertise' => 'Farmasi Klinik',
                 'phone' => '08223344'.substr($nidn, -4),
                 'address' => 'Universitas Buana Perjuangan Karawang',
