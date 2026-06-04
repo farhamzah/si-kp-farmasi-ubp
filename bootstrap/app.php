@@ -4,6 +4,7 @@ use App\Http\Middleware\CheckRole;
 use App\Http\Middleware\CheckUserActive;
 use App\Http\Middleware\EnsureRoleSelected;
 use App\Console\Commands\CoreHealthCheckCommand;
+use App\Console\Commands\CoreAcademicUnitCheckCommand;
 use App\Console\Commands\CoreMappingCoverageCommand;
 use App\Console\Commands\CoreModePreflightCommand;
 use App\Console\Commands\ExternalDocumentReferencePreviewCommand;
@@ -40,6 +41,7 @@ return Application::configure(basePath: dirname(__DIR__))
         AuthBridgeCheckCommand::class,
         AuthBridgeSmokeTestCommand::class,
         AuthModeCommand::class,
+        CoreAcademicUnitCheckCommand::class,
         CoreHealthCheckCommand::class,
         CoreMappingCoverageCommand::class,
         CoreModePreflightCommand::class,

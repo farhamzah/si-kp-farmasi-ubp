@@ -12,6 +12,20 @@ Menentukan field mana yang authoritative dari Core dan field mana yang tetap dim
 - KP tidak menulis perubahan master identity ke Core.
 - Saat Core mode aktif, field identity di KP sebaiknya read-only atau diarahkan ke profile portal Core.
 
+## Hirarki Unit Akademik Core
+Urutan unit akademik mengikuti Core:
+
+1. Fakultas
+2. Program studi
+3. Department
+
+Policy penting:
+- Fakultas bukan department.
+- Label `Fakultas Farmasi` hanya boleh dipakai sebagai unit fakultas, bukan nilai canonical untuk `lecturers.department`.
+- Label prodi legacy KP `Farmasi` diperlakukan sebagai alias menuju canonical Core `Farmasi S1`.
+- Label department legacy KP `Farmasi Klinis` diperlakukan sebagai alias menuju canonical Core `Farmakologi dan Farmasi Klinik`.
+- KP tidak melakukan koreksi otomatis ke data Core atau data lokal dari diagnostic; perbaikan data harus lewat proses admin/mapping yang disetujui.
+
 ## User Identity
 | Field | Authority | KP Usage | Catatan |
 |---|---|---|---|
@@ -39,7 +53,7 @@ Menentukan field mana yang authoritative dari Core dan field mana yang tetap dim
 |---|---|---|---|
 | NIDN/NIP/lecturer_number | Core | mapping dan dokumen | KP legacy fallback |
 | nama dosen | Core | display/snapshot dokumen | read-only saat Core mode |
-| departemen/prodi | Core | display/report | KP fallback legacy |
+| fakultas/prodi/department | Core | display/report | KP fallback legacy; urutan Core adalah fakultas > program studi > department |
 | expertise | Core jika tersedia, KP fallback | optional display | bukan blocker KP |
 | role pembimbing/penguji | Core app access + KP role lokal | authorization | role translator canonical |
 
@@ -80,4 +94,3 @@ Snapshot harus diberi konteks waktu dan tidak menjadi master identity baru.
 - Link profile portal Core boleh ditampilkan sebagai browser link biasa tanpa token.
 - Field operasional KP tetap dapat diedit sesuai role dan workflow.
 - Import user KP harus dibatasi untuk fallback/mapping exception, bukan master import utama.
-
