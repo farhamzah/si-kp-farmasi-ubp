@@ -15,6 +15,8 @@ class StagingRehearsalCheckCommandTest extends TestCase
         config()->set('app.url', 'https://kp-farmasi-staging.example.test');
         config()->set('queue.default', 'database');
         config()->set('mail.default', 'smtp');
+        config()->set('kp_auth.mode', 'core_bridge_with_legacy_fallback');
+        config()->set('kp_master_data.read_mode', 'core_preferred');
         config()->set('services.tu_farmasi.endpoint', null);
         config()->set('services.safa.endpoint', null);
 
@@ -35,6 +37,23 @@ class StagingRehearsalCheckCommandTest extends TestCase
         $this->artisan('kp:staging-rehearsal-check')
             ->expectsOutputToContain('Ready for staging rehearsal: no')
             ->expectsOutputToContain('tu_runtime_bridge_closed')
+            ->assertFailed();
+    }
+
+    public function test_staging_rehearsal_check_blocks_core_bridge_with_legacy_master_data(): void
+    {
+        config()->set('app.debug', false);
+        config()->set('app.url', 'https://kp-farmasi-staging.example.test');
+        config()->set('queue.default', 'database');
+        config()->set('mail.default', 'smtp');
+        config()->set('kp_auth.mode', 'core_bridge_with_legacy_fallback');
+        config()->set('kp_master_data.read_mode', 'legacy');
+        config()->set('services.tu_farmasi.endpoint', null);
+        config()->set('services.safa.endpoint', null);
+
+        $this->artisan('kp:staging-rehearsal-check')
+            ->expectsOutputToContain('Ready for staging rehearsal: no')
+            ->expectsOutputToContain('master_data_core_bridge_aligned')
             ->assertFailed();
     }
 }

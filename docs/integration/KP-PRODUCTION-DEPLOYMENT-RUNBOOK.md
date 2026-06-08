@@ -6,7 +6,7 @@ Tanggal: 2026-06-03
 Runbook ini menjadi urutan deployment production untuk SI-KP Farmasi UBP. Dokumen ini tidak mengaktifkan runtime bridge TU/SAFA dan tidak memuat secret.
 
 ## Template Environment
-Gunakan `.env.production.example` sebagai acuan, lalu buat `.env` production di server. Jangan commit `.env` production.
+Gunakan `.env.vps.example` untuk VPS staging/UAT dan `.env.production.example` untuk production final, lalu buat `.env` di server. Jangan commit `.env` server.
 
 Wajib production:
 - `APP_ENV=production`
@@ -15,6 +15,8 @@ Wajib production:
 - `APP_KEY` terisi dari `php artisan key:generate`
 - `SESSION_SECURE_COOKIE=true`
 - `SESSION_ENCRYPT=true`
+- `KP_AUTH_MODE=core_bridge_with_legacy_fallback`
+- `KP_MASTER_DATA_READ_MODE=core_preferred`
 - `KP_CORE_VERIFY_SSL=true`
 - `KP_CORE_FAIL_SILENTLY=true`
 
@@ -64,6 +66,7 @@ Jalankan:
 ```bash
 php artisan kp:integration-gap-check
 php artisan kp:core-mapping-coverage
+php artisan kp:core-mode-preflight --auth-mode=core_bridge_with_legacy_fallback --master-data-mode=core_preferred --show-samples
 php artisan kp:staging-rehearsal-check
 php artisan kp:production-readiness-gate
 ```
@@ -108,4 +111,3 @@ php artisan queue:restart
 - Tidak ada SSO/autologin/token URL.
 - Tidak ada duplicate upload dokumen.
 - Tidak menyimpan token/password/secret/signed URL/path internal.
-

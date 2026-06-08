@@ -16,9 +16,13 @@ php artisan kp:staging-rehearsal-check --report-json
 
 ## Pre-Deploy Staging
 - Pull branch release/main yang sudah disetujui.
+- Buat `.env` VPS dari `.env.vps.example`; jangan commit `.env` server.
 - Pastikan `.env` staging tidak memakai secret production bila belum go-live.
 - Pastikan `APP_DEBUG=false`.
 - Pastikan `APP_URL` HTTPS.
+- Pastikan `KP_AUTH_MODE=core_bridge_with_legacy_fallback`.
+- Pastikan `KP_MASTER_DATA_READ_MODE=core_preferred`.
+- Pastikan `KP_CORE_HTTP_ENABLED=false` kecuali Core staging sudah memberi app-client credential resmi.
 - Pastikan database KP staging sudah dibackup sebelum migration.
 - Pastikan Core/TU/SAFA database tidak menjadi target write dari KP.
 - Pastikan endpoint runtime TU/SAFA belum diisi sampai approval gate final.
@@ -33,7 +37,13 @@ php artisan kp:staging-rehearsal-check --report-json
 7. `php artisan route:cache`
 8. `php artisan view:cache`
 9. `php artisan kp:staging-rehearsal-check`
-10. `php artisan kp:production-readiness-gate`
+10. `php artisan kp:core-mode-preflight --auth-mode=core_bridge_with_legacy_fallback --master-data-mode=core_preferred --show-samples`
+11. `php artisan kp:core-mapping-coverage`
+12. `php artisan kp:production-readiness-gate`
+
+Catatan:
+- Untuk VPS staging, `kp:production-readiness-gate` boleh gagal bila email masih `log` atau data Core UAT belum lengkap, tetapi blocker environment HTTPS/debug/session/master-data harus diselesaikan.
+- Jika `kp:core-mode-preflight` masih `WARN`, jalankan `php artisan kp:sync-core-mapping --dry-run --show-samples` dan koordinasikan profil student/lecturer yang belum tersedia di Core.
 
 ## UAT Scenarios
 - Admin login, role selection, dashboard.

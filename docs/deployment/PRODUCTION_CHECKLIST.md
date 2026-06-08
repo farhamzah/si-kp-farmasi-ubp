@@ -17,6 +17,9 @@ Gunakan checklist ini sebelum memindahkan aplikasi ke demo server atau productio
 - `APP_KEY` sudah di-generate.
 - Credential database aman dan tidak memakai akun root bila memungkinkan.
 - `SESSION_SECURE_COOKIE=true` jika memakai HTTPS.
+- VPS staging/UAT dapat memakai `.env.vps.example` sebagai template aman.
+- Jika auth memakai Core bridge, set `KP_MASTER_DATA_READ_MODE=core_preferred`.
+- Biarkan `KP_CORE_HTTP_ENABLED=false` sampai credential Core HTTP staging resmi tersedia.
 - `SESSION_DOMAIN` disesuaikan hanya jika perlu.
 - `MAIL_*` dikonfigurasi bila notifikasi email akan dipakai.
 - Akun demo tidak dipakai di production, atau password wajib diganti.
@@ -36,6 +39,8 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 php artisan optimize
+php artisan kp:staging-rehearsal-check
+php artisan kp:core-mode-preflight --auth-mode=core_bridge_with_legacy_fallback --master-data-mode=core_preferred --show-samples
 ```
 
 Catatan: jika ada closure route yang membuat `route:cache` gagal, jangan dipaksa. Perbaiki route terlebih dahulu atau gunakan `config:cache` dan `view:cache`.

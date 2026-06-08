@@ -58,6 +58,34 @@ class ProductionReadinessTest extends TestCase
         }
     }
 
+    public function test_vps_env_example_is_safe_and_uses_core_preferred_master_data(): void
+    {
+        $envExample = file_get_contents(base_path('.env.vps.example'));
+
+        $this->assertStringContainsString('APP_ENV=production', $envExample);
+        $this->assertStringContainsString('APP_DEBUG=false', $envExample);
+        $this->assertStringContainsString('APP_URL=https://kp-farmasi.example.ac.id', $envExample);
+        $this->assertStringContainsString('KP_AUTH_MODE=core_bridge_with_legacy_fallback', $envExample);
+        $this->assertStringContainsString('KP_MASTER_DATA_READ_MODE=core_preferred', $envExample);
+        $this->assertStringContainsString('KP_CORE_HTTP_ENABLED=false', $envExample);
+        $this->assertStringContainsString('SESSION_SECURE_COOKIE=true', $envExample);
+        $this->assertStringContainsString('SESSION_ENCRYPT=true', $envExample);
+        $this->assertStringContainsString('QUEUE_CONNECTION=database', $envExample);
+        $this->assertStringContainsString('CACHE_STORE=database', $envExample);
+
+        foreach ([
+            'DB_PASSWORD=secret',
+            'CORE_DB_PASSWORD=secret',
+            'KP_CORE_CLIENT_SECRET=secret',
+            'AWS_SECRET_ACCESS_KEY=secret',
+            'password123',
+            'access_token=',
+            'signed=',
+        ] as $unsafeValue) {
+            $this->assertStringNotContainsString($unsafeValue, strtolower($envExample));
+        }
+    }
+
     public function test_error_pages_and_login_page_render_for_release_readiness(): void
     {
         $this->get('/login')
