@@ -67,12 +67,12 @@ Route::post('/logout', [LoginController::class, 'destroy'])
 Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/pilih-role', [RoleSelectionController::class, 'index'])->name('role.select');
     Route::post('/set-role/{role:name}', [RoleSelectionController::class, 'store'])->name('role.set');
+    Route::get('/profile/avatar', [ProfileController::class, 'avatar'])->name('profile.avatar.show');
 
     Route::middleware('role.selected')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'redirect'])->name('dashboard');
         Route::get('/profil-saya', [ProfileController::class, 'show'])->name('profile.show');
         Route::redirect('/profile', '/profil-saya')->name('profile.alias');
-        Route::get('/profile/avatar', [ProfileController::class, 'avatar'])->name('profile.avatar.show');
         Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
         Route::delete('/profile/avatar', [ProfileController::class, 'deleteAvatar'])->name('profile.avatar.delete');
         Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');

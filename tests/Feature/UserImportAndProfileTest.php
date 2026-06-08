@@ -121,6 +121,35 @@ class UserImportAndProfileTest extends TestCase
         Storage::disk('local')->assertMissing($oldPath);
     }
 
+    public function test_multi_role_user_avatar_renders_before_role_selection(): void
+    {
+        Storage::fake('local');
+
+        $user = User::create([
+            'name' => 'Avatar Role',
+            'email' => 'avatar-role@test.local',
+            'password' => Hash::make('password'),
+            'status' => 'active',
+            'avatar_path' => 'avatars/role/avatar.jpg',
+            'avatar_disk' => 'local',
+            'avatar_original_filename' => 'avatar.jpg',
+            'avatar_mime' => 'image/jpeg',
+            'avatar_size' => 128,
+        ]);
+        $user->roles()->sync(Role::whereIn('name', ['admin', 'penguji'])->pluck('id'));
+        Storage::disk('local')->put('avatars/role/avatar.jpg', UploadedFile::fake()->image('avatar.jpg')->getContent());
+
+        $this->actingAs($user)
+            ->get('/pilih-role')
+            ->assertOk()
+            ->assertSee(route('profile.avatar.show'), false);
+
+        $this->actingAs($user)
+            ->get('/profile/avatar')
+            ->assertOk()
+            ->assertHeader('content-type', 'image/jpeg');
+    }
+
     public function test_invalid_avatar_upload_is_rejected_and_initials_are_available(): void
     {
         Storage::fake('local');
