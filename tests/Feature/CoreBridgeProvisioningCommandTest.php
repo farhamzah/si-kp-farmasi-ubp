@@ -133,7 +133,7 @@ class CoreBridgeProvisioningCommandTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'farhamzah@ubpkarawang.ac.id']);
     }
 
-    public function test_existing_legacy_user_is_linked_and_roles_are_added(): void
+    public function test_existing_legacy_user_is_linked_and_roles_are_synchronized(): void
     {
         $legacy = User::create([
             'name' => 'Farhamzah Lama',
@@ -143,6 +143,7 @@ class CoreBridgeProvisioningCommandTest extends TestCase
             'must_change_password' => true,
             'profile_completed' => false,
         ]);
+        $legacy->roles()->sync(Role::whereIn('name', ['koordinator_kp'])->pluck('id'));
         $legacyPassword = $legacy->password;
         $this->coreUser(21, 'farhamzah@ubpkarawang.ac.id', ['dosen', 'penguji']);
 
@@ -157,6 +158,34 @@ class CoreBridgeProvisioningCommandTest extends TestCase
         $this->assertSame($legacyPassword, $legacy->password);
         $this->assertEqualsCanonicalizing(
             ['pembimbing_dalam', 'penguji'],
+            $legacy->roles()->pluck('name')->all(),
+        );
+    }
+
+    public function test_execute_uses_core_roles_and_app_access_roles_then_removes_stale_local_roles(): void
+    {
+        $legacy = User::create([
+            'name' => 'Farhamzah Lama',
+            'email' => 'farhamzah@ubpkarawang.ac.id',
+            'password' => Hash::make('legacy-pass'),
+            'status' => 'active',
+            'must_change_password' => false,
+            'profile_completed' => true,
+            'core_user_id' => 21,
+        ]);
+        $legacy->roles()->sync(Role::whereIn('name', ['koordinator_kp', 'pembimbing_lapangan'])->pluck('id'));
+        $this->coreUser(21, 'farhamzah@ubpkarawang.ac.id', ['koordinator-kp']);
+        $this->coreRole(21, 'admin-kp');
+        $this->coreRole(21, 'penguji');
+
+        $this->artisan('kp:provision-core-bridge-user --email=farhamzah@ubpkarawang.ac.id --execute --confirm-execute')
+            ->expectsOutputToContain('mapped KP roles: koordinator_kp, admin, penguji')
+            ->assertSuccessful();
+
+        $legacy->refresh();
+
+        $this->assertEqualsCanonicalizing(
+            ['admin', 'koordinator_kp', 'penguji'],
             $legacy->roles()->pluck('name')->all(),
         );
     }
@@ -231,6 +260,21 @@ class CoreBridgeProvisioningCommandTest extends TestCase
                 'is_active' => true,
             ]);
         }
+    }
+
+    private function coreRole(int $userId, string $roleName): void
+    {
+        $roleId = abs(crc32($userId.'-'.$roleName));
+        DB::connection('core')->table('roles')->insertOrIgnore([
+            'id' => $roleId,
+            'name' => $roleName,
+            'label' => $roleName,
+            'active' => true,
+        ]);
+        DB::connection('core')->table('user_roles')->insertOrIgnore([
+            'user_id' => $userId,
+            'role_id' => $roleId,
+        ]);
     }
 
     private function coreLecturer(int $id, int $userId, string $lecturerNumber, string $email): void

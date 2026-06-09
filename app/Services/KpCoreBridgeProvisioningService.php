@@ -42,17 +42,27 @@ class KpCoreBridgeProvisioningService
             $blockers[] = "Core user {$email} harus mengganti password di Core Profile Portal sebelum dipakai login KP.";
         }
 
-        $coreAccessRoles = $coreUser->appAccesses
+        $coreAppAccessRoles = $coreUser->appAccesses
             ->where('app_code', 'kp-farmasi')
             ->where('is_active', true)
             ->pluck('role_slug')
             ->filter()
             ->values()
             ->all();
+        $coreRoleNames = $coreUser->roles
+            ->pluck('name')
+            ->filter()
+            ->values()
+            ->all();
+        $coreAccessRoles = collect($coreAppAccessRoles)
+            ->merge($coreRoleNames)
+            ->unique()
+            ->values()
+            ->all();
 
         $kpRoles = CoreRoleTranslator::coreRolesToKp($coreAccessRoles);
 
-        if ($coreAccessRoles === []) {
+        if ($coreAppAccessRoles === []) {
             $blockers[] = "Core user {$email} belum punya app access aktif untuk kp-farmasi.";
         }
 
@@ -138,7 +148,7 @@ class KpCoreBridgeProvisioningService
                 ->pluck('id')
                 ->all();
 
-            $legacyUser->roles()->syncWithoutDetaching($roleIds);
+            $legacyUser->roles()->sync($roleIds);
             $this->syncLegacyLecturerProfile($legacyUser, $plan);
 
             $plan['legacy_user_id'] = $legacyUser->id;

@@ -79,6 +79,65 @@ class CoreBridgeAuthTest extends TestCase
         $this->assertDatabaseHas('users', ['email' => 'admin@sikp.test', 'password' => $legacyPassword]);
     }
 
+    public function test_core_bridge_syncs_core_roles_before_redirecting_to_role_selection(): void
+    {
+        config()->set('kp_auth.mode', 'core_bridge');
+        $legacy = $this->legacyUser('multi@sikp.test', 'legacy-pass', ['koordinator_kp'], ['core_user_id' => 20]);
+        $this->coreUser(20, 'multi@sikp.test', 'core-pass', true, ['admin-kp', 'penguji'], ['koordinator-kp']);
+
+        $response = $this->post('/login', [
+            'email' => 'multi@sikp.test',
+            'password' => 'core-pass',
+        ]);
+
+        $response->assertRedirect('/pilih-role');
+        $this->assertAuthenticatedAs($legacy);
+        $this->assertEqualsCanonicalizing(
+            ['admin', 'koordinator_kp', 'penguji'],
+            $legacy->fresh()->roles()->pluck('name')->all(),
+        );
+        $this->assertNull(session('active_role'));
+    }
+
+    public function test_core_bridge_removes_stale_local_roles_on_login(): void
+    {
+        config()->set('kp_auth.mode', 'core_bridge');
+        $legacy = $this->legacyUser('synced@sikp.test', 'legacy-pass', ['koordinator_kp', 'penguji'], ['core_user_id' => 21]);
+        $this->coreUser(21, 'synced@sikp.test', 'core-pass', true, [], ['penguji']);
+
+        $response = $this->post('/login', [
+            'email' => 'synced@sikp.test',
+            'password' => 'core-pass',
+        ]);
+
+        $response->assertRedirect('/penguji/dashboard');
+        $this->assertAuthenticatedAs($legacy);
+        $this->assertEqualsCanonicalizing(
+            ['penguji'],
+            $legacy->fresh()->roles()->pluck('name')->all(),
+        );
+        $this->assertSame('penguji', session('active_role'));
+    }
+
+    public function test_core_bridge_allows_kp_role_from_core_role_when_app_access_is_active(): void
+    {
+        config()->set('kp_auth.mode', 'core_bridge');
+        $legacy = $this->legacyUser('lecturer-koordinator@sikp.test', 'legacy-pass', ['pembimbing_dalam'], ['core_user_id' => 22]);
+        $this->coreUser(22, 'lecturer-koordinator@sikp.test', 'core-pass', true, ['koordinator-kp'], ['dosen']);
+
+        $response = $this->post('/login', [
+            'email' => 'lecturer-koordinator@sikp.test',
+            'password' => 'core-pass',
+        ]);
+
+        $response->assertRedirect('/pilih-role');
+        $this->assertAuthenticatedAs($legacy);
+        $this->assertEqualsCanonicalizing(
+            ['koordinator_kp', 'pembimbing_dalam'],
+            $legacy->fresh()->roles()->pluck('name')->all(),
+        );
+    }
+
     public function test_core_bridge_rejects_user_without_kp_app_access(): void
     {
         config()->set('kp_auth.mode', 'core_bridge');

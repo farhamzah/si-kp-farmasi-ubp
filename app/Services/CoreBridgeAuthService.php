@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\Core\CoreUser;
+use App\Models\Role;
 use App\Models\User;
+use App\Support\CoreRoleTranslator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -88,21 +90,35 @@ class CoreBridgeAuthService
     public function validateKpAppAccess(int $coreUserId): bool
     {
         $allowedRoles = config('kp_auth.core_bridge_allowed_roles', []);
-        $accesses = CoreUser::query()
-            ->find($coreUserId)
-            ?->appAccesses()
+        $coreUser = CoreUser::query()
+            ->with(['roles', 'appAccesses'])
+            ->find($coreUserId);
+        $accesses = $coreUser?->appAccesses
             ->where('app_code', 'kp-farmasi')
-            ->where('is_active', true)
-            ->get() ?? collect();
+            ->where('is_active', true) ?? collect();
+        $coreRoles = $coreUser?->roles->pluck('name')->all() ?? [];
+        $roleCandidates = $accesses
+            ->pluck('role_slug')
+            ->merge($coreRoles)
+            ->filter()
+            ->values()
+            ->all();
 
-        if ($accesses->contains('role_slug', 'admin-core') && $accesses->whereIn('role_slug', $allowedRoles)->isEmpty()) {
+        if ($accesses->isEmpty()) {
+            $this->failureReason = 'core_app_access_denied';
+            Log::warning('KP auth Core app access denied.', ['core_user_id' => $coreUserId]);
+
+            return false;
+        }
+
+        if (in_array('admin-core', $roleCandidates, true) && collect($roleCandidates)->intersect($allowedRoles)->isEmpty()) {
             $this->failureReason = 'core_app_access_denied';
             Log::warning('KP auth denied admin-core-only Core app access.', ['core_user_id' => $coreUserId]);
 
             return false;
         }
 
-        if ($accesses->whereIn('role_slug', $allowedRoles)->isEmpty()) {
+        if (CoreRoleTranslator::coreRolesToKp($roleCandidates) === []) {
             $this->failureReason = 'core_app_access_denied';
             Log::warning('KP auth Core app access denied.', ['core_user_id' => $coreUserId]);
 
@@ -171,6 +187,8 @@ class CoreBridgeAuthService
             return $this->result(false, null, $this->failureReason, 'core_bridge');
         }
 
+        $this->syncLegacyRolesFromCore($legacyUser, $coreUser);
+
         Auth::login($legacyUser, $remember);
         Log::info('KP auth Core bridge login success.', [
             'email' => $this->normalize($email),
@@ -194,5 +212,27 @@ class CoreBridgeAuthService
     private function normalize(string $email): string
     {
         return strtolower(trim($email));
+    }
+
+    private function syncLegacyRolesFromCore(User $legacyUser, CoreUser $coreUser): void
+    {
+        $coreRoles = $coreUser->roles->pluck('name');
+        $appAccessRoles = $coreUser->appAccesses
+            ->where('app_code', 'kp-farmasi')
+            ->where('is_active', true)
+            ->pluck('role_slug');
+        $kpRoles = CoreRoleTranslator::coreRolesToKp($appAccessRoles->merge($coreRoles));
+
+        if ($kpRoles === []) {
+            return;
+        }
+
+        $roleIds = Role::query()
+            ->whereIn('name', $kpRoles)
+            ->pluck('id')
+            ->all();
+
+        $legacyUser->roles()->sync($roleIds);
+        $legacyUser->load('roles');
     }
 }
