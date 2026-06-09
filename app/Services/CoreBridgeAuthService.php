@@ -15,6 +15,11 @@ class CoreBridgeAuthService
 {
     private ?string $failureReason = null;
 
+    public function __construct(
+        private readonly KpCoreBridgeProvisioningService $provisioningService,
+    ) {
+    }
+
     public function attempt(string $email, string $password, bool $remember = false): array
     {
         $this->failureReason = null;
@@ -184,7 +189,11 @@ class CoreBridgeAuthService
 
         $legacyUser = $this->resolveLegacyKpUser($coreUser->id);
         if (! $legacyUser) {
-            return $this->result(false, null, $this->failureReason, 'core_bridge');
+            $legacyUser = $this->autoProvisionLegacyKpUser($coreUser);
+        }
+
+        if (! $legacyUser) {
+            return $this->result(false, null, $this->failureReason, 'core_bridge_auto_provision');
         }
 
         $this->syncLegacyRolesFromCore($legacyUser, $coreUser);
@@ -234,5 +243,28 @@ class CoreBridgeAuthService
 
         $legacyUser->roles()->sync($roleIds);
         $legacyUser->load('roles');
+    }
+
+    private function autoProvisionLegacyKpUser(CoreUser $coreUser): ?User
+    {
+        $report = $this->provisioningService->execute((string) $coreUser->email);
+
+        if ($report['blockers'] !== [] || ! $report['legacy_user_id']) {
+            $this->failureReason = 'legacy_bridge_user_missing';
+            Log::warning('KP auth Core bridge auto-provision failed.', [
+                'core_user_id' => $coreUser->id,
+                'email' => $this->normalize((string) $coreUser->email),
+                'blockers' => $report['blockers'],
+            ]);
+
+            return null;
+        }
+
+        Log::info('KP auth Core bridge auto-provisioned legacy user.', [
+            'core_user_id' => $coreUser->id,
+            'legacy_user_id' => $report['legacy_user_id'],
+        ]);
+
+        return User::query()->find($report['legacy_user_id']);
     }
 }

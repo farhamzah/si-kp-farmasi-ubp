@@ -68,7 +68,7 @@ class ProvisionCoreBridgeUserCommand extends Command
             $this->line('  name: '.$report['core_user']['name']);
             $this->line('  active: '.($report['core_user']['active'] ? 'yes' : 'no'));
             $this->line('  must_change_password: '.($report['core_user']['must_change_password'] ? 'yes' : 'no'));
-            $this->line('  kp-farmasi app access: '.($report['core_app_access_roles'] ? implode(', ', $report['core_app_access_roles']) : 'none'));
+            $this->line('  Core role candidates: '.($report['core_app_access_roles'] ? implode(', ', $report['core_app_access_roles']) : 'none'));
             $this->line('  mapped KP roles: '.($report['kp_roles'] ? implode(', ', $report['kp_roles']) : 'none'));
         }
 

@@ -18,6 +18,7 @@ use App\Console\Commands\IntegrationGapCheckCommand;
 use App\Console\Commands\MasterDataReadCheckCommand;
 use App\Console\Commands\ProductionReadinessGateCommand;
 use App\Console\Commands\ProvisionCoreBridgeUserCommand;
+use App\Console\Commands\ProvisionCoreBridgeUsersCommand;
 use App\Console\Commands\ReleaseCandidateGateCommand;
 use App\Console\Commands\ReleaseSensitiveScanCommand;
 use App\Console\Commands\SafaPublicInfoPreviewCommand;
@@ -53,6 +54,7 @@ return Application::configure(basePath: dirname(__DIR__))
         MasterDataReadCheckCommand::class,
         ProductionReadinessGateCommand::class,
         ProvisionCoreBridgeUserCommand::class,
+        ProvisionCoreBridgeUsersCommand::class,
         ReleaseCandidateGateCommand::class,
         ReleaseSensitiveScanCommand::class,
         SafaPublicInfoPreviewCommand::class,

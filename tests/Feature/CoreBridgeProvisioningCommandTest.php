@@ -109,6 +109,25 @@ class CoreBridgeProvisioningCommandTest extends TestCase
         ]);
     }
 
+    public function test_execute_creates_legacy_student_profile_when_core_student_exists(): void
+    {
+        $this->coreUser(22, 'student@sikp.test', ['mahasiswa']);
+        $this->coreStudent(9, 22, '221063120009', 'student@sikp.test');
+
+        $this->artisan('kp:provision-core-bridge-user --email=student@sikp.test --execute --confirm-execute')
+            ->expectsOutputToContain('Action: created')
+            ->assertSuccessful();
+
+        $user = User::where('email', 'student@sikp.test')->firstOrFail();
+
+        $this->assertDatabaseHas('students', [
+            'user_id' => $user->id,
+            'nim' => '221063120009',
+            'core_student_id' => 9,
+            'core_sync_status' => 'synced',
+        ]);
+    }
+
 
     public function test_admin_core_is_not_translated_to_kp_role(): void
     {
@@ -226,6 +245,25 @@ class CoreBridgeProvisioningCommandTest extends TestCase
             $table->timestamps();
         });
 
+        Schema::connection('core')->create('study_programs', function ($table): void {
+            $table->id();
+            $table->string('name');
+            $table->timestamps();
+        });
+
+        Schema::connection('core')->create('students', function ($table): void {
+            $table->id();
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->string('student_number');
+            $table->string('name')->nullable();
+            $table->string('email')->nullable();
+            $table->unsignedBigInteger('study_program_id')->nullable();
+            $table->unsignedTinyInteger('semester')->nullable();
+            $table->string('class_name')->nullable();
+            $table->boolean('active')->default(true);
+            $table->timestamps();
+        });
+
         Schema::connection('core')->create('lecturers', function ($table): void {
             $table->id();
             $table->unsignedBigInteger('user_id')->nullable();
@@ -274,6 +312,26 @@ class CoreBridgeProvisioningCommandTest extends TestCase
         DB::connection('core')->table('user_roles')->insertOrIgnore([
             'user_id' => $userId,
             'role_id' => $roleId,
+        ]);
+    }
+
+    private function coreStudent(int $id, int $userId, string $studentNumber, string $email): void
+    {
+        DB::connection('core')->table('study_programs')->insertOrIgnore([
+            'id' => 1,
+            'name' => 'Farmasi S1',
+        ]);
+
+        DB::connection('core')->table('students')->insert([
+            'id' => $id,
+            'user_id' => $userId,
+            'student_number' => $studentNumber,
+            'name' => 'Student Core',
+            'email' => $email,
+            'study_program_id' => 1,
+            'semester' => 6,
+            'class_name' => 'Farmasi A',
+            'active' => true,
         ]);
     }
 

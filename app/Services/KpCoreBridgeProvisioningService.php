@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Core\CoreUser;
 use App\Models\Lecturer;
 use App\Models\Role;
+use App\Models\Student;
 use App\Models\User;
 use App\Support\CoreRoleTranslator;
 use Illuminate\Support\Facades\DB;
@@ -82,7 +83,9 @@ class KpCoreBridgeProvisioningService
         $legacyByCore = User::query()->where('core_user_id', $coreUser->id)->first();
         $legacyByEmail = User::query()->whereRaw('LOWER(TRIM(email)) = ?', [$email])->first();
         $legacyUser = $legacyByCore ?: $legacyByEmail;
+        $coreStudent = $this->coreStudentFor($coreUser->id, $email);
         $coreLecturer = $this->coreLecturerFor($coreUser->id, $email);
+        $legacyStudent = $this->legacyStudentFor($legacyUser, $coreStudent);
         $legacyLecturer = $this->legacyLecturerFor($legacyUser, $coreLecturer);
 
         if ($legacyByCore && $legacyByEmail && ! $legacyByCore->is($legacyByEmail)) {
@@ -105,7 +108,7 @@ class KpCoreBridgeProvisioningService
             $warnings[] = "Legacy KP user {$email} tidak aktif dan akan diaktifkan saat execute.";
         }
 
-        return $this->result($email, $coreUser, $legacyUser, $coreAccessRoles, $kpRoles, $action, $warnings, $blockers, $coreLecturer, $legacyLecturer);
+        return $this->result($email, $coreUser, $legacyUser, $coreAccessRoles, $kpRoles, $action, $warnings, $blockers, $coreStudent, $legacyStudent, $coreLecturer, $legacyLecturer);
     }
 
     /**
@@ -149,10 +152,12 @@ class KpCoreBridgeProvisioningService
                 ->all();
 
             $legacyUser->roles()->sync($roleIds);
+            $this->syncLegacyStudentProfile($legacyUser, $plan);
             $this->syncLegacyLecturerProfile($legacyUser, $plan);
 
             $plan['legacy_user_id'] = $legacyUser->id;
             $plan['legacy_status'] = $legacyUser->status;
+            $plan['legacy_student_id'] = $legacyUser->student?->id;
             $plan['legacy_lecturer_id'] = $legacyUser->lecturer?->id;
             $plan['action'] = $plan['action'] === 'create' ? 'created' : 'synced';
         });
@@ -168,13 +173,14 @@ class KpCoreBridgeProvisioningService
 
         $existing = $legacyUser->roles()->pluck('name')->all();
 
-        return collect($kpRoles)->diff($existing)->isNotEmpty();
+        return collect($kpRoles)->diff($existing)->isNotEmpty()
+            || collect($existing)->diff($kpRoles)->isNotEmpty();
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function result(string $email, ?CoreUser $coreUser, ?User $legacyUser, array $coreAccessRoles, array $kpRoles, string $action, array $warnings, array $blockers, ?object $coreLecturer = null, ?Lecturer $legacyLecturer = null): array
+    private function result(string $email, ?CoreUser $coreUser, ?User $legacyUser, array $coreAccessRoles, array $kpRoles, string $action, array $warnings, array $blockers, ?object $coreStudent = null, ?Student $legacyStudent = null, ?object $coreLecturer = null, ?Lecturer $legacyLecturer = null): array
     {
         return [
             'email' => $email,
@@ -188,6 +194,14 @@ class KpCoreBridgeProvisioningService
             ] : null,
             'legacy_user_id' => $legacyUser?->id,
             'legacy_status' => $legacyUser?->status,
+            'core_student' => $coreStudent ? [
+                'id' => $coreStudent->id,
+                'student_number' => $coreStudent->student_number ?? null,
+                'study_program_name' => $coreStudent->study_program_name ?? null,
+                'class_name' => $coreStudent->class_name ?? null,
+                'semester' => $coreStudent->semester ?? null,
+            ] : null,
+            'legacy_student_id' => $legacyStudent?->id,
             'core_lecturer' => $coreLecturer ? [
                 'id' => $coreLecturer->id,
                 'lecturer_number' => $coreLecturer->lecturer_number,
@@ -207,6 +221,34 @@ class KpCoreBridgeProvisioningService
     private function normalize(string $email): string
     {
         return strtolower(trim($email));
+    }
+
+    private function coreStudentFor(int $coreUserId, string $email): ?object
+    {
+        if (! Schema::connection('core')->hasTable('students')) {
+            return null;
+        }
+
+        $query = DB::connection('core')
+            ->table('students');
+
+        if (Schema::connection('core')->hasTable('study_programs')) {
+            $query->leftJoin('study_programs', 'study_programs.id', '=', 'students.study_program_id');
+        }
+
+        $select = ['students.*'];
+        $select[] = Schema::connection('core')->hasTable('study_programs')
+            ? 'study_programs.name as study_program_name'
+            : DB::raw('NULL as study_program_name');
+
+        return $query
+            ->where(function ($query) use ($coreUserId, $email): void {
+                $query
+                    ->where('students.user_id', $coreUserId)
+                    ->orWhereRaw('LOWER(TRIM(students.email)) = ?', [$email]);
+            })
+            ->select($select)
+            ->first();
     }
 
     private function coreLecturerFor(int $coreUserId, string $email): ?object
@@ -262,6 +304,64 @@ class KpCoreBridgeProvisioningService
         }
 
         return $query->first();
+    }
+
+    private function legacyStudentFor(?User $legacyUser, ?object $coreStudent): ?Student
+    {
+        if (! $coreStudent) {
+            return null;
+        }
+
+        $query = Student::query()
+            ->where('core_student_id', $coreStudent->id);
+
+        if ($legacyUser) {
+            $query->orWhere('user_id', $legacyUser->id);
+        }
+
+        if (filled($coreStudent->student_number ?? null)) {
+            $query->orWhere('nim', $coreStudent->student_number);
+        }
+
+        return $query->first();
+    }
+
+    private function syncLegacyStudentProfile(User $legacyUser, array $plan): void
+    {
+        if (! $plan['core_student']) {
+            return;
+        }
+
+        $coreStudent = (object) $plan['core_student'];
+        $legacyStudent = Student::query()
+            ->where('core_student_id', $coreStudent->id)
+            ->orWhere('user_id', $legacyUser->id)
+            ->when(filled($coreStudent->student_number ?? null), fn ($query) => $query->orWhere('nim', $coreStudent->student_number))
+            ->first();
+
+        $attributes = [
+            'user_id' => $legacyUser->id,
+            'nim' => $coreStudent->student_number ?? null,
+            'study_program' => $coreStudent->study_program_name ?? null,
+            'semester' => $coreStudent->semester ?? null,
+            'class_name' => $coreStudent->class_name ?? null,
+            'phone' => null,
+            'address' => null,
+            'status' => 'active',
+            'core_student_id' => $coreStudent->id,
+            'core_synced_at' => now(),
+            'core_sync_status' => 'synced',
+            'core_sync_note' => 'Provisioned from Core student for KP auth bridge.',
+            'profile_completed_at' => now(),
+        ];
+
+        if ($legacyStudent) {
+            $legacyStudent->forceFill($attributes)->save();
+
+            return;
+        }
+
+        Student::query()->create($attributes);
     }
 
     private function syncLegacyLecturerProfile(User $legacyUser, array $plan): void

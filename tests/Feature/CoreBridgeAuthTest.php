@@ -183,7 +183,7 @@ class CoreBridgeAuthTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_core_bridge_rejects_missing_legacy_mapping(): void
+    public function test_core_bridge_auto_provisions_missing_legacy_mapping(): void
     {
         config()->set('kp_auth.mode', 'core_bridge');
         $this->coreUser(13, 'missing-legacy@sikp.test', 'core-pass', true, ['mahasiswa'], ['mahasiswa']);
@@ -193,8 +193,13 @@ class CoreBridgeAuthTest extends TestCase
             'password' => 'core-pass',
         ]);
 
-        $response->assertSessionHasErrors('email');
-        $this->assertGuest();
+        $response->assertRedirect('/mahasiswa/dashboard');
+
+        $legacy = User::where('email', 'missing-legacy@sikp.test')->firstOrFail();
+        $this->assertAuthenticatedAs($legacy);
+        $this->assertSame(13, (int) $legacy->core_user_id);
+        $this->assertFalse(Hash::check('core-pass', $legacy->password));
+        $this->assertEqualsCanonicalizing(['mahasiswa'], $legacy->roles()->pluck('name')->all());
     }
 
     public function test_core_bridge_with_legacy_fallback_allows_legacy_password_after_core_credential_failure(): void
