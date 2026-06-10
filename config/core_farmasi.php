@@ -5,6 +5,7 @@ return [
     'base_url' => env('KP_CORE_BASE_URL'),
     'profile_url' => env('KP_CORE_PROFILE_URL')
         ?: (env('KP_CORE_BASE_URL') ? rtrim((string) env('KP_CORE_BASE_URL'), '/') . '/profile' : null),
+    'storage_public_path' => env('KP_CORE_STORAGE_PUBLIC_PATH'),
     'app_code' => env('KP_CORE_APP_CODE', 'kp-farmasi'),
     'client_id' => env('KP_CORE_CLIENT_ID'),
     'client_secret' => env('KP_CORE_CLIENT_SECRET'),

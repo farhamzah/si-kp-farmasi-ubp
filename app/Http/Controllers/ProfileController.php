@@ -6,11 +6,13 @@ use App\Services\CoreFarmasiClient;
 use App\Services\CoreProfileReadService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\File;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ProfileController extends Controller
 {
@@ -24,13 +26,16 @@ class ProfileController extends Controller
     {
         $user = $request->user()->load(['roles', 'student', 'lecturer', 'fieldSupervisor']);
         $profileType = $user->activeProfileType();
+        $profile = $user->profileModelForType($profileType);
+        $coreOfficialProfile = $this->coreProfiles->officialProfileFor($user, $profileType);
 
         return view('profile.show', [
             'user' => $user,
             'profileType' => $profileType,
-            'profile' => $user->profileModelForType($profileType),
+            'profile' => $profile,
             'coreProfileUrl' => $this->coreFarmasi->profileEditUrl(),
-            'coreOfficialProfile' => $this->coreProfiles->officialProfileFor($user, $profileType),
+            'coreOfficialProfile' => $coreOfficialProfile,
+            'operationalAttributes' => $this->operationalAttributes($profile, $profileType, (bool) $coreOfficialProfile),
         ]);
     }
 
@@ -124,6 +129,61 @@ class ProfileController extends Controller
         return redirect()->route('profile.show')->with('status', 'Profil berhasil diperbarui.');
     }
 
+    /**
+     * @return array<string, string|null>
+     */
+    private function operationalAttributes(?Model $profile, string $profileType, bool $coreManaged): array
+    {
+        if (! $profile) {
+            return [];
+        }
+
+        if ($coreManaged) {
+            return match ($profileType) {
+                'mahasiswa' => $this->onlyFilled($profile, [
+                    'semester' => 'Semester KP',
+                    'class_name' => 'Kelas KP',
+                ]),
+                'dosen' => $this->onlyFilled($profile, [
+                    'expertise' => 'Bidang Keahlian KP',
+                ]),
+                'pembimbing_lapangan' => $this->onlyFilled($profile, [
+                    'institution_name' => 'Institusi Tempat KP',
+                    'position' => 'Jabatan',
+                    'phone' => 'Telepon Operasional',
+                    'address' => 'Alamat Operasional',
+                ]),
+                default => [],
+            };
+        }
+
+        return collect($profile->getAttributes())
+            ->except(['id', 'user_id', 'created_at', 'updated_at'])
+            ->mapWithKeys(fn ($value, string $key): array => [str_replace('_', ' ', strtoupper($key)) => $this->displayValue($value)])
+            ->all();
+    }
+
+    /**
+     * @param  array<string, string>  $fields
+     * @return array<string, string|null>
+     */
+    private function onlyFilled(Model $profile, array $fields): array
+    {
+        return collect($fields)
+            ->mapWithKeys(fn (string $label, string $field): array => [$label => $this->displayValue($profile->{$field} ?? null)])
+            ->filter(fn (?string $value): bool => filled($value))
+            ->all();
+    }
+
+    private function displayValue(mixed $value): ?string
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+
+        return filled($value) ? (string) $value : null;
+    }
+
     public function avatar(Request $request): StreamedResponse
     {
         $user = $request->user();
@@ -138,6 +198,15 @@ class ProfileController extends Controller
                 'Cache-Control' => 'private, max-age=300',
             ]
         );
+    }
+
+    public function coreAvatar(Request $request): BinaryFileResponse
+    {
+        $response = $this->coreProfiles->profilePhotoResponseFor($request->user());
+
+        abort_if(! $response, 404);
+
+        return $response;
     }
 
     public function updateAvatar(Request $request): RedirectResponse

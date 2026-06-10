@@ -68,6 +68,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/pilih-role', [RoleSelectionController::class, 'index'])->name('role.select');
     Route::post('/set-role/{role:name}', [RoleSelectionController::class, 'store'])->name('role.set');
     Route::get('/profile/avatar', [ProfileController::class, 'avatar'])->name('profile.avatar.show');
+    Route::get('/profile/core-avatar', [ProfileController::class, 'coreAvatar'])->name('profile.core-avatar.show');
 
     Route::middleware('role.selected')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'redirect'])->name('dashboard');

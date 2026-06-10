@@ -26,11 +26,12 @@ Tujuan:
 2. Tampilkan profil resmi Core sebagai read-only di halaman profil KP jika mapping Core tersedia.
 3. Jangan izinkan field resmi Core diubah dari KP saat Core profile tersedia.
 4. Pertahankan field operasional KP yang memang khusus KP.
-5. Jangan menulis ke database Core.
-6. Jangan copy password Core.
-7. Jangan membuat SSO/autologin/token URL.
-8. Tambahkan test untuk multi-role dan read-only Core fields.
-9. Buat report tahap.
+5. Pakai foto profil Core jika tersedia, dengan URL publik Core atau proxy read-only auth-only dari storage publik Core.
+6. Jangan menulis ke database Core.
+7. Jangan copy password Core.
+8. Jangan membuat SSO/autologin/token URL.
+9. Tambahkan test untuk multi-role, foto Core, dan read-only Core fields.
+10. Buat report tahap.
 
 Validasi wajib:
 
@@ -43,4 +44,4 @@ Validasi wajib:
 Setelah selesai:
 
 - Commit dan push ke `origin main`.
-- Berikan instruksi pull VPS dan catatan env `KP_CORE_BASE_URL`/`KP_CORE_PROFILE_URL` bila ingin foto Core tampil di KP.
+- Berikan instruksi pull VPS dan catatan env `KP_CORE_BASE_URL`/`KP_CORE_PROFILE_URL` atau `KP_CORE_STORAGE_PUBLIC_PATH` bila ingin foto Core tampil di KP.

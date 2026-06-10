@@ -20,6 +20,9 @@ Tahap ini juga menambahkan tampilan data resmi Core sebagai read-only di halaman
 - `ProfileController` sekarang memakai active role session untuk menentukan tipe profil.
 - Halaman `/profil-saya` menampilkan blok `Data Resmi Core` read-only jika profil Core tersedia.
 - Halaman `/profile/edit` mengunci field resmi Core saat profil Core tersedia.
+- Avatar global memprioritaskan foto Core bila Core user memiliki `profile_photo_path`.
+- Jika URL publik Core belum dikonfigurasi, KP menyediakan proxy avatar read-only auth-only dari storage publik Core yang ada di server yang sama.
+- Saat data Core tersedia, bagian `Data Operasional KP` hanya menampilkan field yang benar-benar KP-specific dan tidak lagi menampilkan snapshot/mapping seperti `core_lecturer_id`, `core_sync_note`, telepon, prodi, atau departemen.
 - Field operasional yang masih bisa diisi di KP:
   - Mahasiswa: semester dan kelas.
   - Dosen: bidang keahlian/expertise.
@@ -54,6 +57,9 @@ Tahap ini juga menambahkan tampilan data resmi Core sebagai read-only di halaman
 - `app/Services/CoreProfileReadService.php`
 - `app/Models/User.php`
 - `app/Http/Controllers/ProfileController.php`
+- `config/core_farmasi.php`
+- `routes/web.php`
+- `resources/views/components/ui/avatar.blade.php`
 - `resources/views/profile/show.blade.php`
 - `resources/views/profile/edit.blade.php`
 - `tests/Feature/CoreProfileReadOnlyDisplayTest.php`
@@ -62,9 +68,10 @@ Tahap ini juga menambahkan tampilan data resmi Core sebagai read-only di halaman
 
 ## Validasi
 
-- `php artisan test --filter=CoreProfileReadOnlyDisplayTest`: PASS, 2 tests / 18 assertions.
-- `php artisan test`: PASS, 192 tests / 1101 assertions.
-- `npm run build`: PowerShell blocked by local execution policy for `npm.ps1`; repeated with `npm.cmd run build`: PASS.
+- `php artisan test --filter=CoreProfileReadOnlyDisplayTest`: PASS, 2 tests / 23 assertions.
+- `php artisan test`: PASS, 192 tests / 1106 assertions.
+- `npm.cmd run build`: PASS.
+- `php artisan route:list`: PASS, 214 routes.
 - `php artisan kp:production-readiness-gate`: ran read-only, FAIL expected on local `.env` because local environment is not production.
   - Blockers local: `APP_ENV`, `APP_DEBUG`, non-HTTPS `APP_URL`, insecure session cookie, and local Core bridge/master-data mode alignment.
   - VPS must be checked after pull with production `.env`.
@@ -93,8 +100,14 @@ KP_CORE_BASE_URL=https://core.safaubp.com
 KP_CORE_PROFILE_URL=https://core.safaubp.com/profile
 ```
 
+Jika URL publik Core belum dipakai tetapi KP dan Core berada di server yang sama, KP juga dapat membaca file publik Core lewat route auth-only:
+
+```env
+KP_CORE_STORAGE_PUBLIC_PATH=/var/www/core-farmasi/storage/app/public
+```
+
 ## Rekomendasi KP-35
 
 - Tambahkan diagnostic command untuk mengecek coverage profil Core per role aktif.
-- Pertimbangkan fallback avatar otomatis dari Core bila avatar KP kosong.
+- Tambahkan pengecekan deployment untuk memastikan `KP_CORE_BASE_URL` atau `KP_CORE_STORAGE_PUBLIC_PATH` benar agar foto Core tampil stabil.
 - Evaluasi apakah semester/kelas juga sebaiknya dipindah ke Core atau tetap menjadi operational field KP.

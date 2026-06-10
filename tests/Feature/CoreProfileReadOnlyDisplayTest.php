@@ -7,6 +7,7 @@ use App\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -16,6 +17,8 @@ class CoreProfileReadOnlyDisplayTest extends TestCase
     use RefreshDatabase;
 
     private string $coreDatabasePath;
+
+    private string $corePublicStoragePath;
 
     protected function setUp(): void
     {
@@ -34,6 +37,11 @@ class CoreProfileReadOnlyDisplayTest extends TestCase
 
         DB::purge('core');
         $this->createCoreSchema();
+
+        $this->corePublicStoragePath = sys_get_temp_dir().DIRECTORY_SEPARATOR.'core-profile-storage-'.uniqid();
+        File::makeDirectory($this->corePublicStoragePath.DIRECTORY_SEPARATOR.'profile-photos', 0755, true);
+        file_put_contents($this->corePublicStoragePath.DIRECTORY_SEPARATOR.'profile-photos'.DIRECTORY_SEPARATOR.'core.jpg', 'fake-image');
+        config()->set('core_farmasi.storage_public_path', $this->corePublicStoragePath);
     }
 
     protected function tearDown(): void
@@ -42,6 +50,10 @@ class CoreProfileReadOnlyDisplayTest extends TestCase
 
         if (isset($this->coreDatabasePath) && file_exists($this->coreDatabasePath)) {
             unlink($this->coreDatabasePath);
+        }
+
+        if (isset($this->corePublicStoragePath) && is_dir($this->corePublicStoragePath)) {
+            File::deleteDirectory($this->corePublicStoragePath);
         }
 
         parent::tearDown();
@@ -67,19 +79,28 @@ class CoreProfileReadOnlyDisplayTest extends TestCase
             ->withSession(['active_role' => 'pembimbing_dalam'])
             ->get('/profil-saya')
             ->assertOk()
-            ->assertSee('Data Resmi Core')
+            ->assertSee('Profil Resmi Core')
             ->assertSee('Profil Dosen')
             ->assertSee('Dosen Core')
             ->assertSee('Farmasi S1')
             ->assertSee('Teknologi Sediaan Farmasi')
-            ->assertSee('Data Operasional KP');
+            ->assertSee('Data Operasional KP')
+            ->assertSee('https://core.test/storage/profile-photos/core.jpg', false)
+            ->assertSee('Belum ada data operasional tambahan')
+            ->assertDontSee('CORE LECTURER ID');
 
         $this->actingAs($user)
             ->withSession(['active_role' => 'pembimbing_dalam'])
             ->get('/profile/edit')
             ->assertOk()
             ->assertSee('Bidang Keahlian/Expertise')
+            ->assertDontSee('Ubah Foto')
             ->assertDontSee('Nomor Induk Mahasiswa');
+
+        $this->actingAs($user)
+            ->withSession(['active_role' => 'pembimbing_dalam'])
+            ->get('/profile/core-avatar')
+            ->assertOk();
     }
 
     public function test_core_managed_profile_fields_are_read_only_from_kp_update(): void
@@ -207,6 +228,7 @@ class CoreProfileReadOnlyDisplayTest extends TestCase
             'username' => '0012345601',
             'identity_type' => 'lecturer',
             'identity_number' => '3275010101010001',
+            'profile_photo_path' => 'profile-photos/core.jpg',
             'active' => true,
         ]);
         DB::connection('core')->table('faculties')->insert(['id' => 1, 'code' => 'FF', 'name' => 'Fakultas Farmasi', 'active' => true]);

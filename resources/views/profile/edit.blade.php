@@ -21,10 +21,12 @@
 @endif
 
 @if($coreOfficialProfile)
-    <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-blue-100">
+    <section class="overflow-hidden rounded-3xl bg-white shadow-xl shadow-cyan-950/8 ring-1 ring-cyan-100">
+        <div class="relative p-6 sm:p-8">
+            <div class="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-cyan-700 via-teal-500 to-emerald-400"></div>
         <div class="mb-5 flex flex-col gap-3 border-b border-slate-100 pb-5 md:flex-row md:items-start md:justify-between">
             <div>
-                <p class="text-xs font-bold uppercase tracking-[0.18em] text-blue-700">Data Resmi Core</p>
+                <p class="text-xs font-black uppercase tracking-[0.22em] text-cyan-700">Data Resmi Core</p>
                 <h2 class="mt-2 text-xl font-black text-slate-950">Identitas read-only</h2>
                 <p class="mt-1 text-sm leading-6 text-slate-500">{{ data_get($coreOfficialProfile, 'notice') }}</p>
             </div>
@@ -46,9 +48,11 @@
                 </section>
             @endforeach
         </div>
+        </div>
     </section>
 @endif
 
+@unless($coreOfficialProfile)
 <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
     <div class="flex flex-col gap-5 sm:flex-row sm:items-center">
         <x-ui.avatar :user="$user" size="xl" class="shadow-xl shadow-cyan-900/10" />
@@ -80,6 +84,7 @@
         @endif
     </div>
 </section>
+@endunless
 
 <form method="POST" action="{{ route('profile.update') }}">
     @csrf

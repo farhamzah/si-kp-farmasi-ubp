@@ -11,11 +11,13 @@
         'xl' => 'h-28 w-28 text-3xl rounded-[1.75rem]',
     ];
     $class = $sizes[$size] ?? $sizes['md'];
+    $coreAvatarUrl = $user?->core_user_id ? app(\App\Services\CoreProfileReadService::class)->profilePhotoUrlFor($user) : null;
+    $avatarUrl = $coreAvatarUrl ?: ($user->hasAvatar() ? $user->avatarUrl() : null);
 @endphp
 
 <span {{ $attributes->merge(['class' => 'inline-flex '.$class.' flex-none items-center justify-center overflow-hidden bg-cyan-50 font-black text-cyan-700 ring-1 ring-cyan-100']) }}>
-    @if($user->hasAvatar())
-        <img src="{{ $user->avatarUrl() }}" alt="Foto profil {{ $user->name }}" class="h-full w-full object-cover">
+    @if($avatarUrl)
+        <img src="{{ $avatarUrl }}" alt="Foto profil {{ $user->name }}" class="h-full w-full object-cover">
     @else
         {{ $user->initials() }}
     @endif

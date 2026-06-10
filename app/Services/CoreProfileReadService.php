@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Throwable;
 
 class CoreProfileReadService
@@ -31,6 +32,8 @@ class CoreProfileReadService
                 default => null,
             };
 
+            $profilePhotoUrl = $this->profilePhotoUrl($coreUser->profile_photo_path ?? null);
+
             return [
                 'available' => true,
                 'source' => 'core',
@@ -42,7 +45,8 @@ class CoreProfileReadService
                     'username' => $coreUser->username ?? null,
                     'identity_type' => $coreUser->identity_type ?? null,
                     'identity_number_masked' => $this->mask($coreUser->identity_number ?? null),
-                    'profile_photo_url' => $this->profilePhotoUrl($coreUser->profile_photo_path ?? null),
+                    'profile_photo_url' => $profilePhotoUrl,
+                    'has_profile_photo' => filled($profilePhotoUrl),
                     'active' => (bool) ($coreUser->active ?? true),
                 ],
                 'linked_profile' => $linkedProfile,
@@ -51,6 +55,53 @@ class CoreProfileReadService
                     ? 'Data resmi dibaca dari Core Farmasi dan ditampilkan read-only di KP.'
                     : 'Akun Core terbaca, tetapi profil resmi untuk role aktif ini belum tertaut.',
             ];
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    public function profilePhotoUrlFor(User $user): ?string
+    {
+        try {
+            if (! Schema::connection('core')->hasTable('users')) {
+                return null;
+            }
+
+            $coreUser = $this->coreUserFor($user);
+
+            if (! $coreUser || blank($coreUser->profile_photo_path ?? null)) {
+                return null;
+            }
+
+            return $this->profilePhotoUrl($coreUser->profile_photo_path);
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    public function profilePhotoResponseFor(User $user): ?BinaryFileResponse
+    {
+        try {
+            if (! Schema::connection('core')->hasTable('users')) {
+                return null;
+            }
+
+            $coreUser = $this->coreUserFor($user);
+            $path = $coreUser->profile_photo_path ?? null;
+
+            if (blank($path)) {
+                return null;
+            }
+
+            $file = $this->localProfilePhotoPath($path);
+
+            if (! $file) {
+                return null;
+            }
+
+            return response()->file($file, [
+                'Cache-Control' => 'private, max-age=300',
+            ]);
         } catch (Throwable) {
             return null;
         }
@@ -240,7 +291,11 @@ class CoreProfileReadService
 
         $baseUrl = $this->coreBaseUrl();
 
-        return $baseUrl ? rtrim($baseUrl, '/').'/storage/'.ltrim($path, '/') : null;
+        if ($baseUrl) {
+            return rtrim($baseUrl, '/').'/storage/'.ltrim($path, '/');
+        }
+
+        return $this->localProfilePhotoPath($path) ? route('profile.core-avatar.show') : null;
     }
 
     private function coreBaseUrl(): ?string
@@ -281,5 +336,42 @@ class CoreProfileReadService
         }
 
         return substr($value, 0, 2).str_repeat('*', max(0, $length - 4)).substr($value, -2);
+    }
+
+    private function localProfilePhotoPath(string $path): ?string
+    {
+        $relative = ltrim(str_replace('\\', '/', $path), '/');
+
+        if ($relative === '' || str_contains($relative, '..')) {
+            return null;
+        }
+
+        foreach ($this->corePublicStorageRoots() as $root) {
+            $base = realpath($root);
+
+            if (! $base) {
+                continue;
+            }
+
+            $candidate = realpath($base.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $relative));
+
+            if ($candidate && str_starts_with($candidate, $base.DIRECTORY_SEPARATOR) && is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function corePublicStorageRoots(): array
+    {
+        return array_values(array_filter(array_unique([
+            config('core_farmasi.storage_public_path'),
+            base_path('../core-farmasi/storage/app/public'),
+            '/var/www/core-farmasi/storage/app/public',
+        ])));
     }
 }
