@@ -5,6 +5,7 @@
 
 @section('content')
 <div class="mx-auto max-w-4xl space-y-6">
+@php($coreManaged = (bool) $coreOfficialProfile)
 @if($coreProfileUrl)
     <section class="rounded-2xl border border-blue-200 bg-blue-50 p-5 shadow-sm">
         <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -15,6 +16,35 @@
             <a href="{{ $coreProfileUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center rounded-xl bg-blue-700 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-blue-700/20 transition hover:bg-blue-800">
                 Ubah Profil di Core
             </a>
+        </div>
+    </section>
+@endif
+
+@if($coreOfficialProfile)
+    <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-blue-100">
+        <div class="mb-5 flex flex-col gap-3 border-b border-slate-100 pb-5 md:flex-row md:items-start md:justify-between">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-[0.18em] text-blue-700">Data Resmi Core</p>
+                <h2 class="mt-2 text-xl font-black text-slate-950">Identitas read-only</h2>
+                <p class="mt-1 text-sm leading-6 text-slate-500">{{ data_get($coreOfficialProfile, 'notice') }}</p>
+            </div>
+            <span class="w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">Source of truth</span>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2">
+            @foreach(data_get($coreOfficialProfile, 'sections', []) as $sectionTitle => $items)
+                <section class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <h3 class="text-sm font-black text-slate-950">{{ $sectionTitle }}</h3>
+                    <dl class="mt-4 space-y-3">
+                        @foreach($items as $label => $value)
+                            <div>
+                                <dt class="text-[11px] font-bold uppercase tracking-wide text-slate-500">{{ $label }}</dt>
+                                <dd class="mt-1 break-words text-sm font-semibold text-slate-900">{{ filled($value) ? $value : '-' }}</dd>
+                            </div>
+                        @endforeach
+                    </dl>
+                </section>
+            @endforeach
         </div>
     </section>
 @endif
@@ -57,8 +87,14 @@
 
     <section class="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200">
         <div class="mb-8">
-            <h2 class="text-2xl font-bold text-slate-950">Pembaruan Data Profil</h2>
-            <p class="mt-2 text-slate-600">Lengkapi informasi akademis wajib untuk mengaktifkan fitur utama sistem.</p>
+            <h2 class="text-2xl font-bold text-slate-950">Pembaruan Data Operasional KP</h2>
+            <p class="mt-2 text-slate-600">
+                @if($coreManaged)
+                    Field identitas resmi dikunci karena sudah dikelola Core. Isi hanya data tambahan yang dibutuhkan workflow KP.
+                @else
+                    Lengkapi informasi akademis wajib untuk mengaktifkan fitur utama sistem.
+                @endif
+            </p>
         </div>
 
         @if($errors->any())
@@ -76,17 +112,19 @@
             @if($profileType === 'mahasiswa')
                 <div class="md:col-span-2">
                     <label class="block text-sm font-semibold text-slate-700 mb-2">Nomor Induk Mahasiswa (NIM)</label>
-                    <input value="{{ $profile?->nim }}" disabled class="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500 cursor-not-allowed">
-                    <p class="mt-1.5 text-xs text-slate-500">Data NIM tidak dapat diubah. Hubungi admin jika ada kesalahan data.</p>
+                    <input value="{{ $coreManaged ? data_get($coreOfficialProfile, 'linked_profile.student_number') : $profile?->nim }}" disabled class="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500 cursor-not-allowed">
+                    <p class="mt-1.5 text-xs text-slate-500">Data NIM tidak dapat diubah di KP. Hubungi admin Core jika ada kesalahan data resmi.</p>
                 </div>
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-2">Nomor Telepon Aktif</label>
-                    <input name="phone" value="{{ old('phone', $profile?->phone) }}" placeholder="+62..." class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-2">Program Studi</label>
-                    <input name="study_program" value="{{ old('study_program', $profile?->study_program) }}" placeholder="Farmasi" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
-                </div>
+                @unless($coreManaged)
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Nomor Telepon Aktif</label>
+                        <input name="phone" value="{{ old('phone', $profile?->phone) }}" placeholder="+62..." class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Program Studi</label>
+                        <input name="study_program" value="{{ old('study_program', $profile?->study_program) }}" placeholder="Farmasi" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
+                    </div>
+                @endunless
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-2">Tingkat Semester</label>
                     <input name="semester" type="number" min="1" max="14" value="{{ old('semester', $profile?->semester) }}" placeholder="7" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
@@ -95,56 +133,62 @@
                     <label class="block text-sm font-semibold text-slate-700 mb-2">Kelas</label>
                     <input name="class_name" value="{{ old('class_name', $profile?->class_name) }}" placeholder="A" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
                 </div>
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-2">Jenis Kelamin</label>
-                    <select name="gender" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
-                        <option value="">Pilih jenis kelamin</option>
-                        <option value="Laki-laki" @selected(old('gender', $profile?->gender) === 'Laki-laki')>Laki-laki</option>
-                        <option value="Perempuan" @selected(old('gender', $profile?->gender) === 'Perempuan')>Perempuan</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-2">Tempat Lahir</label>
-                    <input name="birth_place" value="{{ old('birth_place', $profile?->birth_place) }}" placeholder="Kota/Kabupaten" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-2">Tanggal Lahir</label>
-                    <input name="birth_date" type="date" value="{{ old('birth_date', $profile?->birth_date?->format('Y-m-d')) }}" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-semibold text-slate-700 mb-2">Alamat Lengkap</label>
-                    <textarea name="address" rows="3" placeholder="Jl. ... No. ... Kelurahan ... Kecamatan ..." class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition resize-none">{{ old('address', $profile?->address) }}</textarea>
-                </div>
+                @unless($coreManaged)
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Jenis Kelamin</label>
+                        <select name="gender" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
+                            <option value="">Pilih jenis kelamin</option>
+                            <option value="Laki-laki" @selected(old('gender', $profile?->gender) === 'Laki-laki')>Laki-laki</option>
+                            <option value="Perempuan" @selected(old('gender', $profile?->gender) === 'Perempuan')>Perempuan</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Tempat Lahir</label>
+                        <input name="birth_place" value="{{ old('birth_place', $profile?->birth_place) }}" placeholder="Kota/Kabupaten" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Tanggal Lahir</label>
+                        <input name="birth_date" type="date" value="{{ old('birth_date', $profile?->birth_date?->format('Y-m-d')) }}" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Alamat Lengkap</label>
+                        <textarea name="address" rows="3" placeholder="Jl. ... No. ... Kelurahan ... Kecamatan ..." class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition resize-none">{{ old('address', $profile?->address) }}</textarea>
+                    </div>
+                @endunless
             @elseif($profileType === 'dosen')
                 <div class="md:col-span-2">
                     <label class="block text-sm font-semibold text-slate-700 mb-2">Nomor Induk Dosen Nasional (NIDN/NIP)</label>
-                    <input value="{{ $profile?->nidn_nip }}" disabled class="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500 cursor-not-allowed">
-                    <p class="mt-1.5 text-xs text-slate-500">Data NIDN/NIP tidak dapat diubah. Hubungi admin jika ada kesalahan data.</p>
+                    <input value="{{ $coreManaged ? (data_get($coreOfficialProfile, 'linked_profile.nidn') ?: data_get($coreOfficialProfile, 'linked_profile.lecturer_number')) : $profile?->nidn_nip }}" disabled class="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500 cursor-not-allowed">
+                    <p class="mt-1.5 text-xs text-slate-500">Data NIDN/NIP tidak dapat diubah di KP. Hubungi admin Core jika ada kesalahan data resmi.</p>
                 </div>
                 <div class="md:col-span-2">
                     <label class="block text-sm font-semibold text-slate-700 mb-2">Nomor Pegawai</label>
-                    <input value="{{ $profile?->employee_number }}" disabled class="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500 cursor-not-allowed">
+                    <input value="{{ $coreManaged ? data_get($coreOfficialProfile, 'linked_profile.nip') : $profile?->employee_number }}" disabled class="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500 cursor-not-allowed">
                 </div>
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-2">Nomor Telepon Aktif</label>
-                    <input name="phone" value="{{ old('phone', $profile?->phone) }}" placeholder="+62..." class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-2">Program Studi/Prodi</label>
-                    <input name="study_program" value="{{ old('study_program', $profile?->study_program) }}" placeholder="Farmasi" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-slate-700 mb-2">Departemen/Unit</label>
-                    <input name="department" value="{{ old('department', $profile?->department) }}" placeholder="Teknologi Farmasi" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
-                </div>
+                @unless($coreManaged)
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Nomor Telepon Aktif</label>
+                        <input name="phone" value="{{ old('phone', $profile?->phone) }}" placeholder="+62..." class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Program Studi/Prodi</label>
+                        <input name="study_program" value="{{ old('study_program', $profile?->study_program) }}" placeholder="Farmasi" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Departemen/Unit</label>
+                        <input name="department" value="{{ old('department', $profile?->department) }}" placeholder="Teknologi Farmasi" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
+                    </div>
+                @endunless
                 <div class="md:col-span-2">
                     <label class="block text-sm font-semibold text-slate-700 mb-2">Bidang Keahlian/Expertise</label>
                     <input name="expertise" value="{{ old('expertise', $profile?->expertise) }}" placeholder="Misal: Teknologi Sediaan, Farmakologi, dll" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
                 </div>
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-semibold text-slate-700 mb-2">Alamat Lengkap</label>
-                    <textarea name="address" rows="3" placeholder="Jl. ... No. ... Kelurahan ... Kecamatan ..." class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition resize-none">{{ old('address', $profile?->address) }}</textarea>
-                </div>
+                @unless($coreManaged)
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Alamat Lengkap</label>
+                        <textarea name="address" rows="3" placeholder="Jl. ... No. ... Kelurahan ... Kecamatan ..." class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition resize-none">{{ old('address', $profile?->address) }}</textarea>
+                    </div>
+                @endunless
             @elseif($profileType === 'pembimbing_lapangan')
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-2">Nomor Telepon Aktif</label>
@@ -163,14 +207,20 @@
                     <textarea name="address" rows="3" placeholder="Jl. ... No. ... Kelurahan ... Kecamatan ..." class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition resize-none">{{ old('address', $profile?->address) }}</textarea>
                 </div>
             @else
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-semibold text-slate-700 mb-2">Nama Lengkap</label>
-                    <input name="name" value="{{ old('name', $user->name) }}" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-semibold text-slate-700 mb-2">Alamat Email</label>
-                    <input name="email" type="email" value="{{ old('email', $user->email) }}" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
-                </div>
+                @if($coreManaged)
+                    <div class="md:col-span-2 rounded-xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm leading-6 text-blue-900">
+                        Identitas akun admin dikelola dari Core Farmasi. Tidak ada field operasional KP yang perlu diisi untuk role aktif ini.
+                    </div>
+                @else
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Nama Lengkap</label>
+                        <input name="name" value="{{ old('name', $user->name) }}" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Alamat Email</label>
+                        <input name="email" type="email" value="{{ old('email', $user->email) }}" class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
+                    </div>
+                @endif
             @endif
         </div>
 

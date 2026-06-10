@@ -164,8 +164,13 @@ class User extends Authenticatable
             return true;
         }
 
-        $type = $this->primaryProfileType();
-        $profile = $this->profileModel();
+        return $this->isProfileCompleteForType($this->primaryProfileType());
+    }
+
+    public function isProfileCompleteForType(?string $type = null): bool
+    {
+        $type ??= $this->primaryProfileType();
+        $profile = $this->profileModelForType($type);
 
         return match ($type) {
             'mahasiswa' => $profile && filled($profile->nim) && filled($profile->phone) && filled($profile->study_program) && filled($profile->semester),
@@ -177,13 +182,39 @@ class User extends Authenticatable
 
     public function profileModel(): ?Model
     {
-        $this->loadMissing(['student', 'lecturer', 'fieldSupervisor', 'roles']);
+        return $this->profileModelForType($this->primaryProfileType());
+    }
 
-        return match ($this->primaryProfileType()) {
+    public function profileModelForType(?string $type = null): ?Model
+    {
+        $this->loadMissing(['student', 'lecturer', 'fieldSupervisor']);
+
+        return match ($type ?? $this->primaryProfileType()) {
             'mahasiswa' => $this->student,
             'dosen' => $this->lecturer,
             'pembimbing_lapangan' => $this->fieldSupervisor,
             default => null,
+        };
+    }
+
+    public function activeProfileType(?string $activeRole = null): string
+    {
+        return $this->profileTypeForRole($activeRole ?? session('active_role'));
+    }
+
+    public function activeProfileModel(?string $activeRole = null): ?Model
+    {
+        return $this->profileModelForType($this->activeProfileType($activeRole));
+    }
+
+    public function profileTypeForRole(?string $role): string
+    {
+        return match ($role) {
+            'mahasiswa' => 'mahasiswa',
+            'pembimbing_lapangan' => 'pembimbing_lapangan',
+            'koordinator_kp', 'pembimbing_dalam', 'penguji' => 'dosen',
+            'admin' => 'admin',
+            default => $this->primaryProfileType(),
         };
     }
 

@@ -19,6 +19,44 @@
         </section>
     @endif
 
+    @if($coreOfficialProfile)
+        <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-blue-100 xl:col-span-2">
+            <div class="flex flex-col gap-5 border-b border-slate-100 pb-5 md:flex-row md:items-start md:justify-between">
+                <div class="flex gap-4">
+                    @if(data_get($coreOfficialProfile, 'user.profile_photo_url'))
+                        <img src="{{ data_get($coreOfficialProfile, 'user.profile_photo_url') }}" alt="Foto profil Core" class="h-16 w-16 rounded-2xl object-cover shadow-md shadow-blue-900/10">
+                    @else
+                        <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-lg font-black text-blue-700">
+                            {{ $user->initials() }}
+                        </div>
+                    @endif
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-[0.18em] text-blue-700">Data Resmi Core</p>
+                        <h3 class="mt-2 text-xl font-black text-slate-950">{{ data_get($coreOfficialProfile, 'user.name', $user->name) }}</h3>
+                        <p class="mt-1 text-sm text-slate-500">{{ data_get($coreOfficialProfile, 'notice') }}</p>
+                    </div>
+                </div>
+                <span class="w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">Read-only</span>
+            </div>
+
+            <div class="mt-5 grid gap-4 lg:grid-cols-3">
+                @foreach(data_get($coreOfficialProfile, 'sections', []) as $sectionTitle => $items)
+                    <section class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <h4 class="text-sm font-black text-slate-950">{{ $sectionTitle }}</h4>
+                        <dl class="mt-4 space-y-3">
+                            @foreach($items as $label => $value)
+                                <div>
+                                    <dt class="text-[11px] font-bold uppercase tracking-wide text-slate-500">{{ $label }}</dt>
+                                    <dd class="mt-1 break-words text-sm font-semibold text-slate-900">{{ filled($value) ? $value : '-' }}</dd>
+                                </div>
+                            @endforeach
+                        </dl>
+                    </section>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
     <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
         <div class="mb-6 flex items-center gap-4 border-b border-slate-200 pb-6">
             <x-ui.avatar :user="$user" size="lg" class="shadow-md shadow-teal-500/15" />
@@ -99,8 +137,8 @@
     </section>
 
     <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 xl:col-span-2">
-        <h3 class="text-lg font-bold text-slate-950">Data Profil Lengkap</h3>
-        <p class="mb-5 mt-1 text-sm text-slate-500">Informasi {{ str_replace('_', ' ', ucwords($profileType, '_')) }} yang tersimpan dalam sistem.</p>
+        <h3 class="text-lg font-bold text-slate-950">Data Operasional KP</h3>
+        <p class="mb-5 mt-1 text-sm text-slate-500">Informasi {{ ucwords(str_replace('_', ' ', $profileType)) }} yang tersimpan di KP untuk kebutuhan workflow kerja praktek.</p>
         @if($profile)
             <div class="grid gap-3 md:grid-cols-3">
                 @foreach($profile->getAttributes() as $key => $value)
