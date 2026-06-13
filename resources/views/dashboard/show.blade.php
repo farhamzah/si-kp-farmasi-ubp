@@ -91,6 +91,35 @@
         ->take(4)
         ->values();
 
+    if ($activeRole === 'mahasiswa') {
+        $primaryStats = collect([
+            [
+                'label' => 'Pendaftaran',
+                'value' => $studentRegistration?->statusLabel() ?? 'Belum daftar',
+                'section' => $studentRegistration?->period->name ?? 'Kerja Praktek',
+                'tone' => $studentRegistration?->isVerified() ? 'emerald' : 'amber',
+            ],
+            [
+                'label' => 'Berkas',
+                'value' => $studentRegistration ? $studentRegistration->progressPercentage().'%' : '0%',
+                'section' => 'Kelengkapan dokumen',
+                'tone' => $studentRegistration?->progressPercentage() >= 100 ? 'emerald' : 'cyan',
+            ],
+            [
+                'label' => 'Logbook',
+                'value' => $logbookStats['total'] ?? 0,
+                'section' => 'Catatan kegiatan',
+                'tone' => 'teal',
+            ],
+            [
+                'label' => 'Nilai',
+                'value' => $scoreStats['status_nilai'] ?? 'Belum tersedia',
+                'section' => 'Status akhir',
+                'tone' => 'violet',
+            ],
+        ]);
+    }
+
     if ($primaryStats->isEmpty()) {
         $primaryStats = collect([
             ['label' => 'Status akun', 'value' => 'Aktif', 'section' => 'Akun', 'tone' => 'emerald'],
@@ -153,9 +182,9 @@
 @endphp
 
 <div class="space-y-5">
-    <section class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+    <section class="overflow-hidden rounded-3xl border border-cyan-100 bg-white shadow-xl shadow-cyan-950/10">
         <div class="grid gap-0 lg:grid-cols-[minmax(0,1fr)_360px]">
-            <div class="border-b border-slate-100 p-6 md:p-7 lg:border-b-0 lg:border-r">
+            <div class="border-b border-cyan-100 bg-linear-to-br from-white via-white to-cyan-50/50 p-6 md:p-7 lg:border-b-0 lg:border-r">
                 <div class="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
                     <div class="flex min-w-0 items-start gap-4">
                         <x-ui.avatar :user="$user" size="lg" class="ring-4 ring-white shadow-sm" />
@@ -167,7 +196,7 @@
                                 </span>
                             </div>
                             <h2 class="mt-3 text-2xl font-black tracking-tight text-slate-950 md:text-3xl">Selamat datang, {{ $firstName }}</h2>
-                            <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Fokus hari ini ditampilkan di bagian prioritas. Data transaksi tetap memakai ID legacy KP, sementara label profil dapat mengikuti integrasi Core sesuai mode aplikasi.</p>
+                            <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Pantau status pendaftaran, berkas, bimbingan, sidang, dan nilai dari satu dashboard yang ringkas.</p>
                         </div>
                     </div>
                     <div class="flex shrink-0 gap-2">
@@ -188,7 +217,7 @@
                         @php
                             $tone = $toneClasses[$stat['tone']] ?? $toneClasses['sky'];
                         @endphp
-                        <div class="rounded-lg bg-white p-4 ring-1 {{ $tone['ring'] }}">
+                        <div class="rounded-2xl bg-white/90 p-4 shadow-sm ring-1 {{ $tone['ring'] }}">
                             <p class="text-[11px] font-black uppercase tracking-widest text-slate-500">{{ $stat['label'] }}</p>
                             <p class="mt-2 truncate text-2xl font-black {{ $tone['text'] }}">{{ $formatValue($stat['value']) }}</p>
                             <p class="mt-1 truncate text-xs text-slate-500">{{ $stat['section'] }}</p>
@@ -197,7 +226,7 @@
                 </div>
             </div>
 
-            <aside class="bg-slate-50 p-6 md:p-7">
+            <aside class="bg-slate-50/90 p-6 md:p-7">
                 <div class="flex items-center justify-between gap-3">
                     <div>
                         <p class="text-[11px] font-black uppercase tracking-widest text-slate-500">Prioritas Hari Ini</p>
@@ -253,7 +282,7 @@
     @endif
 
     <section class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <p class="text-[11px] font-black uppercase tracking-widest text-cyan-700">Alur KP</p>
@@ -268,7 +297,7 @@
                     ['03', 'Bimbingan', 'Logbook dan laporan akhir'],
                     ['04', 'Sidang & Nilai', 'Jadwal, ujian, dan finalisasi'],
                 ] as [$number, $label, $description])
-                    <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                         <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-700 text-xs font-black text-white">{{ $number }}</span>
                         <p class="mt-3 font-black text-slate-900">{{ $label }}</p>
                         <p class="mt-1 text-xs leading-5 text-slate-500">{{ $description }}</p>
@@ -277,7 +306,7 @@
             </div>
         </div>
 
-        <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <p class="text-[11px] font-black uppercase tracking-widest text-slate-500">Status Akun</p>
             <div class="mt-4 space-y-3 text-sm">
                 <div class="flex items-center justify-between gap-3">
@@ -299,7 +328,7 @@
     </section>
 
     @if($studentRegistration)
-        <section class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                     <p class="text-[11px] font-black uppercase tracking-widest text-cyan-700">Status Mahasiswa</p>
@@ -309,9 +338,9 @@
                 <span class="rounded-md {{ $studentRegistration->statusBadgeClass() }} px-3 py-1 text-xs font-black">{{ $studentRegistration->statusLabel() }}</span>
             </div>
             <div class="mt-5 grid gap-3 md:grid-cols-3">
-                <div class="rounded-lg bg-slate-50 p-4 ring-1 ring-slate-100"><p class="text-xs font-bold text-slate-500">Progress Berkas</p><p class="mt-2 text-2xl font-black text-slate-950">{{ $studentRegistration->progressPercentage() }}%</p></div>
-                <div class="rounded-lg bg-slate-50 p-4 ring-1 ring-slate-100"><p class="text-xs font-bold text-slate-500">Verifikasi</p><p class="mt-2 font-black text-slate-950">{{ $studentRegistration->isVerified() ? 'Terverifikasi' : 'Belum selesai' }}</p></div>
-                <div class="rounded-lg bg-slate-50 p-4 ring-1 ring-slate-100"><p class="text-xs font-bold text-slate-500">Pemilihan Tempat</p><p class="mt-2 font-black text-slate-950">{{ $studentRegistration->selectionStatusLabel() }}</p>@if($studentRegistration->activePlaceSelection)<p class="mt-1 text-xs text-slate-500">{{ $studentRegistration->activePlaceSelection->place->name }}</p>@endif</div>
+                <div class="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100"><p class="text-xs font-bold text-slate-500">Progress Berkas</p><p class="mt-2 text-2xl font-black text-slate-950">{{ $studentRegistration->progressPercentage() }}%</p></div>
+                <div class="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100"><p class="text-xs font-bold text-slate-500">Verifikasi</p><p class="mt-2 font-black text-slate-950">{{ $studentRegistration->isVerified() ? 'Terverifikasi' : 'Belum selesai' }}</p></div>
+                <div class="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100"><p class="text-xs font-bold text-slate-500">Pemilihan Tempat</p><p class="mt-2 font-black text-slate-950">{{ $studentRegistration->selectionStatusLabel() }}</p>@if($studentRegistration->activePlaceSelection)<p class="mt-1 text-xs text-slate-500">{{ $studentRegistration->activePlaceSelection->place->name }}</p>@endif</div>
             </div>
         </section>
     @endif
@@ -330,7 +359,7 @@
                     $href = $routeName && Route::has($routeName) ? route($routeName) : null;
                 @endphp
                 @if($href)
-                    <a href="{{ $href }}" class="group rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-200 hover:shadow-md">
+                    <a href="{{ $href }}" class="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-200 hover:shadow-md">
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
                                 <h3 class="font-black text-slate-950 group-hover:text-cyan-800">{{ $feature }}</h3>
@@ -342,7 +371,7 @@
                         </div>
                     </a>
                 @else
-                    <div class="rounded-lg border border-dashed border-slate-200 bg-white p-4">
+                    <div class="rounded-2xl border border-dashed border-slate-200 bg-white p-4">
                         <h3 class="font-black text-slate-700">{{ $feature }}</h3>
                         <p class="mt-1 text-sm leading-6 text-slate-500">{{ $featureDescriptions[$feature] ?? 'Modul ini sedang disiapkan.' }}</p>
                         <span class="mt-3 inline-flex rounded-md bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-500">Disiapkan</span>
@@ -357,7 +386,7 @@
             @php
                 $tone = $toneClasses[$section['tone']] ?? $toneClasses['sky'];
             @endphp
-            <div class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+            <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                         <h2 class="text-lg font-black text-slate-950">{{ $section['title'] }}</h2>
@@ -367,7 +396,7 @@
                 </div>
                 <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
                     @foreach($section['stats'] as $label => $value)
-                        <div class="rounded-lg bg-slate-50 p-4 ring-1 ring-slate-100">
+                        <div class="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
                             <p class="text-[11px] font-black uppercase tracking-widest text-slate-500">{{ $formatLabel($label) }}</p>
                             <p class="mt-2 truncate text-2xl font-black {{ $tone['text'] }}">{{ $formatValue($value) }}</p>
                         </div>

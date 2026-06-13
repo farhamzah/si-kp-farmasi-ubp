@@ -69,7 +69,15 @@ class KpRecapExportAndDashboardTest extends TestCase
 
     public function test_all_role_dashboards_can_be_opened(): void
     {
-        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])->get('/mahasiswa/dashboard')->assertOk()->assertSee('Dashboard Mahasiswa')->assertDontSee('Segera');
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/dashboard')
+            ->assertOk()
+            ->assertSee('Dashboard Mahasiswa')
+            ->assertSee('Pendaftaran')
+            ->assertSee('Berkas')
+            ->assertSee('Nilai')
+            ->assertDontSee('Data transaksi tetap memakai ID legacy KP')
+            ->assertDontSee('Segera');
         $this->actingAs($this->admin)->withSession(['active_role' => 'admin'])->get('/admin/dashboard')->assertOk()->assertSee('Dashboard Admin')->assertDontSee('Segera');
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])->get('/koordinator/dashboard')->assertOk()->assertSee('Dashboard Koordinator KP')->assertDontSee('Segera');
         $this->actingAs($this->internal)->withSession(['active_role' => 'pembimbing_dalam'])->get('/pembimbing-dalam/dashboard')->assertOk()->assertSee('Dashboard Pembimbing Dalam')->assertDontSee('Segera');
