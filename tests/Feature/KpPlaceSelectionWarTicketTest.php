@@ -14,7 +14,9 @@ use App\Models\Student;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class KpPlaceSelectionWarTicketTest extends TestCase
@@ -76,6 +78,87 @@ class KpPlaceSelectionWarTicketTest extends TestCase
         ]);
         $this->assertSame(1, $quota->fresh()->filledCount());
         $this->assertDatabaseHas('kp_selection_logs', ['action' => 'selection_success', 'status' => 'success']);
+    }
+
+    public function test_open_period_registration_upload_review_and_place_selection_flow(): void
+    {
+        Storage::fake('local');
+
+        $period = KpPeriod::create([
+            'name' => 'KP TA 2026_2027',
+            'academic_year' => '2026/2027',
+            'semester' => 'ganjil',
+            'registration_start_at' => now()->subDay(),
+            'registration_end_at' => now()->addDays(7),
+            'selection_start_at' => now()->subHour(),
+            'selection_end_at' => now()->addDays(7),
+            'status' => 'dibuka',
+        ]);
+        $requirement = KpDocumentRequirement::create([
+            'kp_period_id' => $period->id,
+            'name' => 'Bukti pembayaran UKT C10',
+            'is_required' => true,
+            'allowed_file_types' => 'pdf,jpg,jpeg,png',
+            'max_file_size_mb' => 5,
+            'status' => 'aktif',
+        ]);
+        $place = KpPlace::create(['name' => 'RSUD Karawang', 'type' => 'rumah_sakit', 'city' => 'KABUPATEN KARAWANG', 'status' => 'aktif']);
+        $quota = KpPlaceQuota::create(['kp_period_id' => $period->id, 'kp_place_id' => $place->id, 'quota' => 10, 'is_open' => true]);
+
+        $this->actingAs($this->mahasiswa)
+            ->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/pendaftaran-kp', ['kp_period_id' => $period->id])
+            ->assertRedirect();
+
+        $registration = KpRegistration::where('kp_period_id', $period->id)->where('student_id', $this->student->id)->firstOrFail();
+
+        $this->actingAs($this->mahasiswa)
+            ->withSession(['active_role' => 'mahasiswa'])
+            ->post("/mahasiswa/pendaftaran-kp/{$registration->id}/documents/{$requirement->id}", [
+                'document' => UploadedFile::fake()->create('bukti-ukt.pdf', 120, 'application/pdf'),
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($this->mahasiswa)
+            ->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/berkas-kp')
+            ->assertOk()
+            ->assertSee('Submit Pendaftaran');
+
+        $this->actingAs($this->mahasiswa)
+            ->withSession(['active_role' => 'mahasiswa'])
+            ->post("/mahasiswa/pendaftaran-kp/{$registration->id}/submit")
+            ->assertRedirect();
+
+        $document = KpDocument::where('kp_registration_id', $registration->id)->firstOrFail();
+
+        $this->actingAs($this->koordinator)
+            ->withSession(['active_role' => 'koordinator_kp'])
+            ->post("/management/kp-registrations/{$registration->id}/documents/{$document->id}/approve")
+            ->assertRedirect();
+
+        $this->actingAs($this->koordinator)
+            ->withSession(['active_role' => 'koordinator_kp'])
+            ->post("/management/kp-registrations/{$registration->id}/verify", ['verification_note' => 'Lengkap.'])
+            ->assertRedirect();
+
+        $this->actingAs($this->mahasiswa)
+            ->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/pemilihan-tempat/'.$period->id)
+            ->assertOk()
+            ->assertSee('RSUD Karawang');
+
+        $this->actingAs($this->mahasiswa)
+            ->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/pemilihan-tempat/'.$quota->id.'/pilih')
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('kp_registrations', ['id' => $registration->id, 'status' => 'terverifikasi']);
+        $this->assertDatabaseHas('kp_place_selections', [
+            'kp_registration_id' => $registration->id,
+            'kp_place_quota_id' => $quota->id,
+            'status' => 'aktif',
+        ]);
     }
 
     public function test_student_cannot_select_twice_or_outside_schedule_or_closed_quota(): void

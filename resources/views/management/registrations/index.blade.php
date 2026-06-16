@@ -66,7 +66,13 @@
                                 <span class="mt-1 block text-xs text-slate-500">{{ $registration->progressPercentage() }}%</span>
                             </td>
                             <td class="px-4 py-4"><span class="rounded-full {{ $registration->statusBadgeClass() }} px-2.5 py-1 text-xs font-semibold">{{ $registration->statusLabel() }}</span></td>
-                            <td class="px-4 py-4 text-slate-600">{{ $registration->submitted_at?->format('d M Y H:i') ?? '-' }}</td>
+                            <td class="px-4 py-4 text-slate-600">
+                                @if($registration->submitted_at)
+                                    {{ $registration->submitted_at->format('d M Y H:i') }}
+                                @else
+                                    <span class="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">Belum submit</span>
+                                @endif
+                            </td>
                             <td class="px-4 py-4 text-right">
                                 <a href="{{ route('management.kp-registrations.show', $registration) }}" class="rounded-lg border border-teal-200 px-3 py-1.5 text-xs font-semibold text-teal-700">Review</a>
                             </td>

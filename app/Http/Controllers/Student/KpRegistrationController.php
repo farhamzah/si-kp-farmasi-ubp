@@ -84,6 +84,10 @@ class KpRegistrationController extends Controller
         $this->authorizeStudent($request, $registration);
         $registration->load(['period.documentRequirements', 'documents']);
 
+        if (! in_array($registration->status, ['draft', 'revisi'], true)) {
+            return back()->withErrors(['registration' => 'Pendaftaran ini sudah disubmit atau sudah selesai direview.']);
+        }
+
         if (! $registration->requiredDocumentsCompleted()) {
             return back()->withErrors(['registration' => 'Lengkapi semua dokumen wajib sebelum submit pendaftaran.']);
         }

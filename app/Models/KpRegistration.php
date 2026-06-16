@@ -104,9 +104,19 @@ class KpRegistration extends Model
         return in_array($this->status, ['menunggu_verifikasi', 'revisi', 'terverifikasi', 'ditolak'], true);
     }
 
+    public function isWaitingVerification(): bool
+    {
+        return $this->status === 'menunggu_verifikasi';
+    }
+
     public function isVerified(): bool
     {
         return $this->status === 'terverifikasi';
+    }
+
+    public function canBeSubmitted(): bool
+    {
+        return in_array($this->status, ['draft', 'revisi'], true) && $this->requiredDocumentsCompleted();
     }
 
     public function isEligibleForPlaceSelection(): bool

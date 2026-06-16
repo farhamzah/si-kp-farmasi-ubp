@@ -68,6 +68,10 @@ class KpRegistrationReviewController extends Controller
     public function verify(ReviewKpRegistrationRequest $request, KpRegistration $registration): RedirectResponse
     {
         $registration->load(['period.documentRequirements', 'documents']);
+        if (! $registration->isWaitingVerification()) {
+            return back()->withErrors(['registration' => 'Pendaftaran belum disubmit mahasiswa, jadi belum bisa diverifikasi.']);
+        }
+
         if (! $registration->allRequiredDocumentsApproved()) {
             return back()->withErrors(['registration' => 'Pendaftaran belum bisa diverifikasi karena dokumen wajib belum semua disetujui.']);
         }

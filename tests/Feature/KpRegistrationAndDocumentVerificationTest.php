@@ -185,6 +185,27 @@ class KpRegistrationAndDocumentVerificationTest extends TestCase
         $this->assertNotNull($registration->registration_number);
     }
 
+    public function test_document_page_prompts_submit_when_required_files_are_complete(): void
+    {
+        [$registration, $requirement] = $this->registrationWithRequirement();
+        KpDocument::where('kp_registration_id', $registration->id)
+            ->where('kp_document_requirement_id', $requirement->id)
+            ->update([
+                'original_filename' => 'krs.pdf',
+                'file_path' => 'kp-documents/test/krs.pdf',
+                'file_disk' => 'local',
+                'status' => 'disetujui',
+                'uploaded_at' => now(),
+            ]);
+
+        $this->actingAs($this->mahasiswa)
+            ->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/berkas-kp')
+            ->assertOk()
+            ->assertSee('Berkas sudah lengkap, submit pendaftaran Anda.')
+            ->assertSee('Submit Pendaftaran');
+    }
+
     public function test_admin_and_koordinator_can_open_review_page(): void
     {
         $this->registrationWithRequirement();
@@ -232,6 +253,18 @@ class KpRegistrationAndDocumentVerificationTest extends TestCase
         $this->actingAs($this->admin)
             ->withSession(['active_role' => 'admin'])
             ->post("/management/kp-registrations/{$registration->id}/documents/{$document->id}/approve")
+            ->assertRedirect();
+
+        $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->post("/management/kp-registrations/{$registration->id}/verify", [
+                'verification_note' => 'Lengkap.',
+            ])
+            ->assertSessionHasErrors('registration');
+
+        $this->actingAs($this->mahasiswa)
+            ->withSession(['active_role' => 'mahasiswa'])
+            ->post("/mahasiswa/pendaftaran-kp/{$registration->id}/submit")
             ->assertRedirect();
 
         $this->actingAs($this->admin)
