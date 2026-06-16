@@ -15,6 +15,7 @@ use App\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -78,6 +79,42 @@ class KpPlaceSelectionWarTicketTest extends TestCase
         ]);
         $this->assertSame(1, $quota->fresh()->filledCount());
         $this->assertDatabaseHas('kp_selection_logs', ['action' => 'selection_success', 'status' => 'success']);
+    }
+
+    public function test_place_selection_respects_june_30_selection_schedule(): void
+    {
+        [$registration, $quota] = $this->verifiedRegistration($this->student);
+        $registration->period->update([
+            'selection_start_at' => Carbon::parse('2026-06-30 08:00:00', config('app.timezone')),
+            'selection_end_at' => Carbon::parse('2026-06-30 23:59:00', config('app.timezone')),
+        ]);
+
+        $this->travelTo(Carbon::parse('2026-06-30 07:59:59', config('app.timezone')));
+        $this->actingAs($this->mahasiswa)
+            ->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/pemilihan-tempat/'.$quota->id.'/pilih')
+            ->assertSessionHasErrors('selection');
+        $this->assertDatabaseMissing('kp_place_selections', ['kp_registration_id' => $registration->id, 'status' => 'aktif']);
+
+        $this->travelTo(Carbon::parse('2026-06-30 08:00:00', config('app.timezone')));
+        $this->actingAs($this->mahasiswa)
+            ->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/pemilihan-tempat/'.$quota->id.'/pilih')
+            ->assertRedirect();
+        $this->assertDatabaseHas('kp_place_selections', ['kp_registration_id' => $registration->id, 'status' => 'aktif']);
+
+        $other = $this->makeUser('after@student.test', ['mahasiswa']);
+        $otherStudent = $this->makeStudent($other, '2210631230005');
+        $otherRegistration = $this->verifiedRegistrationForPeriod($otherStudent, $registration->period, $quota->place);
+
+        $this->travelTo(Carbon::parse('2026-07-01 00:00:00', config('app.timezone')));
+        $this->actingAs($other)
+            ->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/pemilihan-tempat/'.$quota->id.'/pilih')
+            ->assertSessionHasErrors('selection');
+        $this->assertDatabaseMissing('kp_place_selections', ['kp_registration_id' => $otherRegistration->id, 'status' => 'aktif']);
+
+        $this->travelBack();
     }
 
     public function test_open_period_registration_upload_review_and_place_selection_flow(): void
