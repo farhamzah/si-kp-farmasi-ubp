@@ -11,6 +11,13 @@
         <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ $errors->first() }}</div>
     @endif
 
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <a href="{{ route('management.kp-registrations.index') }}" class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:border-cyan-300 hover:text-cyan-700">
+            Kembali ke Antrian
+        </a>
+        <p class="text-sm text-slate-500">Review pendaftaran dan dokumen mahasiswa dari satu halaman.</p>
+    </div>
+
     <div class="grid gap-5 xl:grid-cols-[0.85fr_1.15fr]">
         <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <span class="rounded-full {{ $registration->statusBadgeClass() }} px-3 py-1 text-xs font-semibold">{{ $registration->statusLabel() }}</span>
@@ -85,11 +92,16 @@
                         </div>
                         @if($document?->file_path)
                             <div class="mt-3 flex flex-wrap gap-2">
+                                <a href="{{ route('management.kp-registrations.documents.preview', [$registration, $document]) }}" target="_blank" rel="noopener" class="rounded-lg border border-cyan-200 px-3 py-1.5 text-xs font-semibold text-cyan-700">Preview</a>
                                 <a href="{{ route('management.kp-registrations.documents.download', [$registration, $document]) }}" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700">Download</a>
-                                <form method="POST" action="{{ route('management.kp-registrations.documents.approve', [$registration, $document]) }}" onsubmit="return confirm('Setujui dokumen ini?')">
-                                    @csrf
-                                    <button class="rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-700">Setujui</button>
-                                </form>
+                                @if($document->status === 'disetujui')
+                                    <span class="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">Sudah disetujui</span>
+                                @else
+                                    <form method="POST" action="{{ route('management.kp-registrations.documents.approve', [$registration, $document]) }}" onsubmit="return confirm('Setujui dokumen ini?')">
+                                        @csrf
+                                        <button class="rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-700">Setujui</button>
+                                    </form>
+                                @endif
                             </div>
                             <div class="mt-3 grid gap-2 md:grid-cols-2">
                                 <form method="POST" action="{{ route('management.kp-registrations.documents.revision', [$registration, $document]) }}" onsubmit="return confirm('Minta revisi dokumen ini?')">

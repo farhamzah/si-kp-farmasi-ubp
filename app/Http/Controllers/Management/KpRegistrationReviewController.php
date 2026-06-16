@@ -109,6 +109,18 @@ class KpRegistrationReviewController extends Controller
         return Storage::disk($document->file_disk)->download($document->file_path, $document->original_filename);
     }
 
+    public function preview(KpRegistration $registration, KpDocument $document): StreamedResponse
+    {
+        abort_unless($document->kp_registration_id === $registration->id && $document->file_path, 404);
+
+        return Storage::disk($document->file_disk)->response(
+            $document->file_path,
+            $document->original_filename,
+            array_filter(['Content-Type' => $document->file_mime]),
+            'inline'
+        );
+    }
+
     private function reviewDocument(Request $request, KpRegistration $registration, KpDocument $document, string $status, string $action): RedirectResponse
     {
         abort_unless($document->kp_registration_id === $registration->id, 404);

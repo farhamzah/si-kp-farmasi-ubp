@@ -107,6 +107,7 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('kp-registrations/{registration}/verify', [KpRegistrationReviewController::class, 'verify'])->name('kp-registrations.verify');
             Route::post('kp-registrations/{registration}/revision', [KpRegistrationReviewController::class, 'revision'])->name('kp-registrations.revision');
             Route::post('kp-registrations/{registration}/reject', [KpRegistrationReviewController::class, 'reject'])->name('kp-registrations.reject');
+            Route::get('kp-registrations/{registration}/documents/{document}/preview', [KpRegistrationReviewController::class, 'preview'])->name('kp-registrations.documents.preview');
             Route::get('kp-registrations/{registration}/documents/{document}/download', [KpRegistrationReviewController::class, 'download'])->name('kp-registrations.documents.download');
 
             Route::get('place-selections', [PlaceSelectionMonitoringController::class, 'index'])->name('place-selections.index');

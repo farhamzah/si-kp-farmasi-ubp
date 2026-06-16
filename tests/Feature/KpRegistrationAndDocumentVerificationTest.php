@@ -222,6 +222,48 @@ class KpRegistrationAndDocumentVerificationTest extends TestCase
             ->assertOk();
     }
 
+    public function test_admin_can_preview_uploaded_registration_document_inline(): void
+    {
+        Storage::fake('local');
+        [$registration, $requirement] = $this->registrationWithRequirement();
+        Storage::disk('local')->put('kp-documents/test/krs.pdf', 'PDF preview content');
+
+        $document = KpDocument::where('kp_registration_id', $registration->id)
+            ->where('kp_document_requirement_id', $requirement->id)
+            ->firstOrFail();
+        $document->update([
+            'original_filename' => 'krs.pdf',
+            'file_path' => 'kp-documents/test/krs.pdf',
+            'file_disk' => 'local',
+            'file_mime' => 'application/pdf',
+            'status' => 'menunggu',
+        ]);
+
+        $showResponse = $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->get("/management/kp-registrations/{$registration->id}");
+
+        $showResponse->assertOk()
+            ->assertSee('Kembali ke Antrian')
+            ->assertSee('Preview')
+            ->assertSee('Download');
+
+        $previewResponse = $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->get("/management/kp-registrations/{$registration->id}/documents/{$document->id}/preview");
+
+        $previewResponse->assertOk();
+        $this->assertStringContainsString(
+            'inline',
+            strtolower($previewResponse->headers->get('content-disposition') ?? '')
+        );
+
+        $this->actingAs($this->mahasiswa)
+            ->withSession(['active_role' => 'mahasiswa'])
+            ->get("/management/kp-registrations/{$registration->id}/documents/{$document->id}/preview")
+            ->assertForbidden();
+    }
+
     public function test_admin_can_approve_revision_and_verify_registration_rules(): void
     {
         [$registration, $requirement] = $this->registrationWithRequirement();
