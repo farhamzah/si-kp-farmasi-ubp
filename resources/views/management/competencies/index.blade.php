@@ -21,6 +21,14 @@
                         @endforeach
                     </select>
                 </label>
+                <label class="text-sm font-semibold text-slate-700">Tipe Tempat KP
+                    <select name="place_type" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                        <option value="">Semua tipe tempat</option>
+                        @foreach($placeTypes as $type)
+                            <option value="{{ $type }}" @selected(old('place_type') === $type)>{{ (new \App\Models\KpPlace(['type' => $type]))->typeLabel() }}</option>
+                        @endforeach
+                    </select>
+                </label>
                 <label class="text-sm font-semibold text-slate-700">Judul Kompetensi
                     <input name="title" value="{{ old('title') }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Contoh: Mampu melakukan pelayanan resep">
                 </label>
@@ -55,6 +63,12 @@
                             <option value="{{ $period->id }}" @selected(($filters['period'] ?? '') == $period->id)>{{ $period->name }}</option>
                         @endforeach
                     </select>
+                    <select name="place_type" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                        <option value="">Semua tipe</option>
+                        @foreach($placeTypes as $type)
+                            <option value="{{ $type }}" @selected(($filters['place_type'] ?? '') === $type)>{{ (new \App\Models\KpPlace(['type' => $type]))->typeLabel() }}</option>
+                        @endforeach
+                    </select>
                     <button class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white">Filter</button>
                 </form>
             </div>
@@ -64,13 +78,19 @@
                     <form method="POST" action="{{ route('management.competencies.update', $competency) }}" class="rounded-xl border border-slate-200 p-4">
                         @csrf
                         @method('PUT')
-                        <div class="grid gap-3 lg:grid-cols-[1fr_110px_130px_auto]">
+                        <div class="grid gap-3 lg:grid-cols-[1fr_150px_110px_130px_auto]">
                             <div>
                                 <input name="title" value="{{ old('title', $competency->title) }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold">
                                 <textarea name="description" rows="2" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">{{ old('description', $competency->description) }}</textarea>
                                 <input type="hidden" name="kp_period_id" value="{{ $competency->kp_period_id }}">
-                                <p class="mt-1 text-xs text-slate-500">{{ $competency->period?->name ?? 'Umum semua periode' }} · {{ $competency->achievements_count ?? $competency->achievements->count() }} checklist</p>
+                                <p class="mt-1 text-xs text-slate-500">{{ $competency->period?->name ?? 'Umum semua periode' }} · {{ $competency->placeTypeLabel() }} · {{ $competency->achievements_count ?? $competency->achievements->count() }} checklist</p>
                             </div>
+                            <select name="place_type" class="h-10 rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                                <option value="">Semua tipe</option>
+                                @foreach($placeTypes as $type)
+                                    <option value="{{ $type }}" @selected($competency->place_type === $type)>{{ (new \App\Models\KpPlace(['type' => $type]))->typeLabel() }}</option>
+                                @endforeach
+                            </select>
                             <input name="sort_order" type="number" min="0" value="{{ $competency->sort_order }}" class="h-10 rounded-lg border border-slate-300 px-3 py-2 text-sm">
                             <select name="status" class="h-10 rounded-lg border border-slate-300 px-3 py-2 text-sm">
                                 <option value="aktif" @selected($competency->status === 'aktif')>Aktif</option>
@@ -98,11 +118,12 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @forelse($assignments as $assignment)
-                        @php($total = $competencies->whereIn('kp_period_id', [null, $assignment->kp_period_id])->where('status', 'aktif')->count())
-                        @php($done = $assignment->competencyAchievements->whereIn('kp_competency_id', $competencies->pluck('id'))->count())
+                        @php($applicableCompetencies = $competencies->filter(fn ($competency) => $competency->status === 'aktif' && in_array($competency->kp_period_id, [null, $assignment->kp_period_id], true) && (blank($competency->place_type) || $competency->place_type === $assignment->place?->type)))
+                        @php($total = $applicableCompetencies->count())
+                        @php($done = $assignment->competencyAchievements->whereIn('kp_competency_id', $applicableCompetencies->pluck('id'))->count())
                         <tr>
                             <td class="px-4 py-4"><div class="font-semibold text-slate-950">{{ $assignment->student->user->name }}</div><div class="text-xs text-slate-500">{{ $assignment->student->nim ?: '-' }}</div></td>
-                            <td class="px-4 py-4">{{ $assignment->place->name }}</td>
+                            <td class="px-4 py-4"><div>{{ $assignment->place->name }}</div><div class="text-xs text-slate-500">{{ $assignment->place->typeLabel() }}</div></td>
                             <td class="px-4 py-4"><div>{{ $assignment->internalSupervisor?->user?->name ?? '-' }}</div><div class="text-xs text-slate-500">{{ $assignment->fieldSupervisor?->user?->name ?? '-' }}</div></td>
                             <td class="px-4 py-4 font-bold text-cyan-700">{{ $done }} / {{ $total }}</td>
                         </tr>

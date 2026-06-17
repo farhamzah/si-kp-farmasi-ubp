@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\KpAssignment;
 use App\Models\KpCompetency;
 use App\Models\KpPeriod;
+use App\Models\KpPlace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -16,10 +17,12 @@ class KpCompetencyController extends Controller
     public function index(Request $request): View
     {
         $periodId = $request->filled('period') ? (int) $request->period : null;
+        $placeType = $request->string('place_type')->toString() ?: null;
         $periods = KpPeriod::latest()->get();
         $competencies = KpCompetency::query()
             ->with(['period', 'achievements'])
             ->when($periodId, fn ($query) => $query->where('kp_period_id', $periodId))
+            ->when($placeType, fn ($query) => $query->where('place_type', $placeType))
             ->orderBy('sort_order')
             ->orderBy('title')
             ->get();
@@ -35,7 +38,8 @@ class KpCompetencyController extends Controller
             'periods' => $periods,
             'competencies' => $competencies,
             'assignments' => $assignments,
-            'filters' => $request->only(['period']),
+            'filters' => $request->only(['period', 'place_type']),
+            'placeTypes' => KpPlace::TYPES,
         ]);
     }
 
@@ -69,6 +73,7 @@ class KpCompetencyController extends Controller
     {
         return $request->validate([
             'kp_period_id' => ['nullable', 'integer', 'exists:kp_periods,id'],
+            'place_type' => ['nullable', Rule::in(KpPlace::TYPES)],
             'title' => ['required', 'string', 'max:150'],
             'description' => ['nullable', 'string', 'max:2000'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:999'],

@@ -64,6 +64,7 @@ class KpCompetencyGuideTest extends TestCase
             ->withSession(['active_role' => 'koordinator_kp'])
             ->post('/management/competencies', [
                 'kp_period_id' => $this->assignment->kp_period_id,
+                'place_type' => 'apotek',
                 'title' => 'Pelayanan resep',
                 'description' => 'Mahasiswa mampu memahami alur pelayanan resep.',
                 'sort_order' => 1,
@@ -73,6 +74,7 @@ class KpCompetencyGuideTest extends TestCase
 
         $this->assertDatabaseHas('kp_competencies', [
             'kp_period_id' => $this->assignment->kp_period_id,
+            'place_type' => 'apotek',
             'title' => 'Pelayanan resep',
             'status' => 'aktif',
         ]);
@@ -122,6 +124,55 @@ class KpCompetencyGuideTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_competencies_are_filtered_by_assignment_place_type(): void
+    {
+        $general = KpCompetency::create([
+            'title' => 'Etika kerja umum',
+            'status' => 'aktif',
+        ]);
+        $apotek = KpCompetency::create([
+            'place_type' => 'apotek',
+            'title' => 'Pelayanan resep apotek',
+            'status' => 'aktif',
+        ]);
+        $hospital = KpCompetency::create([
+            'place_type' => 'rumah_sakit',
+            'title' => 'Rekonsiliasi obat rumah sakit',
+            'status' => 'aktif',
+        ]);
+
+        $this->actingAs($this->fieldUser)
+            ->withSession(['active_role' => 'pembimbing_lapangan'])
+            ->get('/pembimbing-lapangan/kompetensi/'.$this->assignment->id)
+            ->assertOk()
+            ->assertSee($general->title)
+            ->assertSee($apotek->title)
+            ->assertDontSee($hospital->title);
+
+        $this->actingAs($this->fieldUser)
+            ->withSession(['active_role' => 'pembimbing_lapangan'])
+            ->put('/pembimbing-lapangan/kompetensi/'.$this->assignment->id, [
+                'competencies' => [$hospital->id],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('kp_competency_achievements', [
+            'kp_assignment_id' => $this->assignment->id,
+            'kp_competency_id' => $hospital->id,
+        ]);
+
+        $hospitalStudent = $this->makeStudent($this->makeUser('hospital-student-competency@test.local', ['mahasiswa']), '2210631250002');
+        $hospitalAssignment = $this->assignment($hospitalStudent, $this->lecturer, $this->fieldSupervisor, 'rumah_sakit', 'RS Sehat');
+
+        $this->actingAs($this->fieldUser)
+            ->withSession(['active_role' => 'pembimbing_lapangan'])
+            ->get('/pembimbing-lapangan/kompetensi/'.$hospitalAssignment->id)
+            ->assertOk()
+            ->assertSee($general->title)
+            ->assertSee($hospital->title)
+            ->assertDontSee($apotek->title);
+    }
+
     public function test_internal_supervisor_can_view_but_not_update_competencies(): void
     {
         KpCompetency::create([
@@ -144,10 +195,10 @@ class KpCompetencyGuideTest extends TestCase
             ->assertForbidden();
     }
 
-    private function assignment(Student $student, Lecturer $lecturer, FieldSupervisor $fieldSupervisor): KpAssignment
+    private function assignment(Student $student, Lecturer $lecturer, FieldSupervisor $fieldSupervisor, string $placeType = 'apotek', string $placeName = 'Apotek Sehat'): KpAssignment
     {
         $period = KpPeriod::create(['name' => 'KP Genap 2026', 'status' => 'dibuka']);
-        $place = KpPlace::create(['name' => 'Apotek Sehat', 'type' => 'apotek', 'status' => 'aktif']);
+        $place = KpPlace::create(['name' => $placeName, 'type' => $placeType, 'status' => 'aktif']);
         $quota = KpPlaceQuota::create(['kp_period_id' => $period->id, 'kp_place_id' => $place->id, 'quota' => 5, 'is_open' => true]);
         $requirement = KpDocumentRequirement::create(['kp_period_id' => $period->id, 'name' => 'KRS', 'is_required' => true, 'status' => 'aktif']);
         $registration = KpRegistration::create(['kp_period_id' => $period->id, 'student_id' => $student->id, 'status' => 'terverifikasi']);

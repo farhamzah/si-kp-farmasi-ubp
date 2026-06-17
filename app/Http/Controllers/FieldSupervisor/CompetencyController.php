@@ -76,9 +76,12 @@ class CompetencyController extends Controller
 
     private function competenciesFor(KpAssignment $assignment)
     {
+        $assignment->loadMissing('place');
+
         return KpCompetency::query()
             ->where('status', 'aktif')
             ->where(fn ($query) => $query->whereNull('kp_period_id')->orWhere('kp_period_id', $assignment->kp_period_id))
+            ->where(fn ($query) => $query->whereNull('place_type')->orWhere('place_type', $assignment->place?->type))
             ->orderBy('sort_order')
             ->orderBy('title')
             ->get();
