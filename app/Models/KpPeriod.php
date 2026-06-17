@@ -85,6 +85,11 @@ class KpPeriod extends Model
         return $this->hasMany(KpAssessmentComponent::class, 'kp_period_id');
     }
 
+    public function competencies()
+    {
+        return $this->hasMany(KpCompetency::class, 'kp_period_id')->orderBy('sort_order')->orderBy('title');
+    }
+
     public function places()
     {
         return $this->belongsToMany(KpPlace::class, 'kp_place_quotas')->withPivot(['quota', 'is_open', 'notes'])->withTimestamps();

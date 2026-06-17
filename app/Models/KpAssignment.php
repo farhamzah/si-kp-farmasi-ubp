@@ -36,6 +36,7 @@ class KpAssignment extends Model
     public function exam() { return $this->hasOne(KpExam::class, 'kp_assignment_id'); }
     public function scores() { return $this->hasMany(KpScore::class, 'kp_assignment_id'); }
     public function finalScore() { return $this->hasOne(KpFinalScore::class, 'kp_assignment_id'); }
+    public function competencyAchievements() { return $this->hasMany(KpCompetencyAchievement::class, 'kp_assignment_id'); }
 
     public function statusLabel(): string
     {

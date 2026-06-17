@@ -7,15 +7,18 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Examiner\ExamScheduleController as ExaminerExamScheduleController;
 use App\Http\Controllers\Examiner\AssessmentController as ExaminerAssessmentController;
 use App\Http\Controllers\FieldSupervisor\AssessmentController as FieldAssessmentController;
+use App\Http\Controllers\FieldSupervisor\CompetencyController as FieldCompetencyController;
 use App\Http\Controllers\FieldSupervisor\FieldStudentController;
 use App\Http\Controllers\FieldSupervisor\LogbookValidationController;
 use App\Http\Controllers\InternalSupervisor\ExamScheduleController as InternalExamScheduleController;
 use App\Http\Controllers\InternalSupervisor\AssessmentController as InternalAssessmentController;
+use App\Http\Controllers\InternalSupervisor\CompetencyController as InternalCompetencyController;
 use App\Http\Controllers\InternalSupervisor\FinalReportReviewController;
 use App\Http\Controllers\InternalSupervisor\LogbookMonitoringController as InternalLogbookMonitoringController;
 use App\Http\Controllers\InternalSupervisor\SupervisedStudentController;
 use App\Http\Controllers\Management\KpAssignmentController;
 use App\Http\Controllers\Management\KpAssignmentLogController;
+use App\Http\Controllers\Management\KpCompetencyController;
 use App\Http\Controllers\Management\KpPeriodController;
 use App\Http\Controllers\Management\KpPlaceController;
 use App\Http\Controllers\Management\KpPlaceQuotaController;
@@ -148,6 +151,7 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('exams/{exam}/complete', [ManagementExamScheduleController::class, 'complete'])->name('exams.complete');
             Route::get('exam-logs', [ExamLogController::class, 'index'])->name('exam-logs.index');
             Route::resource('assessment-components', AssessmentComponentController::class)->except(['show'])->parameters(['assessment-components' => 'component']);
+            Route::resource('competencies', KpCompetencyController::class)->except(['show', 'create', 'edit'])->parameters(['competencies' => 'competency']);
             Route::get('scores', [ScoreMonitoringController::class, 'index'])->name('scores.index');
             Route::get('scores/{assignment}', [ScoreMonitoringController::class, 'show'])->name('scores.show');
             Route::post('scores/{assignment}/calculate', [ScoreMonitoringController::class, 'calculate'])->name('scores.calculate');
@@ -225,6 +229,8 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('penilaian/{assignment}', [InternalAssessmentController::class, 'show'])->name('assessments.show');
             Route::post('penilaian/{assignment}/save', [InternalAssessmentController::class, 'save'])->name('assessments.save');
             Route::post('penilaian/{assignment}/submit', [InternalAssessmentController::class, 'submit'])->name('assessments.submit');
+            Route::get('kompetensi', [InternalCompetencyController::class, 'index'])->name('competencies.index');
+            Route::get('kompetensi/{assignment}', [InternalCompetencyController::class, 'show'])->name('competencies.show');
         });
 
         Route::middleware('role:pembimbing_lapangan')->prefix('pembimbing-lapangan')->name('field-supervisor.')->group(function () {
@@ -240,6 +246,9 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('penilaian/{assignment}', [FieldAssessmentController::class, 'show'])->name('assessments.show');
             Route::post('penilaian/{assignment}/save', [FieldAssessmentController::class, 'save'])->name('assessments.save');
             Route::post('penilaian/{assignment}/submit', [FieldAssessmentController::class, 'submit'])->name('assessments.submit');
+            Route::get('kompetensi', [FieldCompetencyController::class, 'index'])->name('competencies.index');
+            Route::get('kompetensi/{assignment}', [FieldCompetencyController::class, 'show'])->name('competencies.show');
+            Route::put('kompetensi/{assignment}', [FieldCompetencyController::class, 'update'])->name('competencies.update');
         });
 
         Route::middleware('role:penguji')->prefix('penguji')->name('examiner.')->group(function () {
