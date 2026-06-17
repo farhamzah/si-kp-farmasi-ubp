@@ -222,6 +222,55 @@ class KpRegistrationAndDocumentVerificationTest extends TestCase
             ->assertOk();
     }
 
+    public function test_review_link_preserves_current_queue_page_and_filters(): void
+    {
+        $period = $this->openPeriod();
+        $this->requirement($period);
+
+        for ($i = 1; $i <= 11; $i++) {
+            $user = $this->makeUser("queue-{$i}@test.local", ['mahasiswa']);
+            $user->forceFill(['name' => "Queue Test {$i}", 'profile_completed' => true])->save();
+            $student = Student::create([
+                'user_id' => $user->id,
+                'nim' => sprintf('221063124%04d', $i),
+                'study_program' => 'Farmasi',
+                'semester' => 6,
+                'phone' => '081234567890',
+                'status' => 'active',
+            ]);
+            KpRegistration::create([
+                'kp_period_id' => $period->id,
+                'student_id' => $student->id,
+                'registration_number' => sprintf('KP-2026-%04d', $i),
+                'status' => 'menunggu_verifikasi',
+                'submitted_at' => now(),
+            ]);
+        }
+
+        $queueUrl = "/management/kp-registrations?page=2&q=Queue%20Test&period={$period->id}&status=menunggu_verifikasi";
+        $indexResponse = $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->get($queueUrl);
+
+        $indexResponse->assertOk()
+            ->assertSee('return_url=', false)
+            ->assertSee('page%3D2', false)
+            ->assertSee('q%3DQueue%2520Test', false)
+            ->assertSee('status%3Dmenunggu_verifikasi', false);
+
+        $registration = KpRegistration::where('status', 'menunggu_verifikasi')->latest()->skip(10)->firstOrFail();
+        $detailResponse = $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->get(route('management.kp-registrations.show', [
+                'registration' => $registration,
+                'return_url' => url($queueUrl),
+            ]));
+
+        $detailResponse->assertOk()
+            ->assertSee('Kembali ke Antrian')
+            ->assertSee('href="http://localhost/management/kp-registrations?page=2&amp;q=Queue%20Test&amp;period='.$period->id.'&amp;status=menunggu_verifikasi"', false);
+    }
+
     public function test_admin_can_preview_uploaded_registration_document_inline(): void
     {
         Storage::fake('local');

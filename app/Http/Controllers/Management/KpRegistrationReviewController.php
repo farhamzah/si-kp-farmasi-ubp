@@ -43,6 +43,7 @@ class KpRegistrationReviewController extends Controller
     {
         return view('management.registrations.show', [
             'registration' => $registration->load(['period.documentRequirements', 'student.user', 'documents.requirement', 'logs.user']),
+            'backUrl' => $this->safeRegistrationBackUrl(request('return_url')),
         ]);
     }
 
@@ -163,5 +164,28 @@ class KpRegistrationReviewController extends Controller
             'new_status' => $newStatus,
             'note' => $note,
         ]);
+    }
+
+    private function safeRegistrationBackUrl(?string $returnUrl): string
+    {
+        $fallback = route('management.kp-registrations.index');
+
+        if (! $returnUrl) {
+            return $fallback;
+        }
+
+        $appHost = parse_url(config('app.url'), PHP_URL_HOST);
+        $returnHost = parse_url($returnUrl, PHP_URL_HOST);
+        $returnPath = parse_url($returnUrl, PHP_URL_PATH);
+
+        if ($returnHost && $appHost && $returnHost !== $appHost) {
+            return $fallback;
+        }
+
+        if ($returnPath !== '/management/kp-registrations') {
+            return $fallback;
+        }
+
+        return $returnUrl;
     }
 }

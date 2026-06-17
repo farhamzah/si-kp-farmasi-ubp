@@ -12,7 +12,7 @@
     @endif
 
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <a href="{{ route('management.kp-registrations.index') }}" class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:border-cyan-300 hover:text-cyan-700">
+        <a href="{{ $backUrl }}" class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:border-cyan-300 hover:text-cyan-700">
             Kembali ke Antrian
         </a>
         <p class="text-sm text-slate-500">Review pendaftaran dan dokumen mahasiswa dari satu halaman.</p>

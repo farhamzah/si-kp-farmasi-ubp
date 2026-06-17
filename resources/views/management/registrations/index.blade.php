@@ -74,7 +74,7 @@
                                 @endif
                             </td>
                             <td class="px-4 py-4 text-right">
-                                <a href="{{ route('management.kp-registrations.show', $registration) }}" class="rounded-lg border border-teal-200 px-3 py-1.5 text-xs font-semibold text-teal-700">Review</a>
+                                <a href="{{ route('management.kp-registrations.show', ['registration' => $registration, 'return_url' => request()->fullUrl()]) }}" class="rounded-lg border border-teal-200 px-3 py-1.5 text-xs font-semibold text-teal-700">Review</a>
                             </td>
                         </tr>
                     @empty
