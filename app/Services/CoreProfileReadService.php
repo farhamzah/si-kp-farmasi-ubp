@@ -33,6 +33,7 @@ class CoreProfileReadService
             };
 
             $profilePhotoUrl = $this->profilePhotoUrl($coreUser->profile_photo_path ?? null);
+            $displayName = $this->displayNameFor($coreUser, $linkedProfile, $profileType) ?? $user->name;
 
             return [
                 'available' => true,
@@ -40,7 +41,7 @@ class CoreProfileReadService
                 'profile_type' => $profileType,
                 'user' => [
                     'id' => $coreUser->id,
-                    'name' => $coreUser->name ?? $user->name,
+                    'name' => $displayName,
                     'email' => $coreUser->email ?? $user->email,
                     'username' => $coreUser->username ?? null,
                     'identity_type' => $coreUser->identity_type ?? null,
@@ -50,7 +51,7 @@ class CoreProfileReadService
                     'active' => (bool) ($coreUser->active ?? true),
                 ],
                 'linked_profile' => $linkedProfile,
-                'sections' => $this->sectionsFor($coreUser, $linkedProfile, $profileType),
+                'sections' => $this->sectionsFor($coreUser, $linkedProfile, $profileType, $displayName),
                 'notice' => $linkedProfile
                     ? 'Data resmi dibaca dari Core Farmasi dan ditampilkan read-only di KP.'
                     : 'Akun Core terbaca, tetapi profil resmi untuk role aktif ini belum tertaut.',
@@ -216,11 +217,11 @@ class CoreProfileReadService
     /**
      * @return array<string, array<string, string|null>>
      */
-    private function sectionsFor(object $coreUser, ?object $profile, string $profileType): array
+    private function sectionsFor(object $coreUser, ?object $profile, string $profileType, ?string $displayName = null): array
     {
         $sections = [
             'Identitas Core' => [
-                'Nama' => $coreUser->name ?? null,
+                'Nama' => $displayName ?: ($coreUser->name ?? null),
                 'Email' => $coreUser->email ?? null,
                 'Username' => $coreUser->username ?? null,
                 'Tipe Identitas' => $coreUser->identity_type ?? null,
@@ -266,6 +267,37 @@ class CoreProfileReadService
         ];
 
         return $sections;
+    }
+
+    private function displayNameFor(object $coreUser, ?object $profile, string $profileType): ?string
+    {
+        if ($profileType !== 'dosen') {
+            return $coreUser->name ?? null;
+        }
+
+        return $profile?->display_name_with_title
+            ?? $profile?->formal_name
+            ?? $this->composeTitledName($profile?->front_title ?? null, $profile?->name ?? null, $profile?->back_title ?? null)
+            ?? $coreUser->display_name_with_title
+            ?? $coreUser->formal_name
+            ?? $this->composeTitledName($coreUser->front_title ?? null, $coreUser->name ?? null, $coreUser->back_title ?? null)
+            ?? $coreUser->name
+            ?? null;
+    }
+
+    private function composeTitledName(?string $frontTitle, ?string $name, ?string $backTitle): ?string
+    {
+        if (blank($name)) {
+            return null;
+        }
+
+        $display = trim(collect([$frontTitle, $name])->filter(fn ($value) => filled($value))->implode(' '));
+
+        if (filled($backTitle)) {
+            $display .= ', '.trim($backTitle);
+        }
+
+        return $display !== trim((string) $name) ? $display : null;
     }
 
     private function canJoinStudyPrograms(): bool

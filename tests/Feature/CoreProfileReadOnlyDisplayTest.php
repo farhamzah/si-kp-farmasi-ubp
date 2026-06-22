@@ -81,7 +81,7 @@ class CoreProfileReadOnlyDisplayTest extends TestCase
             ->assertOk()
             ->assertSee('Profil Resmi Core')
             ->assertSee('Profil Dosen')
-            ->assertSee('Dosen Core')
+            ->assertSee('Dr. Dosen Core, M.Farm.')
             ->assertSee('Farmasi S1')
             ->assertSee('Teknologi Sediaan Farmasi')
             ->assertSee('Data Operasional KP')
@@ -156,6 +156,8 @@ class CoreProfileReadOnlyDisplayTest extends TestCase
             $table->string('identity_type')->nullable();
             $table->string('identity_number')->nullable();
             $table->string('profile_photo_path')->nullable();
+            $table->string('display_name_with_title')->nullable();
+            $table->string('formal_name')->nullable();
             $table->boolean('active')->default(true);
         });
 
@@ -207,6 +209,10 @@ class CoreProfileReadOnlyDisplayTest extends TestCase
             $table->string('nuptk')->nullable();
             $table->string('national_id_number')->nullable();
             $table->string('name')->nullable();
+            $table->string('front_title')->nullable();
+            $table->string('back_title')->nullable();
+            $table->string('display_name_with_title')->nullable();
+            $table->string('formal_name')->nullable();
             $table->string('email')->nullable();
             $table->string('phone')->nullable();
             $table->text('address')->nullable();
@@ -229,6 +235,8 @@ class CoreProfileReadOnlyDisplayTest extends TestCase
             'identity_type' => 'lecturer',
             'identity_number' => '3275010101010001',
             'profile_photo_path' => 'profile-photos/core.jpg',
+            'display_name_with_title' => null,
+            'formal_name' => null,
             'active' => true,
         ]);
         DB::connection('core')->table('faculties')->insert(['id' => 1, 'code' => 'FF', 'name' => 'Fakultas Farmasi', 'active' => true]);
@@ -242,6 +250,10 @@ class CoreProfileReadOnlyDisplayTest extends TestCase
             'nip' => '198001012010011001',
             'national_id_number' => '3275010101010001',
             'name' => 'Dosen Core',
+            'front_title' => 'Dr.',
+            'back_title' => 'M.Farm.',
+            'display_name_with_title' => 'Dr. Dosen Core, M.Farm.',
+            'formal_name' => 'Dr. Dosen Core, M.Farm.',
             'email' => 'multi-profile@sikp.test',
             'phone' => '081234567890',
             'address' => 'Alamat Core',

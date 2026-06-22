@@ -3,7 +3,7 @@
 @section('page_title', $exam ? 'Edit Jadwal Sidang' : 'Jadwalkan Sidang')
 @section('content')
 <x-ui.card>
-    <div class="mb-5"><h2 class="text-xl font-bold text-slate-950">{{ $examRequest->assignment->student->user->name }}</h2><p class="text-sm text-slate-500">{{ $examRequest->assignment->place->name }} | Pembimbing: {{ $examRequest->assignment->internalSupervisor?->user?->name ?? '-' }}</p></div>
+    <div class="mb-5"><h2 class="text-xl font-bold text-slate-950">{{ $examRequest->assignment->student->user->name }}</h2><p class="text-sm text-slate-500">{{ $examRequest->assignment->place->name }} | Pembimbing: {{ $examRequest->assignment->internalSupervisor ? lecturer_display_name($examRequest->assignment->internalSupervisor) : '-' }}</p></div>
     <form method="POST" action="{{ $exam ? route('management.exams.update',$exam) : route('management.exam-requests.schedule.store',$examRequest) }}" class="grid gap-4 md:grid-cols-2">
         @csrf @if($exam) @method('PUT') @endif
         <div><label class="text-sm font-semibold">Penguji</label><select name="examiner_id" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"><option value="">Pilih Penguji</option>@foreach($examiners as $examiner)<option value="{{ $examiner->id }}" @selected(old('examiner_id',$exam?->examiner_id)==$examiner->id)>{{ $examiner->user->name }} - {{ $examiner->nidn_nip ?: '-' }}</option>@endforeach</select>@error('examiner_id')<p class="text-xs text-red-600">{{ $message }}</p>@enderror</div>

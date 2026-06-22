@@ -39,7 +39,7 @@ class KpRecapService
                 'Status Pendaftaran' => $assignment->registration?->statusLabel() ?? '-',
                 'Status Dokumen' => $assignment->registration?->allRequiredDocumentsApproved() ? 'Lengkap disetujui' : 'Belum lengkap',
                 'Tempat KP' => $assignment->place->name,
-                'Pembimbing Dalam' => $assignment->internalSupervisor?->user?->name ?? '-',
+                'Pembimbing Dalam' => $this->lecturerName($assignment->internalSupervisor),
                 'Pembimbing Lapangan' => $assignment->fieldSupervisor?->user?->name ?? '-',
                 'Status Assignment' => $assignment->statusLabel(),
                 'Status Laporan' => $assignment->finalReport?->statusLabel() ?? '-',
@@ -61,7 +61,7 @@ class KpRecapService
                 'Tempat KP' => $assignment->place->name,
                 'Tipe Tempat' => $assignment->place->typeLabel(),
                 'Kuota' => $assignment->place->quotas->firstWhere('kp_period_id', $assignment->kp_period_id)?->quota ?? '-',
-                'Pembimbing Dalam' => $assignment->internalSupervisor?->user?->name ?? '-',
+                'Pembimbing Dalam' => $this->lecturerName($assignment->internalSupervisor),
                 'Pembimbing Lapangan' => $assignment->fieldSupervisor?->user?->name ?? '-',
                 'Status Penempatan' => $assignment->statusLabel(),
                 'Tanggal Assignment' => $assignment->assigned_at?->format('d/m/Y H:i') ?? '-',
@@ -105,8 +105,8 @@ class KpRecapService
                 'Mahasiswa' => $exam->assignment->student->user->name,
                 'NIM' => $exam->assignment->student->nim,
                 'Tempat KP' => $exam->assignment->place->name,
-                'Pembimbing Dalam' => $exam->supervisor?->user?->name ?? '-',
-                'Penguji' => $exam->examiner?->user?->name ?? '-',
+                'Pembimbing Dalam' => $this->lecturerName($exam->supervisor),
+                'Penguji' => $this->lecturerName($exam->examiner),
                 'Tanggal Sidang' => $exam->exam_date?->format('d/m/Y') ?? '-',
                 'Jam' => substr((string) $exam->start_time, 0, 5).' - '.substr((string) $exam->end_time, 0, 5),
                 'Mode' => $exam->modeLabel(),
@@ -153,5 +153,10 @@ class KpRecapService
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
             ->when($request->filled('q'), fn ($q) => $q->whereHas('student', fn ($s) => $s->where('nim', 'like', "%{$request->q}%")->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$request->q}%"))))
             ->latest();
+    }
+
+    private function lecturerName(mixed $lecturer): string
+    {
+        return $lecturer ? lecturer_display_name($lecturer) : '-';
     }
 }

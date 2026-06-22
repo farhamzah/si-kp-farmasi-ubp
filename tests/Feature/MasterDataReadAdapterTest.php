@@ -107,6 +107,8 @@ class MasterDataReadAdapterTest extends TestCase
         DB::connection('core')->table('lecturers')->where('id', 20)->update([
             'display_name_with_title' => null,
             'formal_name' => null,
+            'front_title' => null,
+            'back_title' => null,
         ]);
 
         $data = app(KpMasterDataReadService::class)->getLecturerDisplayData(Lecturer::first(), 'core_preferred');

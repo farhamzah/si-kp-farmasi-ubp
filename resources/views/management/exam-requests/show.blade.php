@@ -7,7 +7,7 @@
         <p class="text-sm text-slate-500">{{ $examRequest->assignment->student->user->name }} | {{ $examRequest->assignment->student->nim ?: '-' }}</p>
         <h2 class="mt-1 text-2xl font-bold text-slate-950">{{ $examRequest->assignment->place->name }}</h2>
         <span class="mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 {{ $examRequest->statusBadgeClass() }}">{{ $examRequest->statusLabel() }}</span>
-        <div class="mt-5 grid gap-4 md:grid-cols-2 text-sm"><div class="rounded-xl bg-slate-50 p-4"><p class="font-semibold">Pembimbing Dalam</p><p>{{ $examRequest->assignment->internalSupervisor?->user?->name ?? '-' }}</p></div><div class="rounded-xl bg-slate-50 p-4"><p class="font-semibold">Laporan Akhir</p><p>{{ $examRequest->assignment->finalReport?->statusLabel() ?? '-' }}</p></div></div>
+        <div class="mt-5 grid gap-4 md:grid-cols-2 text-sm"><div class="rounded-xl bg-slate-50 p-4"><p class="font-semibold">Pembimbing Dalam</p><p>{{ $examRequest->assignment->internalSupervisor ? lecturer_display_name($examRequest->assignment->internalSupervisor) : '-' }}</p></div><div class="rounded-xl bg-slate-50 p-4"><p class="font-semibold">Laporan Akhir</p><p>{{ $examRequest->assignment->finalReport?->statusLabel() ?? '-' }}</p></div></div>
         @if($examRequest->exam)<a href="{{ route('management.exams.show',$examRequest->exam) }}" class="mt-5 inline-flex rounded-lg border border-cyan-200 px-4 py-2 text-sm font-semibold text-cyan-700">Lihat Jadwal</a>@endif
     </x-ui.card>
     <aside class="space-y-5">

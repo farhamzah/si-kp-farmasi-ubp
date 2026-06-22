@@ -18,7 +18,7 @@
                 <div>
                     <p class="text-xs font-bold uppercase tracking-widest text-cyan-700">Status Sidang</p>
                     <h2 class="mt-1 text-2xl font-bold text-slate-950">{{ $assignment->place->name }}</h2>
-                    <p class="mt-1 text-sm text-slate-500">Pembimbing Dalam: {{ $assignment->internalSupervisor?->user?->name ?? '-' }}</p>
+                    <p class="mt-1 text-sm text-slate-500">Pembimbing Dalam: {{ $assignment->internalSupervisor ? lecturer_display_name($assignment->internalSupervisor) : '-' }}</p>
                 </div>
                 @if($examRequest)<span class="rounded-full px-3 py-1 text-xs font-semibold ring-1 {{ $examRequest->statusBadgeClass() }}">{{ $examRequest->statusLabel() }}</span>@endif
             </div>
@@ -35,7 +35,7 @@
                 <div class="mt-4 grid gap-4 md:grid-cols-3">
                     <div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-500">Tanggal & Jam</p><p class="mt-1 font-bold">{{ $exam->scheduleLabel() }}</p></div>
                     <div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-500">Mode</p><p class="mt-1 font-bold">{{ $exam->modeLabel() }}</p></div>
-                    <div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-500">Penguji</p><p class="mt-1 font-bold">{{ $exam->examiner?->user?->name ?? '-' }}</p></div>
+                    <div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-500">Penguji</p><p class="mt-1 font-bold">{{ $exam->examiner ? lecturer_display_name($exam->examiner) : '-' }}</p></div>
                 </div>
                 <p class="mt-4 text-sm text-slate-600">Lokasi: {{ $exam->room ?: '-' }} | Link: {{ $exam->meeting_link ?: '-' }}</p>
             </x-ui.card>

@@ -199,8 +199,10 @@ class KpMasterDataReadService
 
         $displayName = $coreLecturer->display_name_with_title
             ?: $coreLecturer->formal_name
+            ?: $this->composeTitledName($coreLecturer->front_title ?? null, $coreLecturer->name ?? null, $coreLecturer->back_title ?? null)
             ?: $coreLecturer->user?->display_name_with_title
             ?: $coreLecturer->user?->formal_name
+            ?: $this->composeTitledName($coreLecturer->user?->front_title ?? null, $coreLecturer->user?->name ?? null, $coreLecturer->user?->back_title ?? null)
             ?: $coreLecturer->name;
 
         return new LecturerDisplayData(
@@ -216,6 +218,21 @@ class KpMasterDataReadService
             expertise: $coreLecturer->notes ?: $legacyLecturer->expertise,
             status: $coreLecturer->active ? 'active' : 'inactive',
         );
+    }
+
+    private function composeTitledName(?string $frontTitle, ?string $name, ?string $backTitle): ?string
+    {
+        if (blank($name)) {
+            return null;
+        }
+
+        $display = trim(collect([$frontTitle, $name])->filter(fn ($value) => filled($value))->implode(' '));
+
+        if (filled($backTitle)) {
+            $display .= ', '.trim($backTitle);
+        }
+
+        return $display !== trim((string) $name) ? $display : null;
     }
 
     private function coreStudentFor(Student $student): ?CoreStudent

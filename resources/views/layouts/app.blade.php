@@ -15,6 +15,7 @@
     $roleLabel = $currentUser?->displayRoleLabel($activeRole) ?? \App\Support\RoleDashboard::labelFor($activeRole);
     $topbarRoleLabel = $currentUser?->displayRoleLabel($activeRole) ?? $roleLabel;
     $ownedRoles = $currentUser?->roles ?? collect();
+    $currentUserDisplayName = $currentUser ? user_display_name($currentUser, $activeRole) : '';
 @endphp
 <div class="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_32%),radial-gradient(circle_at_80%_12%,rgba(20,184,166,0.14),transparent_28%),linear-gradient(135deg,#f8fdff,#eef9fb_45%,#f4f9fc)] lg:flex">
     <!-- Sidebar Navigation -->
@@ -163,7 +164,7 @@
             <div class="flex items-center gap-3">
                 <x-ui.avatar :user="$currentUser" size="sm" />
                 <div class="min-w-0">
-                    <p class="truncate text-sm font-semibold text-slate-900">{{ $currentUser->name }}</p>
+                    <p class="truncate text-sm font-semibold text-slate-900">{{ $currentUserDisplayName }}</p>
                     <p class="mt-1 truncate text-xs text-cyan-700">{{ $roleLabel }}</p>
                 </div>
             </div>
@@ -187,7 +188,7 @@
                     <div class="flex min-w-0 max-w-[220px] items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs shadow-sm ring-1 ring-sky-100 sm:max-w-[260px]">
                         <x-ui.avatar :user="$currentUser" size="sm" />
                         <span class="min-w-0 leading-tight">
-                            <span class="block truncate font-black text-slate-800">{{ $currentUser->name }}</span>
+                            <span class="block truncate font-black text-slate-800">{{ $currentUserDisplayName }}</span>
                             <span class="block truncate text-[11px] font-bold text-cyan-700">{{ $topbarRoleLabel }}</span>
                         </span>
                     </div>

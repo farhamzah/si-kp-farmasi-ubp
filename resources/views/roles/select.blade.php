@@ -3,6 +3,7 @@
 @section('content')
 @php
     $user = auth()->user();
+    $userDisplayName = user_display_name($user);
     $roleMeta = [
         'admin' => ['label' => 'Admin', 'icon' => 'AD', 'tone' => 'from-slate-700 to-cyan-800', 'description' => 'Kelola user, data master, monitoring, rekap, dan export.'],
         'koordinator_kp' => ['label' => 'Koordinator KP', 'icon' => 'KP', 'tone' => 'from-cyan-600 to-teal-600', 'description' => 'Kelola periode, kuota, pembimbing, sidang, dan nilai KP.'],
@@ -23,7 +24,7 @@
                         <x-ui.avatar :user="$user" size="lg" class="shadow-lg shadow-cyan-800/10" />
                         <div class="min-w-0">
                             <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Pilih akses untuk melanjutkan</p>
-                            <h1 class="mt-1 truncate text-2xl font-black tracking-tight text-slate-950 md:text-3xl">{{ $user->name }}</h1>
+                            <h1 class="mt-1 truncate text-2xl font-black tracking-tight text-slate-950 md:text-3xl">{{ $userDisplayName }}</h1>
                             <p class="mt-1 truncate text-sm font-medium text-slate-500">{{ $user->email }}</p>
                         </div>
                     </div>

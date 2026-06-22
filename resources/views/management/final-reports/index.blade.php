@@ -59,7 +59,7 @@
                                 <div class="text-xs text-slate-500">{{ $report->assignment->student->nim ?: '-' }}</div>
                             </td>
                             <td>{{ $report->assignment->place->name }}</td>
-                            <td>{{ $report->assignment->internalSupervisor?->user?->name ?? '-' }}</td>
+                            <td>{{ $report->assignment->internalSupervisor ? lecturer_display_name($report->assignment->internalSupervisor) : '-' }}</td>
                             <td class="font-semibold text-slate-900">{{ $report->current_version }}</td>
                             <td><span class="rounded-full px-2.5 py-1 text-xs font-semibold ring-1 {{ $report->statusBadgeClass() }}">{{ $report->statusLabel() }}</span></td>
                             <td><a href="{{ route('management.final-reports.show',$report) }}" class="si-btn si-btn-secondary min-h-9 px-3 py-1.5 text-xs text-cyan-700">Detail</a></td>

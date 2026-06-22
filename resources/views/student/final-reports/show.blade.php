@@ -9,7 +9,7 @@
     @else
         <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div><p class="text-xs font-semibold uppercase tracking-widest text-teal-700">Penempatan KP</p><h2 class="mt-1 text-2xl font-bold text-slate-950">{{ $assignment->place->name }}</h2><p class="mt-1 text-sm text-slate-500">Pembimbing Dalam: {{ $assignment->internalSupervisor?->user?->name ?? '-' }}</p></div>
+                <div><p class="text-xs font-semibold uppercase tracking-widest text-teal-700">Penempatan KP</p><h2 class="mt-1 text-2xl font-bold text-slate-950">{{ $assignment->place->name }}</h2><p class="mt-1 text-sm text-slate-500">Pembimbing Dalam: {{ $assignment->internalSupervisor ? lecturer_display_name($assignment->internalSupervisor) : '-' }}</p></div>
                 @if($report)<span class="rounded-full px-3 py-1 text-xs font-semibold ring-1 {{ $report->statusBadgeClass() }}">{{ $report->statusLabel() }}</span>@endif
             </div>
             @if($report)
