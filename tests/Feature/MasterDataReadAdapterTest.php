@@ -98,8 +98,21 @@ class MasterDataReadAdapterTest extends TestCase
         $this->assertSame('legacy', $legacy->source);
         $this->assertSame('Legacy Lecturer', $legacy->name);
         $this->assertSame('core', $core->source);
-        $this->assertSame('Core Lecturer', $core->name);
+        $this->assertSame('Dr. Core Lecturer, M.Farm.', $core->name);
         $this->assertSame('Fakultas Farmasi', $core->departmentName);
+    }
+
+    public function test_lecturer_display_falls_back_to_base_name_when_titled_name_is_missing(): void
+    {
+        DB::connection('core')->table('lecturers')->where('id', 20)->update([
+            'display_name_with_title' => null,
+            'formal_name' => null,
+        ]);
+
+        $data = app(KpMasterDataReadService::class)->getLecturerDisplayData(Lecturer::first(), 'core_preferred');
+
+        $this->assertSame('core', $data->source);
+        $this->assertSame('Core Lecturer', $data->name);
     }
 
     public function test_select_lists_work(): void
@@ -128,7 +141,7 @@ class MasterDataReadAdapterTest extends TestCase
         config()->set('kp_master_data.read_mode', 'core_preferred');
 
         $this->assertSame('221063120001 - Core Student', student_display_label(Student::first()));
-        $this->assertSame('0012345601 - Core Lecturer', lecturer_display_label(Lecturer::first()));
+        $this->assertSame('0012345601 - Dr. Core Lecturer, M.Farm.', lecturer_display_label(Lecturer::first()));
     }
 
     public function test_select_values_remain_legacy_ids_and_validation_accepts_legacy_ids(): void
@@ -259,6 +272,8 @@ class MasterDataReadAdapterTest extends TestCase
         Schema::connection('core')->create('users', function ($table): void {
             $table->id();
             $table->string('name');
+            $table->string('display_name_with_title')->nullable();
+            $table->string('formal_name')->nullable();
             $table->string('email');
             $table->boolean('active')->default(true);
             $table->timestamps();
@@ -310,6 +325,10 @@ class MasterDataReadAdapterTest extends TestCase
             $table->unsignedBigInteger('user_id')->nullable();
             $table->string('lecturer_number');
             $table->string('name');
+            $table->string('front_title')->nullable();
+            $table->string('back_title')->nullable();
+            $table->string('display_name_with_title')->nullable();
+            $table->string('formal_name')->nullable();
             $table->string('email');
             $table->unsignedBigInteger('department_id');
             $table->unsignedBigInteger('study_program_id')->nullable();
@@ -350,7 +369,7 @@ class MasterDataReadAdapterTest extends TestCase
         DB::connection('core')->table('departments')->insert(['id' => 1, 'name' => 'Fakultas Farmasi', 'active' => true]);
         DB::connection('core')->table('study_programs')->insert(['id' => 1, 'department_id' => 1, 'name' => 'S1 Farmasi', 'active' => true]);
         DB::connection('core')->table('students')->insert(['id' => 10, 'user_id' => 1, 'student_number' => '221063120001', 'name' => 'Core Student', 'email' => 'student@sikp.test', 'study_program_id' => 1, 'active' => true]);
-        DB::connection('core')->table('lecturers')->insert(['id' => 20, 'user_id' => 2, 'lecturer_number' => '0012345601', 'name' => 'Core Lecturer', 'email' => 'lecturer@sikp.test', 'department_id' => 1, 'study_program_id' => 1, 'notes' => 'Clinical', 'active' => true]);
+        DB::connection('core')->table('lecturers')->insert(['id' => 20, 'user_id' => 2, 'lecturer_number' => '0012345601', 'name' => 'Core Lecturer', 'front_title' => 'Dr.', 'back_title' => 'M.Farm.', 'display_name_with_title' => 'Dr. Core Lecturer, M.Farm.', 'formal_name' => 'Dr. Core Lecturer, M.Farm.', 'email' => 'lecturer@sikp.test', 'department_id' => 1, 'study_program_id' => 1, 'notes' => 'Clinical', 'active' => true]);
         DB::connection('core')->table('user_app_accesses')->insert([
             ['id' => 1, 'user_id' => 30, 'app_code' => 'kp-farmasi', 'role_slug' => 'admin-kp', 'is_active' => true],
             ['id' => 2, 'user_id' => 1, 'app_code' => 'kp-farmasi', 'role_slug' => 'mahasiswa', 'is_active' => true],

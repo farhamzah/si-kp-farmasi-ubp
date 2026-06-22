@@ -197,11 +197,17 @@ class KpMasterDataReadService
     {
         $coreLecturer->loadMissing(['user', 'studyProgram', 'department']);
 
+        $displayName = $coreLecturer->display_name_with_title
+            ?: $coreLecturer->formal_name
+            ?: $coreLecturer->user?->display_name_with_title
+            ?: $coreLecturer->user?->formal_name
+            ?: $coreLecturer->name;
+
         return new LecturerDisplayData(
             source: 'core',
             legacyLecturerId: $legacyLecturer->id,
             coreLecturerId: $coreLecturer->id,
-            name: (string) $coreLecturer->name,
+            name: (string) $displayName,
             lecturerNumber: (string) $coreLecturer->lecturer_number,
             email: (string) $coreLecturer->email,
             phone: $coreLecturer->phone ?: $legacyLecturer->phone,
