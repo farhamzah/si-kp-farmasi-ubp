@@ -14,6 +14,73 @@ use Throwable;
 
 class KpPlaceSelectionService
 {
+    public function selectPlaceManually(User $admin, KpRegistration $registration, KpPlaceQuota $quota, string $reason): KpPlaceSelection
+    {
+        return DB::transaction(function () use ($admin, $registration, $quota, $reason) {
+            $lockedRegistration = KpRegistration::query()
+                ->with(['period.documentRequirements', 'documents', 'assignment'])
+                ->lockForUpdate()
+                ->findOrFail($registration->id);
+
+            $lockedQuota = KpPlaceQuota::query()
+                ->with(['place', 'period'])
+                ->lockForUpdate()
+                ->findOrFail($quota->id);
+
+            if (! $lockedRegistration->isEligibleForPlaceSelection()) {
+                $this->logSelection($lockedRegistration, $lockedQuota, $admin, 'manual_selection_failed_not_verified', 'failed', 'Pendaftaran belum terverifikasi lengkap.');
+                throw ValidationException::withMessages(['kp_registration_id' => 'Mahasiswa belum terverifikasi atau dokumen wajib belum disetujui.']);
+            }
+
+            if ($lockedRegistration->kp_period_id !== $lockedQuota->kp_period_id) {
+                $this->logSelection($lockedRegistration, $lockedQuota, $admin, 'manual_selection_failed_invalid_period', 'failed', 'Kuota tempat tidak berada pada periode pendaftaran mahasiswa.');
+                throw ValidationException::withMessages(['kp_place_quota_id' => 'Kuota tempat harus berada pada periode yang sama dengan pendaftaran mahasiswa.']);
+            }
+
+            if (! $lockedQuota->is_open) {
+                $this->logSelection($lockedRegistration, $lockedQuota, $admin, 'manual_selection_failed_quota_closed', 'failed', 'Kuota tujuan sedang ditutup.');
+                throw ValidationException::withMessages(['kp_place_quota_id' => 'Kuota tujuan sedang ditutup.']);
+            }
+
+            if (KpPlaceSelection::where('kp_period_id', $lockedRegistration->kp_period_id)->where('student_id', $lockedRegistration->student_id)->where('status', 'aktif')->lockForUpdate()->exists()) {
+                $this->logSelection($lockedRegistration, $lockedQuota, $admin, 'manual_selection_failed_already_selected', 'failed', 'Mahasiswa sudah memiliki pilihan tempat aktif.');
+                throw ValidationException::withMessages(['kp_registration_id' => 'Mahasiswa sudah memiliki pilihan tempat aktif pada periode ini.']);
+            }
+
+            if ($lockedRegistration->assignment()->where('status', '!=', 'dibatalkan')->lockForUpdate()->exists()) {
+                $this->logSelection($lockedRegistration, $lockedQuota, $admin, 'manual_selection_failed_assignment_exists', 'failed', 'Mahasiswa sudah memiliki penempatan KP aktif.');
+                throw ValidationException::withMessages(['kp_registration_id' => 'Mahasiswa sudah memiliki penempatan KP aktif pada periode ini.']);
+            }
+
+            $filled = KpPlaceSelection::where('kp_place_quota_id', $lockedQuota->id)->where('status', 'aktif')->lockForUpdate()->count();
+            if (($lockedQuota->quota - $filled) <= 0) {
+                $this->logSelection($lockedRegistration, $lockedQuota, $admin, 'manual_selection_failed_quota_full', 'failed', 'Kuota tujuan sudah penuh.');
+                throw ValidationException::withMessages(['kp_place_quota_id' => 'Kuota tujuan sudah penuh.']);
+            }
+
+            $selection = KpPlaceSelection::create([
+                'kp_period_id' => $lockedRegistration->kp_period_id,
+                'kp_registration_id' => $lockedRegistration->id,
+                'student_id' => $lockedRegistration->student_id,
+                'kp_place_id' => $lockedQuota->kp_place_id,
+                'kp_place_quota_id' => $lockedQuota->id,
+                'selected_at' => now(),
+                'selected_by' => $admin->id,
+                'status' => 'aktif',
+                'active_key' => $this->activeKey($lockedRegistration->kp_period_id, $lockedRegistration->student_id),
+                'note' => 'Penempatan manual oleh koordinator/admin: '.$reason,
+            ]);
+
+            KpWaitingList::where('kp_period_id', $lockedRegistration->kp_period_id)
+                ->where('student_id', $lockedRegistration->student_id)
+                ->update(['status' => 'sudah_memilih', 'resolved_at' => now(), 'note' => 'Diselesaikan melalui penempatan manual.']);
+
+            $this->logSelection($lockedRegistration, $lockedQuota, $admin, 'selection_manual_by_koordinator', 'success', $reason, null, null, ['selection_id' => $selection->id]);
+
+            return $selection;
+        });
+    }
+
     public function selectPlace(User $user, KpRegistration $registration, KpPlaceQuota $quota, ?string $ip = null, ?string $userAgent = null): KpPlaceSelection
     {
         if ($user->student?->id !== $registration->student_id) {

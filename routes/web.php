@@ -114,6 +114,8 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('kp-registrations/{registration}/documents/{document}/download', [KpRegistrationReviewController::class, 'download'])->name('kp-registrations.documents.download');
 
             Route::get('place-selections', [PlaceSelectionMonitoringController::class, 'index'])->name('place-selections.index');
+            Route::get('place-selections/manual', [PlaceSelectionMonitoringController::class, 'manual'])->name('place-selections.manual');
+            Route::post('place-selections/manual', [PlaceSelectionMonitoringController::class, 'storeManual'])->name('place-selections.manual.store');
             Route::get('place-selections/{selection}', [PlaceSelectionMonitoringController::class, 'show'])->name('place-selections.show');
             Route::post('place-selections/{selection}/cancel', [PlaceSelectionMonitoringController::class, 'cancel'])->name('place-selections.cancel');
             Route::get('place-selections/{selection}/move', [PlaceSelectionMonitoringController::class, 'move'])->name('place-selections.move');

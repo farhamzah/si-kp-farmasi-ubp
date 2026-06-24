@@ -289,6 +289,92 @@ class KpPlaceSelectionWarTicketTest extends TestCase
         $this->assertDatabaseHas('kp_selection_logs', ['action' => 'selection_moved_by_admin']);
     }
 
+    public function test_koordinator_can_manually_select_place_for_non_war_ticket_student(): void
+    {
+        [$registration, $quota] = $this->verifiedRegistration($this->student, quota: 2);
+        $registration->period->update([
+            'selection_start_at' => now()->addDays(5),
+            'selection_end_at' => now()->addDays(6),
+        ]);
+
+        $this->actingAs($this->koordinator)
+            ->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/place-selections/manual')
+            ->assertOk()
+            ->assertSee('Pilihkan Tempat KP')
+            ->assertSee($this->student->nim)
+            ->assertSee($quota->place->name);
+
+        $this->actingAs($this->koordinator)
+            ->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/place-selections/manual', [
+                'kp_registration_id' => $registration->id,
+                'kp_place_quota_id' => $quota->id,
+                'reason' => 'Ditunjuk langsung oleh koordinator.',
+            ])
+            ->assertRedirect();
+
+        $selection = KpPlaceSelection::where('kp_registration_id', $registration->id)->firstOrFail();
+
+        $this->assertSame('aktif', $selection->status);
+        $this->assertSame($this->koordinator->id, $selection->selected_by);
+        $this->assertStringContainsString('Ditunjuk langsung', (string) $selection->note);
+        $this->assertSame(1, $quota->fresh()->filledCount());
+        $this->assertDatabaseHas('kp_selection_logs', [
+            'kp_registration_id' => $registration->id,
+            'action' => 'selection_manual_by_koordinator',
+            'status' => 'success',
+        ]);
+
+        $this->actingAs($this->koordinator)
+            ->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/place-selections/'.$selection->id.'/create-assignment')
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('kp_assignments', [
+            'kp_place_selection_id' => $selection->id,
+            'student_id' => $this->student->id,
+            'kp_place_id' => $quota->kp_place_id,
+            'status' => 'menunggu_pembimbing',
+        ]);
+    }
+
+    public function test_manual_selection_rejects_duplicate_or_unverified_student(): void
+    {
+        [$registration, $quota] = $this->verifiedRegistration($this->student, quota: 1);
+
+        $this->actingAs($this->koordinator)
+            ->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/place-selections/manual', [
+                'kp_registration_id' => $registration->id,
+                'kp_place_quota_id' => $quota->id,
+                'reason' => 'Penempatan pertama.',
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($this->koordinator)
+            ->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/place-selections/manual', [
+                'kp_registration_id' => $registration->id,
+                'kp_place_quota_id' => $quota->id,
+                'reason' => 'Duplikat.',
+            ])
+            ->assertSessionHasErrors('kp_registration_id');
+
+        $other = $this->makeUser('manual-unverified@student.test', ['mahasiswa']);
+        $otherStudent = $this->makeStudent($other, '2210631230099');
+        [$draftRegistration] = $this->draftRegistrationWithQuota($otherStudent);
+
+        $this->actingAs($this->koordinator)
+            ->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/place-selections/manual', [
+                'kp_registration_id' => $draftRegistration->id,
+                'kp_place_quota_id' => $quota->id,
+                'reason' => 'Belum valid.',
+            ])
+            ->assertSessionHasErrors('kp_registration_id');
+    }
+
     private function verifiedRegistration(Student $student, int $quota = 5): array
     {
         $period = KpPeriod::create([
