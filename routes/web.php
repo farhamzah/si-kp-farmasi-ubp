@@ -164,6 +164,8 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('final-scores/{finalScore}/unlock', [ScoreMonitoringController::class, 'unlock'])->name('final-scores.unlock');
             Route::get('score-logs', [ScoreLogController::class, 'index'])->name('score-logs.index');
             Route::get('recaps', [RecapController::class, 'index'])->name('recaps.index');
+            Route::get('recaps/{type}/preview', [RecapController::class, 'preview'])->name('recaps.preview');
+            Route::get('recaps/{type}/download/{format}', [RecapController::class, 'download'])->name('recaps.download');
             Route::get('recaps/students', [RecapController::class, 'students'])->name('recaps.students');
             Route::get('recaps/placements', [RecapController::class, 'placements'])->name('recaps.placements');
             Route::get('recaps/logbooks', [RecapController::class, 'logbooks'])->name('recaps.logbooks');

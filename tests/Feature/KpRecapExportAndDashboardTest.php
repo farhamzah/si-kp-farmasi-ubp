@@ -38,12 +38,16 @@ class KpRecapExportAndDashboardTest extends TestCase
         $this->actingAs($this->admin)->withSession(['active_role' => 'admin'])
             ->get('/management/recaps')
             ->assertOk()
-            ->assertSee('Rekap, Monitoring, dan Export KP');
+            ->assertSee('Rekap, Monitoring, dan Export KP')
+            ->assertSee('Preview')
+            ->assertSee('Excel');
 
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->get('/management/recaps/students')
             ->assertOk()
-            ->assertSee('Rekap Mahasiswa KP');
+            ->assertSee('Rekap Mahasiswa KP')
+            ->assertSee('Print Preview')
+            ->assertSee('PDF');
 
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
             ->get('/management/recaps')
@@ -64,6 +68,33 @@ class KpRecapExportAndDashboardTest extends TestCase
 
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
             ->get('/management/exports/scores')
+            ->assertForbidden();
+    }
+
+    public function test_recap_reports_can_be_previewed_printed_and_downloaded_by_management_only(): void
+    {
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/recaps/students/preview')
+            ->assertOk()
+            ->assertSee('Rekap Mahasiswa KP');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/recaps/placements/download/word')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/msword; charset=UTF-8');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/recaps/logbooks/download/pdf')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/recaps/scores/download/excel')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/management/recaps/scores/download/pdf')
             ->assertForbidden();
     }
 
