@@ -3,44 +3,91 @@
 namespace App\Http\Controllers\Management;
 
 use App\Http\Controllers\Controller;
+use App\Exports\KpRecapExport;
 use App\Http\Requests\Management\CancelSelectionRequest;
 use App\Http\Requests\Management\MoveSelectionRequest;
 use App\Http\Requests\Management\StoreManualPlaceSelectionRequest;
-use App\Models\KpPeriod;
 use App\Models\KpPlaceQuota;
 use App\Models\KpPlaceSelection;
 use App\Models\KpRegistration;
 use App\Services\KpPlaceSelectionService;
+use App\Services\PlaceSelectionMonitoringReportService;
+use App\Support\SimplePdfReport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class PlaceSelectionMonitoringController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, PlaceSelectionMonitoringReportService $report): View
     {
-        $selections = KpPlaceSelection::query()
-            ->with(['period', 'student.user', 'place', 'quota'])
-            ->when($request->filled('period'), fn ($query) => $query->where('kp_period_id', $request->period))
-            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->status))
-            ->when($request->filled('q'), function ($query) use ($request) {
-                $keyword = $request->q;
-                $query->where(function ($inner) use ($keyword) {
-                    $inner->whereHas('student', fn ($student) => $student->where('nim', 'like', "%{$keyword}%")
-                        ->orWhereHas('user', fn ($user) => $user->where('name', 'like', "%{$keyword}%")->orWhere('email', 'like', "%{$keyword}%")))
-                        ->orWhereHas('place', fn ($place) => $place->where('name', 'like', "%{$keyword}%"));
-                });
-            })
-            ->latest('selected_at')
+        $selections = $report->query($request)
             ->paginate(10)
             ->withQueryString();
 
         return view('management.place-selections.index', [
             'selections' => $selections,
-            'periods' => KpPeriod::latest()->get(),
+            'periods' => $report->periods(),
             'filters' => $request->only(['period', 'status', 'q']),
-            'stats' => $this->stats(),
+            'stats' => $report->stats(),
         ]);
+    }
+
+    public function reportPreview(Request $request, PlaceSelectionMonitoringReportService $report): View
+    {
+        return view('management.place-selections.report-preview', [
+            'rows' => $report->rows($request),
+            'stats' => $report->stats(),
+            'filters' => $report->filterSummary($request),
+            'printMode' => $request->boolean('print'),
+        ]);
+    }
+
+    public function reportDownload(string $format, Request $request, PlaceSelectionMonitoringReportService $report): Response|BinaryFileResponse
+    {
+        abort_unless(in_array($format, ['word', 'excel', 'pdf'], true), 404);
+
+        $rows = $report->rows($request);
+        $filename = 'monitoring-pemilihan-tempat-'.now()->format('Ymd-His');
+
+        if ($format === 'excel') {
+            return Excel::download(new KpRecapExport($rows), $filename.'.xlsx');
+        }
+
+        if ($format === 'pdf') {
+            $headings = array_keys($rows->first() ?? [
+                'No' => '',
+                'Mahasiswa' => '',
+                'NIM' => '',
+                'Periode' => '',
+                'Tempat KP' => '',
+                'Waktu Pilih' => '',
+                'Status' => '',
+            ]);
+
+            return response(SimplePdfReport::table(
+                'Monitoring Pemilihan Tempat KP',
+                $report->filterSummary($request),
+                $headings,
+                $rows->map(fn ($row) => array_values($row))->all()
+            ), 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="'.$filename.'.pdf"',
+            ]);
+        }
+
+        return response()
+            ->view('management.place-selections.report-word', [
+                'rows' => $rows,
+                'stats' => $report->stats(),
+                'filters' => $report->filterSummary($request),
+            ], 200, [
+                'Content-Type' => 'application/msword; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="'.$filename.'.doc"',
+            ]);
     }
 
     public function show(KpPlaceSelection $selection): View
@@ -93,24 +140,6 @@ class PlaceSelectionMonitoringController extends Controller
         $newSelection = $service->moveSelection($request->user(), $selection, KpPlaceQuota::findOrFail($request->kp_place_quota_id), $request->reason);
 
         return redirect()->route('management.place-selections.show', $newSelection)->with('status', 'Pilihan tempat KP berhasil dipindahkan.');
-    }
-
-    private function stats(): array
-    {
-        $verified = \App\Models\KpRegistration::where('status', 'terverifikasi')->count();
-        $selected = KpPlaceSelection::where('status', 'aktif')->count();
-        $quota = KpPlaceQuota::sum('quota');
-        $filled = KpPlaceSelection::where('status', 'aktif')->count();
-
-        return [
-            'verified' => $verified,
-            'selected' => $selected,
-            'not_selected' => max(0, $verified - $selected),
-            'waiting' => \App\Models\KpWaitingList::where('status', 'menunggu')->count(),
-            'total_quota' => $quota,
-            'remaining_quota' => max(0, $quota - $filled),
-            'full_places' => KpPlaceQuota::get()->filter->isFull()->count(),
-        ];
     }
 
     private function eligibleManualRegistrations()

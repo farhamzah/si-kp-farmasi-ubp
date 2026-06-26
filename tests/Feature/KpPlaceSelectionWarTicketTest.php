@@ -241,9 +241,51 @@ class KpPlaceSelectionWarTicketTest extends TestCase
     {
         $this->verifiedRegistration($this->student);
 
-        $this->actingAs($this->admin)->withSession(['active_role' => 'admin'])->get('/management/place-selections')->assertOk()->assertSee('Monitoring Pemilihan');
+        $this->actingAs($this->admin)->withSession(['active_role' => 'admin'])->get('/management/place-selections')->assertOk()->assertSee('Monitoring Pemilihan')->assertSee('Print Preview')->assertSee('Excel');
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])->get('/management/place-selections')->assertOk();
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])->get('/management/place-selections')->assertForbidden();
+    }
+
+    public function test_management_can_preview_print_and_download_place_selection_report(): void
+    {
+        [$registration, $quota] = $this->verifiedRegistration($this->student);
+        KpPlaceSelection::create([
+            'kp_period_id' => $registration->kp_period_id,
+            'kp_registration_id' => $registration->id,
+            'student_id' => $this->student->id,
+            'kp_place_id' => $quota->kp_place_id,
+            'kp_place_quota_id' => $quota->id,
+            'selected_at' => now(),
+            'selected_by' => $this->mahasiswa->id,
+            'status' => 'aktif',
+            'active_key' => $registration->kp_period_id.'-'.$this->student->id,
+        ]);
+
+        $this->actingAs($this->koordinator)
+            ->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/place-selections/report/preview?status=aktif')
+            ->assertOk()
+            ->assertSee('Monitoring Pemilihan Tempat KP')
+            ->assertSee($this->student->nim)
+            ->assertSee('Apotek Sehat');
+
+        $this->actingAs($this->koordinator)
+            ->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/place-selections/report/download/word?status=aktif')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/msword; charset=UTF-8');
+
+        $this->actingAs($this->koordinator)
+            ->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/place-selections/report/download/pdf?status=aktif')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $this->actingAs($this->koordinator)
+            ->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/place-selections/report/download/excel?status=aktif')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     }
 
     public function test_admin_can_cancel_and_move_selection(): void
