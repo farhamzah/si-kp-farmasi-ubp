@@ -2,8 +2,28 @@
 @section('title','Penempatan KP - '.config('app.name'))
 @section('page_title','Penempatan KP')
 @section('content')
+@php
+    $reportQuery = array_filter([
+        'q' => $filters['q'] ?? null,
+        'place' => $filters['place'] ?? null,
+        'period' => $filters['period'] ?? null,
+        'status' => $filters['status'] ?? null,
+        'internal_supervisor' => $filters['internal_supervisor'] ?? null,
+        'field_supervisor' => $filters['field_supervisor'] ?? null,
+        'sort' => $filters['sort'] ?? null,
+    ], fn ($value) => filled($value));
+@endphp
 <div class="space-y-5">
-<div class="flex justify-end"><a href="{{ route('management.kp-assignments.create') }}" class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white">Buat Penempatan</a></div>
+<div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+    <div class="grid gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap">
+        <a href="{{ route('management.kp-assignments.report.preview', $reportQuery) }}" target="_blank" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">Preview</a>
+        <a href="{{ route('management.kp-assignments.report.preview', $reportQuery + ['print' => 1]) }}" target="_blank" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">Print</a>
+        <a href="{{ route('management.kp-assignments.report.download', ['format' => 'word'] + $reportQuery) }}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">Word</a>
+        <a href="{{ route('management.kp-assignments.report.download', ['format' => 'excel'] + $reportQuery) }}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">Excel</a>
+        <a href="{{ route('management.kp-assignments.report.download', ['format' => 'pdf'] + $reportQuery) }}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">PDF</a>
+    </div>
+    <a href="{{ route('management.kp-assignments.create') }}" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white">Buat Penempatan</a>
+</div>
 <section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
     <form method="GET" class="space-y-3">
         <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-[1.25fr_1fr_220px_220px]">
@@ -17,14 +37,19 @@
             </select>
             <select name="status" class="min-h-11 rounded-lg border border-slate-300 px-3 py-2 text-sm">
                 <option value="">Semua Status</option>
-                @foreach(['menunggu_pembimbing'=>'Menunggu Pembimbing','aktif'=>'Aktif','berjalan'=>'Berjalan','selesai'=>'Selesai','dibatalkan'=>'Dibatalkan'] as $value=>$label)
+                @foreach($statusOptions as $value=>$label)
                     <option value="{{ $value }}" @selected(($filters['status'] ?? '') === $value)>{{ $label }}</option>
                 @endforeach
             </select>
         </div>
-        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_160px_96px]">
+        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_220px_160px_96px]">
             <input name="internal_supervisor" value="{{ $filters['internal_supervisor'] ?? '' }}" placeholder="Cari pembimbing dalam" class="min-h-11 rounded-lg border border-slate-300 px-3 py-2 text-sm">
             <input name="field_supervisor" value="{{ $filters['field_supervisor'] ?? '' }}" placeholder="Cari pembimbing lapangan" class="min-h-11 rounded-lg border border-slate-300 px-3 py-2 text-sm">
+            <select name="sort" class="min-h-11 rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                @foreach($sortOptions as $value => $label)
+                    <option value="{{ $value }}" @selected(($filters['sort'] ?? 'latest') === $value)>Urut: {{ $label }}</option>
+                @endforeach
+            </select>
             <button class="min-h-11 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Filter</button>
             <a href="{{ route('management.kp-assignments.index') }}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Reset</a>
         </div>

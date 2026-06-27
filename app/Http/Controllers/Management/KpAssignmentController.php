@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Management;
 
+use App\Exports\KpRecapExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Management\AssignFieldSupervisorRequest;
 use App\Http\Requests\Management\AssignInternalSupervisorRequest;
@@ -10,57 +11,86 @@ use App\Http\Requests\Management\StoreKpAssignmentRequest;
 use App\Http\Requests\Management\UpdateKpAssignmentRequest;
 use App\Models\FieldSupervisor;
 use App\Models\KpAssignment;
-use App\Models\KpPeriod;
 use App\Models\KpPlaceSelection;
 use App\Models\Lecturer;
+use App\Services\KpAssignmentReportService;
 use App\Services\KpAssignmentService;
+use App\Support\SimplePdfReport;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class KpAssignmentController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, KpAssignmentReportService $report): View
     {
-        $assignments = KpAssignment::query()
-            ->with(['period', 'student.user', 'place', 'internalSupervisor.user', 'fieldSupervisor.user'])
-            ->when($request->filled('period'), fn ($q) => $q->where('kp_period_id', $request->period))
-            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
-            ->when($request->filled('q'), function ($q) use ($request) {
-                $keyword = $request->q;
-                $q->whereHas('student', fn ($student) => $student->where('nim', 'like', "%{$keyword}%")
-                    ->orWhereHas('user', fn ($user) => $user->where('name', 'like', "%{$keyword}%")->orWhere('email', 'like', "%{$keyword}%")));
-            })
-            ->when($request->filled('place'), function ($q) use ($request) {
-                $keyword = $request->place;
-                $q->whereHas('place', fn ($place) => $place
-                    ->where('name', 'like', "%{$keyword}%")
-                    ->orWhere('city', 'like', "%{$keyword}%")
-                    ->orWhere('address', 'like', "%{$keyword}%"));
-            })
-            ->when($request->filled('internal_supervisor'), function ($q) use ($request) {
-                $keyword = $request->internal_supervisor;
-                $q->whereHas('internalSupervisor', fn ($lecturer) => $lecturer
-                    ->where('nidn_nip', 'like', "%{$keyword}%")
-                    ->orWhere('employee_number', 'like', "%{$keyword}%")
-                    ->orWhereHas('user', fn ($user) => $user->where('name', 'like', "%{$keyword}%")->orWhere('email', 'like', "%{$keyword}%")));
-            })
-            ->when($request->filled('field_supervisor'), function ($q) use ($request) {
-                $keyword = $request->field_supervisor;
-                $q->whereHas('fieldSupervisor', fn ($supervisor) => $supervisor
-                    ->where('institution_name', 'like', "%{$keyword}%")
-                    ->orWhere('position', 'like', "%{$keyword}%")
-                    ->orWhereHas('user', fn ($user) => $user->where('name', 'like', "%{$keyword}%")->orWhere('email', 'like', "%{$keyword}%")));
-            })
-            ->latest()
+        $assignments = $report->query($request)
             ->paginate(10)
             ->withQueryString();
 
         return view('management.assignments.index', [
             'assignments' => $assignments,
-            'periods' => KpPeriod::latest()->get(),
-            'filters' => $request->only(['period', 'status', 'q', 'place', 'internal_supervisor', 'field_supervisor']),
+            'periods' => $report->periods(),
+            'filters' => $request->only(['period', 'status', 'q', 'place', 'internal_supervisor', 'field_supervisor', 'sort']),
+            'statusOptions' => $report->statusOptions(),
+            'sortOptions' => $report->sortOptions(),
         ]);
+    }
+
+    public function reportPreview(Request $request, KpAssignmentReportService $report): View
+    {
+        return view('management.assignments.report-preview', [
+            'rows' => $report->rows($request),
+            'filters' => $report->filterSummary($request),
+            'printMode' => $request->boolean('print'),
+        ]);
+    }
+
+    public function reportDownload(string $format, Request $request, KpAssignmentReportService $report): Response|BinaryFileResponse
+    {
+        abort_unless(in_array($format, ['word', 'excel', 'pdf'], true), 404);
+
+        $rows = $report->rows($request);
+        $filename = 'penempatan-kp-'.now()->format('Ymd-His');
+
+        if ($format === 'excel') {
+            return Excel::download(new KpRecapExport($rows), $filename.'.xlsx');
+        }
+
+        if ($format === 'pdf') {
+            $headings = array_keys($rows->first() ?? [
+                'No' => '',
+                'Mahasiswa' => '',
+                'NIM' => '',
+                'Periode' => '',
+                'Tempat KP' => '',
+                'Pembimbing Dalam' => '',
+                'Pembimbing Lapangan' => '',
+                'Status' => '',
+            ]);
+
+            return response(SimplePdfReport::table(
+                'Penempatan KP',
+                $report->filterSummary($request),
+                $headings,
+                $rows->map(fn ($row) => array_values($row))->all()
+            ), 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="'.$filename.'.pdf"',
+            ]);
+        }
+
+        return response()
+            ->view('management.assignments.report-word', [
+                'rows' => $rows,
+                'filters' => $report->filterSummary($request),
+            ], 200, [
+                'Content-Type' => 'application/msword; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="'.$filename.'.doc"',
+            ]);
     }
 
     public function create(): View

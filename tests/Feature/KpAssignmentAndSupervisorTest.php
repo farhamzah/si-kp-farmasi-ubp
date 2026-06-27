@@ -191,6 +191,67 @@ class KpAssignmentAndSupervisorTest extends TestCase
             ->assertDontSee('Budi Santoso');
     }
 
+    public function test_management_assignment_report_preview_and_download_follow_filters(): void
+    {
+        $this->student->user->update(['name' => 'Rahma Septiani']);
+        $this->lecturerUser->update(['name' => 'apt. Farhamzah, S.Si., M.T.I']);
+        $this->fieldUser->update(['name' => 'Pak Deden']);
+        $assignment = $this->assignment($this->lecturer, $this->fieldSupervisor);
+        $assignment->place->update(['name' => 'LAFI AU', 'city' => 'Bandung']);
+
+        $otherUser = $this->makeUser('other-report-student@test.local', ['mahasiswa']);
+        $otherStudent = $this->makeStudent($otherUser, '2210631230088');
+        $otherStudent->user->update(['name' => 'Budi Santoso']);
+        $otherAssignment = $this->assignment(null, null, $otherStudent);
+        $otherAssignment->place->update(['name' => 'RSUD Karawang', 'city' => 'Karawang']);
+
+        $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->get('/management/kp-assignments?place=LAFI&sort=student')
+            ->assertOk()
+            ->assertSee('Preview')
+            ->assertSee('Print')
+            ->assertSee('Word')
+            ->assertSee('Excel')
+            ->assertSee('PDF')
+            ->assertSee('Rahma Septiani')
+            ->assertDontSee('Budi Santoso');
+
+        $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->get('/management/kp-assignments/report/preview?place=LAFI&sort=student')
+            ->assertOk()
+            ->assertSee('Penempatan KP')
+            ->assertSee('Tempat KP')
+            ->assertSee('Rahma Septiani')
+            ->assertDontSee('Budi Santoso');
+
+        $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->get('/management/kp-assignments/report/preview?place=LAFI&print=1')
+            ->assertOk()
+            ->assertSee('onload="window.print()"', false);
+
+        $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->get('/management/kp-assignments/report/download/word?place=LAFI')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/msword; charset=UTF-8');
+
+        $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->get('/management/kp-assignments/report/download/pdf?place=LAFI')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+
+        $excelResponse = $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->get('/management/kp-assignments/report/download/excel?place=LAFI')
+            ->assertOk();
+
+        $this->assertStringContainsString('.xlsx', (string) $excelResponse->headers->get('Content-Disposition'));
+    }
+
     private function assignment(?Lecturer $lecturer = null, ?FieldSupervisor $fieldSupervisor = null, ?Student $student = null): KpAssignment
     {
         $selection = $this->activeSelection($student ?? $this->student);

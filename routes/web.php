@@ -125,6 +125,8 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('waiting-lists', [WaitingListController::class, 'index'])->name('waiting-lists.index');
             Route::post('waiting-lists/{waitingList}/cancel', [WaitingListController::class, 'cancel'])->name('waiting-lists.cancel');
             Route::get('selection-logs', [SelectionLogController::class, 'index'])->name('selection-logs.index');
+            Route::get('kp-assignments/report/preview', [KpAssignmentController::class, 'reportPreview'])->name('kp-assignments.report.preview');
+            Route::get('kp-assignments/report/download/{format}', [KpAssignmentController::class, 'reportDownload'])->name('kp-assignments.report.download');
             Route::resource('kp-assignments', KpAssignmentController::class)->except(['destroy']);
             Route::post('kp-assignments/{assignment}/assign-internal-supervisor', [KpAssignmentController::class, 'assignInternalSupervisor'])->name('kp-assignments.assign-internal-supervisor');
             Route::post('kp-assignments/{assignment}/assign-field-supervisor', [KpAssignmentController::class, 'assignFieldSupervisor'])->name('kp-assignments.assign-field-supervisor');
