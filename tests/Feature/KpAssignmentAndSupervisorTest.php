@@ -55,6 +55,38 @@ class KpAssignmentAndSupervisorTest extends TestCase
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])->get('/management/kp-assignments')->assertForbidden();
     }
 
+    public function test_assignment_detail_and_edit_preserve_queue_return_url(): void
+    {
+        $assignment = $this->assignment($this->lecturer, $this->fieldSupervisor);
+        $assignment->place->update(['name' => 'LAFI AU']);
+        $queueUrl = '/management/kp-assignments?place=LAFI&page=6';
+
+        $response = $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->get('/management/kp-assignments/'.$assignment->id.'?return_url='.urlencode(url($queueUrl)))
+            ->assertOk()
+            ->assertSee('Kembali ke Penempatan KP')
+            ->assertSee('return_url=', false);
+
+        $response->assertSee(e(url($queueUrl)), false);
+
+        $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->get('/management/kp-assignments/'.$assignment->id.'/edit?return_url='.urlencode(url($queueUrl)))
+            ->assertOk()
+            ->assertSee('Kembali ke Penempatan KP')
+            ->assertSee('name="return_url"', false);
+
+        $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->put('/management/kp-assignments/'.$assignment->id, [
+                'internal_supervisor_id' => $this->lecturer->id,
+                'field_supervisor_id' => $this->fieldSupervisor->id,
+                'return_url' => url($queueUrl),
+            ])
+            ->assertRedirect('/management/kp-assignments/'.$assignment->id.'?return_url='.urlencode(url($queueUrl)));
+    }
+
     public function test_admin_can_create_assignment_from_active_selection_and_duplicate_is_rejected(): void
     {
         $selection = $this->activeSelection($this->student);

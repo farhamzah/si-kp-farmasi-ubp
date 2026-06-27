@@ -92,12 +92,16 @@ class KpAssignmentController extends Controller
     {
         return view('management.assignments.show', [
             'assignment' => $kpAssignment->load(['period', 'registration', 'selection', 'student.user', 'place', 'internalSupervisor.user', 'fieldSupervisor.user', 'logs.user']),
+            'backUrl' => $this->safeAssignmentBackUrl(request('return_url')),
         ]);
     }
 
     public function edit(KpAssignment $kpAssignment): View
     {
-        return view('management.assignments.edit', $this->formData() + ['assignment' => $kpAssignment]);
+        return view('management.assignments.edit', $this->formData() + [
+            'assignment' => $kpAssignment,
+            'backUrl' => $this->safeAssignmentBackUrl(request('return_url')),
+        ]);
     }
 
     public function update(UpdateKpAssignmentRequest $request, KpAssignment $kpAssignment, KpAssignmentService $service): RedirectResponse
@@ -110,7 +114,12 @@ class KpAssignmentController extends Controller
             $request->note
         );
 
-        return redirect()->route('management.kp-assignments.show', $kpAssignment)->with('status', 'Pembimbing penempatan berhasil diperbarui.');
+        return redirect()
+            ->route('management.kp-assignments.show', array_filter([
+                'kp_assignment' => $kpAssignment,
+                'return_url' => $this->safeAssignmentBackUrl($request->input('return_url')),
+            ]))
+            ->with('status', 'Pembimbing penempatan berhasil diperbarui.');
     }
 
     public function assignInternalSupervisor(AssignInternalSupervisorRequest $request, KpAssignment $assignment, KpAssignmentService $service): RedirectResponse
@@ -146,5 +155,28 @@ class KpAssignmentController extends Controller
             'lecturers' => Lecturer::with('user')->whereHas('user.roles', fn ($q) => $q->where('name', 'pembimbing_dalam'))->orderBy('nidn_nip')->get(),
             'fieldSupervisors' => FieldSupervisor::with('user')->whereHas('user.roles', fn ($q) => $q->where('name', 'pembimbing_lapangan'))->orderBy('institution_name')->get(),
         ];
+    }
+
+    private function safeAssignmentBackUrl(?string $returnUrl): string
+    {
+        $fallback = route('management.kp-assignments.index');
+
+        if (! $returnUrl) {
+            return $fallback;
+        }
+
+        $appHost = parse_url(config('app.url'), PHP_URL_HOST);
+        $returnHost = parse_url($returnUrl, PHP_URL_HOST);
+        $returnPath = parse_url($returnUrl, PHP_URL_PATH);
+
+        if ($returnHost && $appHost && $returnHost !== $appHost) {
+            return $fallback;
+        }
+
+        if ($returnPath !== '/management/kp-assignments') {
+            return $fallback;
+        }
+
+        return $returnUrl;
     }
 }

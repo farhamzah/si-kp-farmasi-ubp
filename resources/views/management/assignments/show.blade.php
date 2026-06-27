@@ -4,10 +4,15 @@
 @section('content')
 @php($studentDisplay = app(\App\Services\KpMasterDataReadService::class)->getStudentDisplayData($assignment->student))
 @php($internalSupervisorDisplay = $assignment->internalSupervisor ? app(\App\Services\KpMasterDataReadService::class)->getLecturerDisplayData($assignment->internalSupervisor) : null)
-<div class="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
-    @if(session('status'))
-        <div class="xl:col-span-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('status') }}</div>
-    @endif
+<div class="space-y-5">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <a href="{{ $backUrl }}" class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:border-cyan-300 hover:text-cyan-700">
+            Kembali ke Penempatan KP
+        </a>
+        <p class="text-sm text-slate-500">Kelola pembimbing, status, dan riwayat penempatan mahasiswa.</p>
+    </div>
+
+    <div class="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
     @if($errors->any())
         <div class="xl:col-span-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ $errors->first() }}</div>
     @endif
@@ -31,7 +36,7 @@
             </div>
         </div>
         <div class="mt-5 flex gap-2">
-            <a href="{{ route('management.kp-assignments.edit',$assignment) }}" class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white">Edit Pembimbing</a>
+            <a href="{{ route('management.kp-assignments.edit', ['kp_assignment' => $assignment, 'return_url' => $backUrl]) }}" class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white">Edit Pembimbing</a>
             @if($assignment->status !== 'dibatalkan')
                 <form method="POST" action="{{ route('management.kp-assignments.cancel',$assignment) }}" onsubmit="return confirm('Batalkan penempatan ini?')">
                     @csrf
@@ -58,5 +63,6 @@
             @endforelse
         </div>
     </section>
+    </div>
 </div>
 @endsection
