@@ -31,6 +31,27 @@ class KpAssignmentController extends Controller
                 $q->whereHas('student', fn ($student) => $student->where('nim', 'like', "%{$keyword}%")
                     ->orWhereHas('user', fn ($user) => $user->where('name', 'like', "%{$keyword}%")->orWhere('email', 'like', "%{$keyword}%")));
             })
+            ->when($request->filled('place'), function ($q) use ($request) {
+                $keyword = $request->place;
+                $q->whereHas('place', fn ($place) => $place
+                    ->where('name', 'like', "%{$keyword}%")
+                    ->orWhere('city', 'like', "%{$keyword}%")
+                    ->orWhere('address', 'like', "%{$keyword}%"));
+            })
+            ->when($request->filled('internal_supervisor'), function ($q) use ($request) {
+                $keyword = $request->internal_supervisor;
+                $q->whereHas('internalSupervisor', fn ($lecturer) => $lecturer
+                    ->where('nidn_nip', 'like', "%{$keyword}%")
+                    ->orWhere('employee_number', 'like', "%{$keyword}%")
+                    ->orWhereHas('user', fn ($user) => $user->where('name', 'like', "%{$keyword}%")->orWhere('email', 'like', "%{$keyword}%")));
+            })
+            ->when($request->filled('field_supervisor'), function ($q) use ($request) {
+                $keyword = $request->field_supervisor;
+                $q->whereHas('fieldSupervisor', fn ($supervisor) => $supervisor
+                    ->where('institution_name', 'like', "%{$keyword}%")
+                    ->orWhere('position', 'like', "%{$keyword}%")
+                    ->orWhereHas('user', fn ($user) => $user->where('name', 'like', "%{$keyword}%")->orWhere('email', 'like', "%{$keyword}%")));
+            })
             ->latest()
             ->paginate(10)
             ->withQueryString();
@@ -38,7 +59,7 @@ class KpAssignmentController extends Controller
         return view('management.assignments.index', [
             'assignments' => $assignments,
             'periods' => KpPeriod::latest()->get(),
-            'filters' => $request->only(['period', 'status', 'q']),
+            'filters' => $request->only(['period', 'status', 'q', 'place', 'internal_supervisor', 'field_supervisor']),
         ]);
     }
 

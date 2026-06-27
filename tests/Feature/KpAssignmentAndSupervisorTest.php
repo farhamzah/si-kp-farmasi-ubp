@@ -117,9 +117,51 @@ class KpAssignmentAndSupervisorTest extends TestCase
         $this->assertDatabaseHas('kp_assignment_logs', ['kp_assignment_id' => $assignment->id, 'action' => 'assignment_cancelled']);
     }
 
-    private function assignment(?Lecturer $lecturer = null, ?FieldSupervisor $fieldSupervisor = null): KpAssignment
+    public function test_management_assignment_search_can_filter_by_place_and_supervisors(): void
     {
-        $selection = $this->activeSelection($this->student);
+        $this->student->user->update(['name' => 'Rahma Septiani']);
+        $this->lecturerUser->update(['name' => 'apt. Farhamzah, S.Si., M.T.I']);
+        $this->fieldUser->update(['name' => 'Pak Deden']);
+        $assignment = $this->assignment($this->lecturer, $this->fieldSupervisor);
+        $assignment->place->update(['name' => 'LAFI AU', 'city' => 'Bandung']);
+
+        $otherUser = $this->makeUser('other-student@test.local', ['mahasiswa']);
+        $otherStudent = $this->makeStudent($otherUser, '2210631230099');
+        $otherStudent->user->update(['name' => 'Budi Santoso']);
+        $otherLecturerUser = $this->makeUser('other-supervisor@test.local', ['pembimbing_dalam']);
+        $otherLecturerUser->update(['name' => 'Dosen Pembanding']);
+        $otherLecturer = Lecturer::create(['user_id' => $otherLecturerUser->id, 'nidn_nip' => '998877', 'status' => 'active']);
+        $otherFieldUser = $this->makeUser('other-field@test.local', ['pembimbing_lapangan']);
+        $otherFieldUser->update(['name' => 'Bu Nina']);
+        $otherFieldSupervisor = FieldSupervisor::create(['user_id' => $otherFieldUser->id, 'institution_name' => 'RSUD Karawang', 'position' => 'Apoteker', 'status' => 'active']);
+        $otherAssignment = $this->assignment($otherLecturer, $otherFieldSupervisor, $otherStudent);
+        $otherAssignment->place->update(['name' => 'RSUD Karawang', 'city' => 'Karawang']);
+
+        $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->get('/management/kp-assignments?place=LAFI')
+            ->assertOk()
+            ->assertSee('Rahma Septiani')
+            ->assertDontSee('Budi Santoso');
+
+        $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->get('/management/kp-assignments?internal_supervisor=Pembanding')
+            ->assertOk()
+            ->assertSee('Budi Santoso')
+            ->assertDontSee('Rahma Septiani');
+
+        $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->get('/management/kp-assignments?field_supervisor=Deden')
+            ->assertOk()
+            ->assertSee('Rahma Septiani')
+            ->assertDontSee('Budi Santoso');
+    }
+
+    private function assignment(?Lecturer $lecturer = null, ?FieldSupervisor $fieldSupervisor = null, ?Student $student = null): KpAssignment
+    {
+        $selection = $this->activeSelection($student ?? $this->student);
 
         return KpAssignment::create([
             'kp_period_id' => $selection->kp_period_id,
