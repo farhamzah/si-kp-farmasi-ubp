@@ -137,7 +137,21 @@
 
                     <div>
                         <label for="password" class="mb-2 block text-sm font-bold text-slate-800">Kata Sandi</label>
-                        <input id="password" name="password" type="password" required placeholder="Masukkan kata sandi" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-950 outline-none transition placeholder:text-slate-400 hover:border-slate-400 focus:border-teal-600 focus:bg-white focus:ring-4 focus:ring-teal-600/15">
+                        <div class="relative">
+                            <input id="password" name="password" type="password" required placeholder="Masukkan kata sandi" class="w-full rounded-xl border border-slate-300 bg-slate-50 py-3 pl-4 pr-12 text-sm font-medium text-slate-950 outline-none transition placeholder:text-slate-400 hover:border-slate-400 focus:border-teal-600 focus:bg-white focus:ring-4 focus:ring-teal-600/15">
+                            <button type="button" id="toggle-password" class="absolute inset-y-0 right-2 my-auto inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-600/30" aria-label="Tampilkan kata sandi" aria-pressed="false">
+                                <svg id="password-eye-open" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12 18 18.75 12 18.75 2.25 12 2.25 12Z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15.25A3.25 3.25 0 1 0 12 8.75a3.25 3.25 0 0 0 0 6.5Z"/>
+                                </svg>
+                                <svg id="password-eye-closed" class="hidden h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.58 10.58A2 2 0 0 0 12 14a2 2 0 0 0 1.42-.58"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.3 7.53C4.18 9.18 2.25 12 2.25 12S6 18.75 12 18.75c1.64 0 3.14-.5 4.43-1.2"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.38 5.58C18.94 6.72 21.75 12 21.75 12s-.78 1.4-2.23 2.86"/>
+                                </svg>
+                            </button>
+                        </div>
                         @error('password')
                             <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p>
                         @enderror
@@ -165,4 +179,22 @@
         </section>
     </div>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const passwordInput = document.getElementById('password');
+        const toggleButton = document.getElementById('toggle-password');
+        const eyeOpen = document.getElementById('password-eye-open');
+        const eyeClosed = document.getElementById('password-eye-closed');
+
+        toggleButton?.addEventListener('click', () => {
+            const shouldShow = passwordInput.type === 'password';
+            passwordInput.type = shouldShow ? 'text' : 'password';
+            toggleButton.setAttribute('aria-label', shouldShow ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi');
+            toggleButton.setAttribute('aria-pressed', shouldShow ? 'true' : 'false');
+            eyeOpen.classList.toggle('hidden', shouldShow);
+            eyeClosed.classList.toggle('hidden', ! shouldShow);
+            passwordInput.focus();
+        });
+    });
+</script>
 @endsection

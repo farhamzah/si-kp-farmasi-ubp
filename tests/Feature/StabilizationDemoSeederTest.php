@@ -20,7 +20,9 @@ class StabilizationDemoSeederTest extends TestCase
     {
         $response = $this->get('/login')
             ->assertOk()
-            ->assertSee('Portal Kerja Praktek Farmasi UBP');
+            ->assertSee('Portal Kerja Praktek Farmasi UBP')
+            ->assertSee('toggle-password')
+            ->assertSee('Tampilkan kata sandi');
 
         $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
         $this->assertStringContainsString('no-cache', $response->headers->get('Cache-Control'));
