@@ -79,6 +79,23 @@ class KpCompetencyGuideTest extends TestCase
             'status' => 'aktif',
         ]);
 
+        $this->actingAs($this->koordinator)
+            ->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/competencies', [
+                'kp_period_id' => $this->assignment->kp_period_id,
+                'place_types' => ['apotek', 'rumah_sakit'],
+                'title' => 'Komunikasi profesional lintas fasilitas',
+                'description' => 'Mahasiswa mampu berkomunikasi dengan tenaga kesehatan.',
+                'sort_order' => 2,
+                'status' => 'aktif',
+            ])
+            ->assertRedirect();
+
+        $multiTypeCompetency = KpCompetency::where('title', 'Komunikasi profesional lintas fasilitas')->firstOrFail();
+        $this->assertNull($multiTypeCompetency->place_type);
+        $this->assertSame(['apotek', 'rumah_sakit'], $multiTypeCompetency->place_types);
+        $this->assertSame('Apotek, Rumah Sakit', $multiTypeCompetency->placeTypeLabel());
+
         $this->actingAs($this->mahasiswa)
             ->withSession(['active_role' => 'mahasiswa'])
             ->get('/management/competencies')
@@ -140,6 +157,16 @@ class KpCompetencyGuideTest extends TestCase
             'title' => 'Rekonsiliasi obat rumah sakit',
             'status' => 'aktif',
         ]);
+        $multiType = KpCompetency::create([
+            'place_types' => ['apotek', 'rumah_sakit'],
+            'title' => 'Komunikasi profesional',
+            'status' => 'aktif',
+        ]);
+        $industry = KpCompetency::create([
+            'place_types' => ['industri', 'distributor'],
+            'title' => 'Dokumentasi produksi dan distribusi',
+            'status' => 'aktif',
+        ]);
 
         $this->actingAs($this->fieldUser)
             ->withSession(['active_role' => 'pembimbing_lapangan'])
@@ -147,7 +174,9 @@ class KpCompetencyGuideTest extends TestCase
             ->assertOk()
             ->assertSee($general->title)
             ->assertSee($apotek->title)
-            ->assertDontSee($hospital->title);
+            ->assertSee($multiType->title)
+            ->assertDontSee($hospital->title)
+            ->assertDontSee($industry->title);
 
         $this->actingAs($this->fieldUser)
             ->withSession(['active_role' => 'pembimbing_lapangan'])
@@ -170,7 +199,9 @@ class KpCompetencyGuideTest extends TestCase
             ->assertOk()
             ->assertSee($general->title)
             ->assertSee($hospital->title)
-            ->assertDontSee($apotek->title);
+            ->assertSee($multiType->title)
+            ->assertDontSee($apotek->title)
+            ->assertDontSee($industry->title);
     }
 
     public function test_internal_supervisor_can_view_but_not_update_competencies(): void

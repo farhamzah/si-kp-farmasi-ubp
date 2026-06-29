@@ -22,10 +22,10 @@ class KpCompetencyController extends Controller
         $competencies = KpCompetency::query()
             ->with(['period', 'achievements'])
             ->when($periodId, fn ($query) => $query->where('kp_period_id', $periodId))
-            ->when($placeType, fn ($query) => $query->where('place_type', $placeType))
             ->orderBy('sort_order')
             ->orderBy('title')
-            ->get();
+            ->get()
+            ->when($placeType, fn ($items) => $items->filter(fn (KpCompetency $competency) => $competency->appliesToPlaceType($placeType))->values());
 
         $assignments = KpAssignment::query()
             ->with(['period', 'student.user', 'place', 'internalSupervisor.user', 'fieldSupervisor.user', 'competencyAchievements'])
@@ -71,13 +71,30 @@ class KpCompetencyController extends Controller
 
     private function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'kp_period_id' => ['nullable', 'integer', 'exists:kp_periods,id'],
             'place_type' => ['nullable', Rule::in(KpPlace::TYPES)],
+            'place_types' => ['nullable', 'array'],
+            'place_types.*' => ['string', Rule::in(KpPlace::TYPES)],
             'title' => ['required', 'string', 'max:150'],
             'description' => ['nullable', 'string', 'max:2000'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:999'],
             'status' => ['required', Rule::in(['aktif', 'nonaktif'])],
         ]);
+
+        $types = collect($data['place_types'] ?? [])
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($types === [] && filled($data['place_type'] ?? null)) {
+            $types = [$data['place_type']];
+        }
+
+        $data['place_types'] = $types === [] ? null : $types;
+        $data['place_type'] = count($types) === 1 ? $types[0] : null;
+
+        return $data;
     }
 }

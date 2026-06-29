@@ -9,12 +9,20 @@ class KpCompetency extends Model
     protected $fillable = [
         'kp_period_id',
         'place_type',
+        'place_types',
         'title',
         'description',
         'sort_order',
         'status',
         'created_by',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'place_types' => 'array',
+        ];
+    }
 
     public function period()
     {
@@ -43,7 +51,40 @@ class KpCompetency extends Model
 
     public function placeTypeLabel(): string
     {
-        return match ($this->place_type) {
+        $types = $this->selectedPlaceTypes();
+
+        if ($types->isEmpty()) {
+            return 'Semua tipe tempat';
+        }
+
+        return $types
+            ->map(fn ($type) => self::typeLabel($type))
+            ->join(', ');
+    }
+
+    public function selectedPlaceTypes()
+    {
+        $types = collect($this->place_types ?? [])
+            ->filter()
+            ->values();
+
+        if ($types->isEmpty() && filled($this->place_type)) {
+            $types = collect([$this->place_type]);
+        }
+
+        return $types;
+    }
+
+    public function appliesToPlaceType(?string $placeType): bool
+    {
+        $types = $this->selectedPlaceTypes();
+
+        return $types->isEmpty() || $types->contains($placeType);
+    }
+
+    public static function typeLabel(?string $type): string
+    {
+        return match ($type) {
             'rumah_sakit' => 'Rumah Sakit',
             'puskesmas' => 'Puskesmas',
             'industri' => 'Industri',

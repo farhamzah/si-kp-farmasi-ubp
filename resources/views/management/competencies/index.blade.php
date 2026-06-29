@@ -21,14 +21,23 @@
                         @endforeach
                     </select>
                 </label>
-                <label class="text-sm font-semibold text-slate-700">Tipe Tempat KP
-                    <select name="place_type" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
-                        <option value="">Semua tipe tempat</option>
+                <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                    <div class="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                            <p class="text-sm font-bold text-slate-800">Tipe Tempat KP</p>
+                            <p class="mt-0.5 text-xs text-slate-500">Centang beberapa tipe bila kompetensinya sama. Kosongkan untuk semua tipe.</p>
+                        </div>
+                        <span class="rounded-full bg-white px-2 py-1 text-[11px] font-bold text-cyan-700 ring-1 ring-cyan-100">Multi tipe</span>
+                    </div>
+                    <div class="mt-3 grid gap-2 sm:grid-cols-2">
                         @foreach($placeTypes as $type)
-                            <option value="{{ $type }}" @selected(old('place_type') === $type)>{{ (new \App\Models\KpPlace(['type' => $type]))->typeLabel() }}</option>
+                            <label class="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-teal-200 hover:bg-teal-50">
+                                <input type="checkbox" name="place_types[]" value="{{ $type }}" @checked(in_array($type, old('place_types', []), true) || old('place_type') === $type) class="rounded border-slate-300 text-teal-600 focus:ring-teal-500">
+                                <span>{{ \App\Models\KpCompetency::typeLabel($type) }}</span>
+                            </label>
                         @endforeach
-                    </select>
-                </label>
+                    </div>
+                </div>
                 <label class="text-sm font-semibold text-slate-700">Judul Kompetensi
                     <input name="title" value="{{ old('title') }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Contoh: Mampu melakukan pelayanan resep">
                 </label>
@@ -78,19 +87,25 @@
                     <form method="POST" action="{{ route('management.competencies.update', $competency) }}" class="rounded-xl border border-slate-200 p-4">
                         @csrf
                         @method('PUT')
-                        <div class="grid gap-3 lg:grid-cols-[1fr_150px_110px_130px_auto]">
+                        <div class="grid gap-3 lg:grid-cols-[1fr_220px_110px_130px_auto]">
                             <div>
                                 <input name="title" value="{{ old('title', $competency->title) }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold">
                                 <textarea name="description" rows="2" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">{{ old('description', $competency->description) }}</textarea>
                                 <input type="hidden" name="kp_period_id" value="{{ $competency->kp_period_id }}">
                                 <p class="mt-1 text-xs text-slate-500">{{ $competency->period?->name ?? 'Umum semua periode' }} · {{ $competency->placeTypeLabel() }} · {{ $competency->achievements_count ?? $competency->achievements->count() }} checklist</p>
                             </div>
-                            <select name="place_type" class="h-10 rounded-lg border border-slate-300 px-3 py-2 text-sm">
-                                <option value="">Semua tipe</option>
-                                @foreach($placeTypes as $type)
-                                    <option value="{{ $type }}" @selected($competency->place_type === $type)>{{ (new \App\Models\KpPlace(['type' => $type]))->typeLabel() }}</option>
-                                @endforeach
-                            </select>
+                            <div class="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                                <p class="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">Tipe tempat</p>
+                                <div class="grid gap-1">
+                                    @foreach($placeTypes as $type)
+                                        <label class="flex items-center gap-2 rounded-md bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-100">
+                                            <input type="checkbox" name="place_types[]" value="{{ $type }}" @checked($competency->selectedPlaceTypes()->contains($type)) class="rounded border-slate-300 text-teal-600 focus:ring-teal-500">
+                                            <span>{{ \App\Models\KpCompetency::typeLabel($type) }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                                <p class="mt-2 text-[11px] leading-4 text-slate-500">Tidak dicentang berarti semua tipe.</p>
+                            </div>
                             <input name="sort_order" type="number" min="0" value="{{ $competency->sort_order }}" class="h-10 rounded-lg border border-slate-300 px-3 py-2 text-sm">
                             <select name="status" class="h-10 rounded-lg border border-slate-300 px-3 py-2 text-sm">
                                 <option value="aktif" @selected($competency->status === 'aktif')>Aktif</option>
@@ -118,7 +133,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @forelse($assignments as $assignment)
-                        @php($applicableCompetencies = $competencies->filter(fn ($competency) => $competency->status === 'aktif' && in_array($competency->kp_period_id, [null, $assignment->kp_period_id], true) && (blank($competency->place_type) || $competency->place_type === $assignment->place?->type)))
+                        @php($applicableCompetencies = $competencies->filter(fn ($competency) => $competency->status === 'aktif' && in_array($competency->kp_period_id, [null, $assignment->kp_period_id], true) && $competency->appliesToPlaceType($assignment->place?->type)))
                         @php($total = $applicableCompetencies->count())
                         @php($done = $assignment->competencyAchievements->whereIn('kp_competency_id', $applicableCompetencies->pluck('id'))->count())
                         <tr>
