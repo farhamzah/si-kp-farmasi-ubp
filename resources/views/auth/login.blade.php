@@ -137,9 +137,9 @@
 
                     <div>
                         <label for="password" class="mb-2 block text-sm font-bold text-slate-800">Kata Sandi</label>
-                        <div class="relative">
-                            <input id="password" name="password" type="password" required placeholder="Masukkan kata sandi" class="w-full rounded-xl border border-slate-300 bg-slate-50 py-3 pl-4 pr-12 text-sm font-medium text-slate-950 outline-none transition placeholder:text-slate-400 hover:border-slate-400 focus:border-teal-600 focus:bg-white focus:ring-4 focus:ring-teal-600/15">
-                            <button type="button" id="toggle-password" class="absolute inset-y-0 right-2 my-auto inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-600/30" aria-label="Tampilkan kata sandi" aria-pressed="false">
+                        <div class="flex min-h-12 items-center rounded-xl border border-slate-300 bg-slate-50 shadow-sm transition hover:border-slate-400 focus-within:border-teal-600 focus-within:bg-white focus-within:ring-4 focus-within:ring-teal-600/15">
+                            <input id="password" name="password" type="password" required placeholder="Masukkan kata sandi" class="min-w-0 flex-1 rounded-xl border-0 bg-transparent px-4 py-3 text-sm font-medium text-slate-950 outline-none placeholder:text-slate-400 focus:ring-0">
+                            <button type="button" id="toggle-password" class="mr-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-600/30" aria-label="Tampilkan kata sandi" aria-pressed="false" title="Tampilkan kata sandi">
                                 <svg id="password-eye-open" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12 18 18.75 12 18.75 2.25 12 2.25 12Z"/>
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 15.25A3.25 3.25 0 1 0 12 8.75a3.25 3.25 0 0 0 0 6.5Z"/>
@@ -191,6 +191,7 @@
             passwordInput.type = shouldShow ? 'text' : 'password';
             toggleButton.setAttribute('aria-label', shouldShow ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi');
             toggleButton.setAttribute('aria-pressed', shouldShow ? 'true' : 'false');
+            toggleButton.setAttribute('title', shouldShow ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi');
             eyeOpen.classList.toggle('hidden', shouldShow);
             eyeClosed.classList.toggle('hidden', ! shouldShow);
             passwordInput.focus();
