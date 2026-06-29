@@ -16,9 +16,9 @@
                     <div class="absolute inset-0 rounded-[2rem] bg-linear-to-tr from-cyan-600 to-teal-400 opacity-75 blur-md transition duration-300 group-hover:opacity-100"></div>
                     <div class="relative flex h-28 w-28 items-center justify-center rounded-[1.8rem] bg-white p-1 ring-4 ring-white shadow-xl">
                         @if($coreOfficialProfile && data_get($coreOfficialProfile, 'user.profile_photo_url'))
-                            <img src="{{ data_get($coreOfficialProfile, 'user.profile_photo_url') }}" alt="Foto profil" class="h-full w-full rounded-[1.5rem] object-cover object-[center_18%]">
+                            <img src="{{ data_get($coreOfficialProfile, 'user.profile_photo_url') }}" alt="Foto profil" class="h-full w-full rounded-[1.5rem] object-cover object-[center_10%]">
                         @elseif($user->hasAvatar())
-                            <img src="{{ route('profile.avatar.show') }}" alt="Foto profil" class="h-full w-full rounded-[1.5rem] object-cover object-[center_18%]">
+                            <img src="{{ route('profile.avatar.show') }}" alt="Foto profil" class="h-full w-full rounded-[1.5rem] object-cover object-[center_10%]">
                         @else
                             <div class="flex h-full w-full items-center justify-center rounded-[1.5rem] bg-gradient-to-br from-cyan-50 to-teal-50 text-3xl font-black text-cyan-700">
                                 {{ $user->initials() }}

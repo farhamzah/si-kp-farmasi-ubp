@@ -17,7 +17,7 @@
 
 <span {{ $attributes->merge(['class' => 'inline-flex '.$class.' flex-none items-center justify-center overflow-hidden bg-cyan-50 font-black text-cyan-700 ring-1 ring-cyan-100']) }}>
     @if($avatarUrl)
-        <img src="{{ $avatarUrl }}" alt="Foto profil {{ $user->name }}" class="h-full w-full object-cover object-[center_18%]">
+        <img src="{{ $avatarUrl }}" alt="Foto profil {{ $user->name }}" class="h-full w-full object-cover object-[center_10%]">
     @else
         {{ $user->initials() }}
     @endif
