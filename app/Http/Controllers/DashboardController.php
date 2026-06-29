@@ -108,16 +108,28 @@ class DashboardController extends Controller
         }
 
         if ($role === 'pembimbing_dalam') {
+            $lecturerId = $request->user()->lecturer?->id;
+
+            if (! $lecturerId) {
+                return ['total' => 0, 'active' => 0];
+            }
+
             return [
-                'total' => KpAssignment::where('internal_supervisor_id', $request->user()->lecturer?->id)->count(),
-                'active' => KpAssignment::where('internal_supervisor_id', $request->user()->lecturer?->id)->whereIn('status', ['aktif', 'berjalan'])->count(),
+                'total' => KpAssignment::where('internal_supervisor_id', $lecturerId)->count(),
+                'active' => KpAssignment::where('internal_supervisor_id', $lecturerId)->whereIn('status', ['aktif', 'berjalan'])->count(),
             ];
         }
 
         if ($role === 'pembimbing_lapangan') {
+            $fieldSupervisorId = $request->user()->fieldSupervisor?->id;
+
+            if (! $fieldSupervisorId) {
+                return ['total' => 0, 'active' => 0];
+            }
+
             return [
-                'total' => KpAssignment::where('field_supervisor_id', $request->user()->fieldSupervisor?->id)->count(),
-                'active' => KpAssignment::where('field_supervisor_id', $request->user()->fieldSupervisor?->id)->whereIn('status', ['aktif', 'berjalan'])->count(),
+                'total' => KpAssignment::where('field_supervisor_id', $fieldSupervisorId)->count(),
+                'active' => KpAssignment::where('field_supervisor_id', $fieldSupervisorId)->whereIn('status', ['aktif', 'berjalan'])->count(),
             ];
         }
 
@@ -150,6 +162,10 @@ class DashboardController extends Controller
         if ($role === 'pembimbing_lapangan') {
             $fieldSupervisorId = $request->user()->fieldSupervisor?->id;
 
+            if (! $fieldSupervisorId) {
+                return ['total' => 0, 'menunggu_validasi' => 0];
+            }
+
             return [
                 'total' => KpLogbook::whereHas('assignment', fn ($q) => $q->where('field_supervisor_id', $fieldSupervisorId))->count(),
                 'menunggu_validasi' => KpLogbook::where('status', 'menunggu_validasi')->whereHas('assignment', fn ($q) => $q->where('field_supervisor_id', $fieldSupervisorId))->count(),
@@ -158,6 +174,10 @@ class DashboardController extends Controller
 
         if ($role === 'pembimbing_dalam') {
             $lecturerId = $request->user()->lecturer?->id;
+
+            if (! $lecturerId) {
+                return ['total' => 0, 'komentar' => 0];
+            }
 
             return [
                 'total' => KpLogbook::whereHas('assignment', fn ($q) => $q->where('internal_supervisor_id', $lecturerId))->count(),
@@ -181,6 +201,10 @@ class DashboardController extends Controller
 
         if ($role === 'pembimbing_dalam') {
             $lecturerId = $request->user()->lecturer?->id;
+
+            if (! $lecturerId) {
+                return ['menunggu_review' => 0, 'revisi' => 0, 'disetujui' => 0];
+            }
 
             return [
                 'menunggu_review' => KpFinalReport::where('status', 'menunggu_review')->whereHas('assignment', fn ($q) => $q->where('internal_supervisor_id', $lecturerId))->count(),
@@ -223,11 +247,21 @@ class DashboardController extends Controller
 
         if ($role === 'pembimbing_dalam') {
             $lecturerId = $request->user()->lecturer?->id;
+
+            if (! $lecturerId) {
+                return ['sidang_terjadwal' => 0];
+            }
+
             return ['sidang_terjadwal' => KpExam::where('supervisor_id', $lecturerId)->where('status', 'dijadwalkan')->count()];
         }
 
         if ($role === 'penguji') {
             $lecturerId = $request->user()->lecturer?->id;
+
+            if (! $lecturerId) {
+                return ['sidang_ditugaskan' => 0, 'sidang_mendatang' => 0];
+            }
+
             return [
                 'sidang_ditugaskan' => KpExam::where('examiner_id', $lecturerId)->count(),
                 'sidang_mendatang' => KpExam::where('examiner_id', $lecturerId)->where('status', 'dijadwalkan')->count(),
@@ -253,15 +287,33 @@ class DashboardController extends Controller
         }
 
         if ($role === 'pembimbing_dalam') {
-            return ['belum_submit' => KpAssignment::where('internal_supervisor_id', $request->user()->lecturer?->id)->whereDoesntHave('scores', fn ($q) => $q->where('assessor_type', 'pembimbing_dalam')->whereIn('status', ['submitted', 'locked']))->count()];
+            $lecturerId = $request->user()->lecturer?->id;
+
+            if (! $lecturerId) {
+                return ['belum_submit' => 0];
+            }
+
+            return ['belum_submit' => KpAssignment::where('internal_supervisor_id', $lecturerId)->whereIn('status', ['aktif', 'berjalan'])->whereDoesntHave('scores', fn ($q) => $q->where('assessor_type', 'pembimbing_dalam')->whereIn('status', ['submitted', 'locked']))->count()];
         }
 
         if ($role === 'pembimbing_lapangan') {
-            return ['belum_submit' => KpAssignment::where('field_supervisor_id', $request->user()->fieldSupervisor?->id)->whereDoesntHave('scores', fn ($q) => $q->where('assessor_type', 'pembimbing_lapangan')->whereIn('status', ['submitted', 'locked']))->count()];
+            $fieldSupervisorId = $request->user()->fieldSupervisor?->id;
+
+            if (! $fieldSupervisorId) {
+                return ['belum_submit' => 0];
+            }
+
+            return ['belum_submit' => KpAssignment::where('field_supervisor_id', $fieldSupervisorId)->whereIn('status', ['aktif', 'berjalan'])->whereDoesntHave('scores', fn ($q) => $q->where('assessor_type', 'pembimbing_lapangan')->whereIn('status', ['submitted', 'locked']))->count()];
         }
 
         if ($role === 'penguji') {
-            return ['sidang_belum_submit' => KpExam::where('examiner_id', $request->user()->lecturer?->id)->whereDoesntHave('scores', fn ($q) => $q->where('assessor_type', 'penguji')->whereIn('status', ['submitted', 'locked']))->count()];
+            $lecturerId = $request->user()->lecturer?->id;
+
+            if (! $lecturerId) {
+                return ['sidang_belum_submit' => 0];
+            }
+
+            return ['sidang_belum_submit' => KpExam::where('examiner_id', $lecturerId)->whereDoesntHave('scores', fn ($q) => $q->where('assessor_type', 'penguji')->whereIn('status', ['submitted', 'locked']))->count()];
         }
 
         return null;

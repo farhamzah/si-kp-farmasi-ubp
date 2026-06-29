@@ -2,7 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\KpAssignment;
+use App\Models\KpPeriod;
+use App\Models\KpPlace;
+use App\Models\KpRegistration;
 use App\Models\Role;
+use App\Models\Student;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -116,11 +121,56 @@ class KpRecapExportAndDashboardTest extends TestCase
         $this->actingAs($this->examiner)->withSession(['active_role' => 'penguji'])->get('/penguji/dashboard')->assertOk()->assertSee('Dashboard Penguji')->assertDontSee('Segera');
     }
 
+    public function test_field_supervisor_dashboard_does_not_count_unassigned_students_without_profile(): void
+    {
+        $this->createAssignmentWithNoFieldSupervisor();
+
+        $this->actingAs($this->field)
+            ->withSession(['active_role' => 'pembimbing_lapangan'])
+            ->get('/pembimbing-lapangan/dashboard')
+            ->assertOk()
+            ->assertSee('Dashboard Pembimbing Luar')
+            ->assertSee('Tidak ada antrian mendesak')
+            ->assertDontSee('Nilai belum submit');
+    }
+
     private function makeUser(string $email, array $roles): User
     {
         $user = User::create(['name' => 'User Test', 'email' => $email, 'password' => Hash::make('password'), 'status' => 'active']);
         $user->roles()->sync(Role::whereIn('name', $roles)->pluck('id'));
 
         return $user;
+    }
+
+    private function createAssignmentWithNoFieldSupervisor(): KpAssignment
+    {
+        $studentUser = $this->makeUser('dashboard-student@test.local', ['mahasiswa']);
+        $student = Student::create([
+            'user_id' => $studentUser->id,
+            'nim' => '24416248201001',
+            'study_program' => 'Farmasi',
+            'semester' => 6,
+            'status' => 'active',
+        ]);
+        $period = KpPeriod::create(['name' => 'KP TA 2026_2027', 'status' => 'dibuka']);
+        $place = KpPlace::create(['name' => 'Apotek UAT', 'type' => 'apotek', 'status' => 'aktif']);
+        $registration = KpRegistration::create([
+            'kp_period_id' => $period->id,
+            'student_id' => $student->id,
+            'status' => 'terverifikasi',
+        ]);
+
+        return KpAssignment::create([
+            'kp_period_id' => $period->id,
+            'kp_registration_id' => $registration->id,
+            'student_id' => $student->id,
+            'kp_place_id' => $place->id,
+            'internal_supervisor_id' => null,
+            'field_supervisor_id' => null,
+            'status' => 'aktif',
+            'assigned_by' => $this->koordinator->id,
+            'assigned_at' => now(),
+            'active_key' => $period->id.'-'.$student->id,
+        ]);
     }
 }
