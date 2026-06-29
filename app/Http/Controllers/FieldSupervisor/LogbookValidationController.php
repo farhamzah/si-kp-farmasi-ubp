@@ -4,6 +4,7 @@ namespace App\Http\Controllers\FieldSupervisor;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Management\ReviewKpLogbookRequest;
+use App\Models\KpAssignment;
 use App\Models\KpLogbook;
 use App\Services\KpLogbookService;
 use Illuminate\Http\RedirectResponse;
@@ -17,23 +18,55 @@ class LogbookValidationController extends Controller
 {
     public function index(Request $request): View
     {
-        $fieldSupervisorId = $request->user()->fieldSupervisor?->id;
-        $logbooks = KpLogbook::query()
-            ->with(['assignment.student.user', 'assignment.period', 'assignment.place'])
-            ->whereHas('assignment', fn ($q) => $q->where('field_supervisor_id', $fieldSupervisorId))
-            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
+        $fieldSupervisorId = $request->user()->fieldSupervisor?->id ?: 0;
+        $assignmentsQuery = KpAssignment::query()
+            ->with(['student.user', 'period', 'place'])
+            ->withCount([
+                'logbooks',
+                'logbooks as pending_logbooks_count' => fn ($q) => $q->where('status', 'menunggu_validasi'),
+                'logbooks as approved_logbooks_count' => fn ($q) => $q->where('status', 'disetujui'),
+                'logbooks as revision_logbooks_count' => fn ($q) => $q->whereIn('status', ['revisi', 'ditolak']),
+            ])
+            ->withMax('logbooks', 'activity_date')
+            ->withMax('logbooks', 'submitted_at')
+            ->where('field_supervisor_id', $fieldSupervisorId)
+            ->when($request->filled('status'), fn ($q) => $q->whereHas('logbooks', fn ($logbook) => $logbook->where('status', $request->status)))
             ->when($request->filled('q'), function ($q) use ($request) {
                 $keyword = $request->q;
-                $q->whereHas('assignment.student', fn ($student) => $student->where('nim', 'like', "%{$keyword}%")
+                $q->whereHas('student', fn ($student) => $student->where('nim', 'like', "%{$keyword}%")
                     ->orWhereHas('user', fn ($user) => $user->where('name', 'like', "%{$keyword}%")->orWhere('email', 'like', "%{$keyword}%")));
             })
-            ->latest('activity_date')
+            ->orderByDesc('pending_logbooks_count')
+            ->orderByDesc('logbooks_max_activity_date');
+
+        $assignments = $assignmentsQuery
             ->paginate(10)
             ->withQueryString();
 
+        $selectedAssignment = null;
+        $selectedLogbooks = collect();
+
+        if ($request->filled('assignment')) {
+            $selectedAssignment = KpAssignment::query()
+                ->with(['student.user', 'period', 'place', 'internalSupervisor.user'])
+                ->where('field_supervisor_id', $fieldSupervisorId)
+                ->whereKey($request->integer('assignment'))
+                ->first();
+
+            $selectedLogbooks = $selectedAssignment
+                ? $selectedAssignment->logbooks()
+                    ->with(['comments.user', 'validatedBy'])
+                    ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
+                    ->latest('activity_date')
+                    ->get()
+                : collect();
+        }
+
         return view('field-supervisor.logbooks.index', [
-            'logbooks' => $logbooks,
-            'filters' => $request->only(['status', 'q']),
+            'assignments' => $assignments,
+            'selectedAssignment' => $selectedAssignment,
+            'selectedLogbooks' => $selectedLogbooks,
+            'filters' => $request->only(['status', 'q', 'assignment']),
         ]);
     }
 

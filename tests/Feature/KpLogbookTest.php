@@ -142,6 +142,42 @@ class KpLogbookTest extends TestCase
         $this->assertSame('ditolak', $rejected->fresh()->status);
     }
 
+    public function test_field_supervisor_logbook_index_groups_by_student_and_opens_assignment_detail(): void
+    {
+        KpLogbook::create($this->logbookAttributes([
+            'activity_title' => 'Kegiatan pelayanan resep',
+            'status' => 'menunggu_validasi',
+            'submitted_at' => now(),
+        ]));
+        KpLogbook::create($this->logbookAttributes([
+            'activity_date' => now()->subDay()->toDateString(),
+            'activity_title' => 'Kegiatan stok opname',
+            'status' => 'disetujui',
+            'submitted_at' => now()->subDay(),
+            'validated_at' => now(),
+        ]));
+
+        $this->actingAs($this->fieldUser)
+            ->withSession(['active_role' => 'pembimbing_lapangan'])
+            ->get('/pembimbing-lapangan/logbook')
+            ->assertOk()
+            ->assertSee('Ringkasan per Mahasiswa')
+            ->assertSee($this->mahasiswa->name)
+            ->assertSee('2 total')
+            ->assertSee('1 menunggu')
+            ->assertSee('Lihat Logbook')
+            ->assertDontSee('Kegiatan pelayanan resep');
+
+        $this->actingAs($this->fieldUser)
+            ->withSession(['active_role' => 'pembimbing_lapangan'])
+            ->get('/pembimbing-lapangan/logbook?assignment='.$this->assignment->id)
+            ->assertOk()
+            ->assertSee('Rincian Logbook Mahasiswa')
+            ->assertSee('Kegiatan pelayanan resep')
+            ->assertSee('Kegiatan stok opname')
+            ->assertSee('Validasi');
+    }
+
     public function test_internal_supervisor_can_view_assigned_logbook_and_add_comment_only_for_own_student(): void
     {
         $logbook = KpLogbook::create($this->logbookAttributes());
@@ -160,6 +196,33 @@ class KpLogbookTest extends TestCase
 
         $this->assertDatabaseHas('kp_logbook_comments', ['kp_logbook_id' => $logbook->id, 'comment' => 'Aktivitas sudah sesuai.']);
         $this->assertDatabaseHas('kp_logbook_logs', ['kp_logbook_id' => $logbook->id, 'action' => 'comment_added']);
+    }
+
+    public function test_internal_supervisor_logbook_index_groups_by_student_and_opens_assignment_detail(): void
+    {
+        KpLogbook::create($this->logbookAttributes([
+            'activity_title' => 'Observasi pelayanan',
+            'status' => 'revisi',
+            'submitted_at' => now(),
+        ]));
+
+        $this->actingAs($this->lecturerUser)
+            ->withSession(['active_role' => 'pembimbing_dalam'])
+            ->get('/pembimbing-dalam/logbook')
+            ->assertOk()
+            ->assertSee('Ringkasan per Mahasiswa')
+            ->assertSee($this->mahasiswa->name)
+            ->assertSee('1 total')
+            ->assertSee('1 revisi/ditolak')
+            ->assertDontSee('Observasi pelayanan');
+
+        $this->actingAs($this->lecturerUser)
+            ->withSession(['active_role' => 'pembimbing_dalam'])
+            ->get('/pembimbing-dalam/logbook?assignment='.$this->assignment->id)
+            ->assertOk()
+            ->assertSee('Rincian Logbook Mahasiswa')
+            ->assertSee('Observasi pelayanan')
+            ->assertSeeText('Komentar');
     }
 
     public function test_admin_and_koordinator_can_monitor_logbooks_while_student_cannot(): void
