@@ -178,9 +178,15 @@ class KpPlaceSelectionService
     public function cancelSelection(User $admin, KpPlaceSelection $selection, string $reason): void
     {
         DB::transaction(function () use ($admin, $selection, $reason) {
-            $locked = KpPlaceSelection::query()->lockForUpdate()->findOrFail($selection->id);
+            $locked = KpPlaceSelection::query()->with('assignment')->lockForUpdate()->findOrFail($selection->id);
             if ($locked->status !== 'aktif') {
                 throw ValidationException::withMessages(['selection' => 'Pilihan ini sudah tidak aktif.']);
+            }
+
+            if ($locked->assignment && $locked->assignment->status !== 'dibatalkan') {
+                throw ValidationException::withMessages([
+                    'selection' => 'Pilihan ini sudah menjadi penempatan KP. Batalkan dari halaman Penempatan KP agar pembimbing ikut dilepas.',
+                ]);
             }
 
             $locked->update([

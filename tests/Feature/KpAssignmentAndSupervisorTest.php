@@ -146,7 +146,54 @@ class KpAssignmentAndSupervisorTest extends TestCase
             'reason' => 'Dibatalkan untuk test.',
         ])->assertRedirect();
 
-        $this->assertDatabaseHas('kp_assignment_logs', ['kp_assignment_id' => $assignment->id, 'action' => 'assignment_cancelled']);
+        $assignment->refresh();
+        $this->assertSame('dibatalkan', $assignment->status);
+        $this->assertNull($assignment->internal_supervisor_id);
+        $this->assertNull($assignment->field_supervisor_id);
+        $this->assertNull($assignment->active_key);
+        $this->assertSame('dibatalkan', $assignment->selection->fresh()->status);
+        $this->assertNull($assignment->selection->fresh()->active_key);
+        $this->assertSame(0, $assignment->selection->quota->fresh()->filledCount());
+        $this->assertDatabaseHas('kp_assignment_logs', [
+            'kp_assignment_id' => $assignment->id,
+            'action' => 'assignment_cancelled',
+            'old_internal_supervisor_id' => $this->lecturer->id,
+            'new_internal_supervisor_id' => null,
+            'old_field_supervisor_id' => $this->fieldSupervisor->id,
+            'new_field_supervisor_id' => null,
+        ]);
+    }
+
+    public function test_cancel_reconcile_command_cleans_legacy_cancelled_assignment_links(): void
+    {
+        $assignment = $this->assignment($this->lecturer, $this->fieldSupervisor);
+        $assignment->update(['status' => 'dibatalkan']);
+
+        $this->artisan('kp:assignment-cancel-reconcile --show-rows')
+            ->expectsOutput('KP assignment cancel reconcile')
+            ->expectsOutput('Mode: dry-run only; no writes performed')
+            ->assertExitCode(0);
+
+        $this->assertNotNull($assignment->fresh()->internal_supervisor_id);
+        $this->assertSame('aktif', $assignment->selection->fresh()->status);
+
+        $this->artisan('kp:assignment-cancel-reconcile --execute')
+            ->expectsOutput('Execute refused: missing --confirm-execute.')
+            ->assertExitCode(1);
+
+        $this->artisan('kp:assignment-cancel-reconcile --execute --confirm-execute')
+            ->expectsOutput('Mode: execute local KP updates')
+            ->assertExitCode(0);
+
+        $assignment->refresh();
+        $this->assertNull($assignment->internal_supervisor_id);
+        $this->assertNull($assignment->field_supervisor_id);
+        $this->assertNull($assignment->active_key);
+        $this->assertSame('dibatalkan', $assignment->selection->fresh()->status);
+        $this->assertDatabaseHas('kp_assignment_logs', [
+            'kp_assignment_id' => $assignment->id,
+            'action' => 'assignment_cancel_reconciled',
+        ]);
     }
 
     public function test_management_assignment_search_can_filter_by_place_and_supervisors(): void

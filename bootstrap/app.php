@@ -4,6 +4,7 @@ use App\Http\Middleware\CheckRole;
 use App\Http\Middleware\CheckUserActive;
 use App\Http\Middleware\EnsureRoleSelected;
 use App\Console\Commands\AcademicUnitCleanupCommand;
+use App\Console\Commands\AssignmentCancelReconcileCommand;
 use App\Console\Commands\CoreHealthCheckCommand;
 use App\Console\Commands\CoreAcademicUnitCheckCommand;
 use App\Console\Commands\CoreMappingCoverageCommand;
@@ -41,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withCommands([
         AcademicUnitCleanupCommand::class,
+        AssignmentCancelReconcileCommand::class,
         AuthBridgeCheckCommand::class,
         AuthBridgeSmokeTestCommand::class,
         AuthModeCommand::class,

@@ -114,10 +114,35 @@ class KpAssignmentService
     public function cancelAssignment(User $actor, KpAssignment $assignment, string $reason): void
     {
         DB::transaction(function () use ($actor, $assignment, $reason) {
-            $assignment = KpAssignment::query()->lockForUpdate()->findOrFail($assignment->id);
+            $assignment = KpAssignment::query()->with('selection.registration')->lockForUpdate()->findOrFail($assignment->id);
+
+            if ($assignment->status === 'dibatalkan') {
+                throw ValidationException::withMessages(['assignment' => 'Penempatan KP ini sudah dibatalkan.']);
+            }
+
             $oldStatus = $assignment->status;
-            $assignment->update(['status' => 'dibatalkan', 'active_key' => null, 'note' => $reason]);
-            $this->logAssignment($actor, $assignment, 'assignment_cancelled', $oldStatus, 'dibatalkan', $assignment->internal_supervisor_id, $assignment->internal_supervisor_id, $assignment->field_supervisor_id, $assignment->field_supervisor_id, $reason);
+            $oldInternal = $assignment->internal_supervisor_id;
+            $oldField = $assignment->field_supervisor_id;
+
+            $assignment->update([
+                'status' => 'dibatalkan',
+                'internal_supervisor_id' => null,
+                'field_supervisor_id' => null,
+                'active_key' => null,
+                'note' => $reason,
+            ]);
+
+            if ($assignment->selection && $assignment->selection->status === 'aktif') {
+                $assignment->selection->update([
+                    'status' => 'dibatalkan',
+                    'cancelled_by' => $actor->id,
+                    'cancelled_at' => now(),
+                    'cancellation_reason' => 'Penempatan dibatalkan: '.$reason,
+                    'active_key' => null,
+                ]);
+            }
+
+            $this->logAssignment($actor, $assignment, 'assignment_cancelled', $oldStatus, 'dibatalkan', $oldInternal, null, $oldField, null, $reason);
         });
     }
 

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\KpDocument;
 use App\Models\KpDocumentRequirement;
+use App\Models\KpAssignment;
 use App\Models\KpPeriod;
 use App\Models\KpPlace;
 use App\Models\KpPlaceQuota;
@@ -329,6 +330,43 @@ class KpPlaceSelectionWarTicketTest extends TestCase
         $this->assertDatabaseHas('kp_place_selections', ['id' => $selection2->id, 'status' => 'dipindahkan']);
         $this->assertDatabaseHas('kp_place_selections', ['kp_place_quota_id' => $newQuota->id, 'status' => 'aktif']);
         $this->assertDatabaseHas('kp_selection_logs', ['action' => 'selection_moved_by_admin']);
+    }
+
+    public function test_selection_with_active_assignment_must_be_cancelled_from_assignment_flow(): void
+    {
+        [$registration, $quota] = $this->verifiedRegistration($this->student);
+        $selection = KpPlaceSelection::create([
+            'kp_period_id' => $registration->kp_period_id,
+            'kp_registration_id' => $registration->id,
+            'student_id' => $this->student->id,
+            'kp_place_id' => $quota->kp_place_id,
+            'kp_place_quota_id' => $quota->id,
+            'selected_at' => now(),
+            'selected_by' => $this->mahasiswa->id,
+            'status' => 'aktif',
+            'active_key' => $registration->kp_period_id.'-'.$this->student->id,
+        ]);
+        KpAssignment::create([
+            'kp_period_id' => $selection->kp_period_id,
+            'kp_registration_id' => $selection->kp_registration_id,
+            'kp_place_selection_id' => $selection->id,
+            'student_id' => $selection->student_id,
+            'kp_place_id' => $selection->kp_place_id,
+            'status' => 'menunggu_pembimbing',
+            'assigned_by' => $this->admin->id,
+            'assigned_at' => now(),
+            'active_key' => $selection->kp_period_id.'-'.$selection->student_id,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->post('/management/place-selections/'.$selection->id.'/cancel', ['reason' => 'Salah pilih.'])
+            ->assertSessionHasErrors('selection');
+
+        $selection->refresh();
+        $this->assertSame('aktif', $selection->status);
+        $this->assertNotNull($selection->active_key);
+        $this->assertSame(1, $quota->fresh()->filledCount());
     }
 
     public function test_koordinator_can_manually_select_place_for_non_war_ticket_student(): void

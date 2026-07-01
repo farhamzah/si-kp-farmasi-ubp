@@ -16,6 +16,14 @@
     @if($errors->any())
         <div class="xl:col-span-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ $errors->first() }}</div>
     @endif
+    @if(session('status'))
+        <div class="xl:col-span-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{{ session('status') }}</div>
+    @endif
+    @if($assignment->status === 'dibatalkan')
+        <div class="xl:col-span-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            Penempatan ini sudah dibatalkan. Pembimbing dilepas dari penempatan, dan pilihan tempat terkait ikut dibatalkan bila masih aktif.
+        </div>
+    @endif
 
     <section class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
         <span class="rounded-full {{ $assignment->statusBadgeClass() }} px-3 py-1 text-xs font-semibold">{{ $assignment->statusLabel() }}</span>
@@ -35,13 +43,14 @@
                 <p class="font-bold">{{ $assignment->fieldSupervisor?->user?->name ?? 'Belum ada' }}</p>
             </div>
         </div>
-        <div class="mt-5 flex gap-2">
-            <a href="{{ route('management.kp-assignments.edit', ['kp_assignment' => $assignment, 'return_url' => $backUrl]) }}" class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white">Edit Pembimbing</a>
+        <div class="mt-5 space-y-3">
             @if($assignment->status !== 'dibatalkan')
-                <form method="POST" action="{{ route('management.kp-assignments.cancel',$assignment) }}" onsubmit="return confirm('Batalkan penempatan ini?')">
+                <a href="{{ route('management.kp-assignments.edit', ['kp_assignment' => $assignment, 'return_url' => $backUrl]) }}" class="inline-flex items-center justify-center rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white">Edit Pembimbing</a>
+                <form method="POST" action="{{ route('management.kp-assignments.cancel',$assignment) }}" class="rounded-xl border border-rose-200 bg-rose-50 p-3" onsubmit="return confirm('Batalkan penempatan ini? Pembimbing akan dilepas dan pilihan tempat ikut dibatalkan bila masih aktif.')">
                     @csrf
-                    <input type="hidden" name="reason" value="Dibatalkan dari halaman detail.">
-                    <button class="rounded-lg border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-700">Batalkan</button>
+                    <label class="text-xs font-semibold uppercase tracking-wide text-rose-700" for="reason">Alasan pembatalan</label>
+                    <textarea id="reason" name="reason" rows="2" required class="mt-2 w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm" placeholder="Contoh: mahasiswa batal KP atau penempatan perlu diulang."></textarea>
+                    <button class="mt-2 w-full rounded-lg border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-700 sm:w-auto">Batalkan Penempatan & Lepas Pembimbing</button>
                 </form>
             @endif
         </div>
