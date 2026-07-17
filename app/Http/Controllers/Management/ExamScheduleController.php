@@ -35,9 +35,15 @@ class ExamScheduleController extends Controller
         return view('management.exams.show', ['exam' => $exam->load(['request.logs.user', 'assignment.student.user', 'assignment.place', 'supervisor.user', 'examiner.user', 'examiners.user'])]);
     }
 
-    public function create(KpExamRequest $examRequest): View
+    public function create(KpExamRequest $examRequest): View|RedirectResponse
     {
-        return view('management.exams.schedule', ['examRequest' => $examRequest->load(['assignment.student.user', 'assignment.place', 'assignment.internalSupervisor.user']), 'exam' => null, 'examiners' => $this->examiners()]);
+        if (! $examRequest->canBeScheduled()) {
+            return redirect()
+                ->route('management.exam-requests.show', $examRequest)
+                ->withErrors(['request' => 'Kandidat harus disetujui koordinator sebelum dijadwalkan.']);
+        }
+
+        return view('management.exams.schedule', ['examRequest' => $examRequest->load(['assignment.student.user', 'assignment.period', 'assignment.place', 'assignment.internalSupervisor.user', 'assignment.fieldSupervisor.user', 'assignment.finalReport.latestFile']), 'exam' => null, 'examiners' => $this->examiners()]);
     }
 
     public function store(ScheduleExamRequest $request, KpExamRequest $examRequest, KpExamService $service): RedirectResponse
@@ -48,7 +54,7 @@ class ExamScheduleController extends Controller
 
     public function edit(KpExam $exam): View
     {
-        return view('management.exams.schedule', ['examRequest' => $exam->request->load(['assignment.student.user', 'assignment.place', 'assignment.internalSupervisor.user']), 'exam' => $exam->load('examiners'), 'examiners' => $this->examiners()]);
+        return view('management.exams.schedule', ['examRequest' => $exam->request->load(['assignment.student.user', 'assignment.period', 'assignment.place', 'assignment.internalSupervisor.user', 'assignment.fieldSupervisor.user', 'assignment.finalReport.latestFile']), 'exam' => $exam->load('examiners'), 'examiners' => $this->examiners()]);
     }
 
     public function update(UpdateExamScheduleRequest $request, KpExam $exam, KpExamService $service): RedirectResponse
@@ -71,6 +77,6 @@ class ExamScheduleController extends Controller
 
     private function examiners()
     {
-        return Lecturer::with('user')->whereHas('user.roles', fn ($q) => $q->where('name', 'penguji'))->get();
+        return Lecturer::with('user')->whereHas('user.roles', fn ($q) => $q->where('name', 'penguji'))->get()->sortBy(fn (Lecturer $lecturer) => lecturer_display_name($lecturer))->values();
     }
 }

@@ -16,8 +16,23 @@ class ExamRequestController extends Controller
 {
     public function index(Request $request): View
     {
+        $summary = [
+            'diajukan' => KpExamRequest::where('status', 'diajukan')->count(),
+            'disetujui' => KpExamRequest::where('status', 'disetujui')->count(),
+            'dijadwalkan' => KpExamRequest::where('status', 'dijadwalkan')->count(),
+            'revisi' => KpExamRequest::where('status', 'revisi')->count(),
+        ];
+
         $requests = KpExamRequest::query()
-            ->with(['assignment.student.user', 'assignment.period', 'assignment.place', 'assignment.internalSupervisor.user', 'exam'])
+            ->with([
+                'assignment.student.user',
+                'assignment.period',
+                'assignment.place',
+                'assignment.internalSupervisor.user',
+                'assignment.fieldSupervisor.user',
+                'assignment.finalReport.latestFile',
+                'exam',
+            ])
             ->when($request->filled('period'), fn ($q) => $q->whereHas('assignment', fn ($a) => $a->where('kp_period_id', $request->period)))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
             ->when($request->filled('q'), fn ($q) => $q->whereHas('assignment.student', fn ($s) => $s->where('nim', 'like', "%{$request->q}%")->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$request->q}%"))))
@@ -25,12 +40,17 @@ class ExamRequestController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        return view('management.exam-requests.index', ['requests' => $requests, 'periods' => KpPeriod::latest()->get(), 'filters' => $request->only(['period', 'status', 'q'])]);
+        return view('management.exam-requests.index', [
+            'requests' => $requests,
+            'periods' => KpPeriod::latest()->get(),
+            'filters' => $request->only(['period', 'status', 'q']),
+            'summary' => $summary,
+        ]);
     }
 
     public function show(KpExamRequest $examRequest): View
     {
-        return view('management.exam-requests.show', ['examRequest' => $examRequest->load(['assignment.student.user', 'assignment.period', 'assignment.place', 'assignment.internalSupervisor.user', 'assignment.finalReport.latestFile', 'exam.examiner.user', 'exam.examiners.user', 'logs.user'])]);
+        return view('management.exam-requests.show', ['examRequest' => $examRequest->load(['assignment.student.user', 'assignment.period', 'assignment.place', 'assignment.internalSupervisor.user', 'assignment.fieldSupervisor.user', 'assignment.finalReport.latestFile', 'exam.examiner.user', 'exam.examiners.user', 'logs.user'])]);
     }
 
     public function approve(ReviewExamRequestRequest $request, KpExamRequest $examRequest, KpExamService $service): RedirectResponse

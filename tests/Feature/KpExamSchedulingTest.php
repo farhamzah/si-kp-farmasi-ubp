@@ -107,7 +107,8 @@ class KpExamSchedulingTest extends TestCase
         $this->actingAs($this->admin)->withSession(['active_role' => 'admin'])
             ->get('/management/exam-requests')
             ->assertOk()
-            ->assertSee('Pengajuan Sidang');
+            ->assertSee('Antrian Validasi Sidang')
+            ->assertSee('Validasi kandidat sebelum penjadwalan');
 
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->get('/management/exam-requests')
@@ -118,9 +119,27 @@ class KpExamSchedulingTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_koordinator_can_schedule_exam_and_student_supervisor_examiner_can_see_it(): void
+    public function test_pending_exam_request_must_be_approved_before_scheduling(): void
     {
         $request = $this->submittedExamRequest();
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/exam-requests/'.$request->id.'/schedule')
+            ->assertRedirect('/management/exam-requests/'.$request->id)
+            ->assertSessionHasErrors('request');
+
+        $this->assertFalse($request->fresh()->canBeScheduled());
+    }
+
+    public function test_koordinator_can_schedule_exam_and_student_supervisor_examiner_can_see_it(): void
+    {
+        $request = $this->approvedExamRequest();
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/exam-requests/'.$request->id.'/schedule')
+            ->assertOk()
+            ->assertSee('Kandidat sidang')
+            ->assertSee('Pilih 2 sampai 3 penguji');
 
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->post('/management/exam-requests/'.$request->id.'/schedule', $this->validSchedulePayload())
@@ -154,7 +173,7 @@ class KpExamSchedulingTest extends TestCase
 
     public function test_schedule_validation_rejects_invalid_examiner_time_room_and_link(): void
     {
-        $request = $this->submittedExamRequest();
+        $request = $this->approvedExamRequest();
 
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->post('/management/exam-requests/'.$request->id.'/schedule', $this->validSchedulePayload(['examiner_ids' => [$this->examiner->id]]))
@@ -197,7 +216,7 @@ class KpExamSchedulingTest extends TestCase
     public function test_internal_supervisor_can_also_be_examiner_when_they_have_penguji_role(): void
     {
         $this->supervisorUser->roles()->syncWithoutDetaching(Role::where('name', 'penguji')->value('id'));
-        $request = $this->submittedExamRequest();
+        $request = $this->approvedExamRequest();
 
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->post('/management/exam-requests/'.$request->id.'/schedule', $this->validSchedulePayload([
@@ -254,9 +273,23 @@ class KpExamSchedulingTest extends TestCase
         );
     }
 
-    private function scheduledExam(): KpExam
+    private function approvedExamRequest(): KpExamRequest
     {
         $request = $this->submittedExamRequest();
+
+        $request->forceFill([
+            'status' => 'disetujui',
+            'reviewed_by' => $this->koordinator->id,
+            'reviewed_at' => now(),
+            'review_note' => 'Syarat sidang lengkap.',
+        ])->save();
+
+        return $request->fresh();
+    }
+
+    private function scheduledExam(): KpExam
+    {
+        $request = $this->approvedExamRequest();
 
         return KpExam::create([
             'kp_exam_request_id' => $request->id,

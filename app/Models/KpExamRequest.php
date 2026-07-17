@@ -45,7 +45,7 @@ class KpExamRequest extends Model
 
     public function canBeScheduled(): bool
     {
-        return in_array($this->status, ['diajukan', 'disetujui'], true);
+        return $this->status === 'disetujui';
     }
 
     public function isActive(): bool
