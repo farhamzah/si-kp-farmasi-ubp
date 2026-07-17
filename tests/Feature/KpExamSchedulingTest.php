@@ -171,6 +171,53 @@ class KpExamSchedulingTest extends TestCase
             ->assertOk();
     }
 
+    public function test_exam_invitation_inbox_is_scoped_to_the_active_role(): void
+    {
+        $exam = $this->scheduledExam();
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/undangan-sidang')
+            ->assertOk()
+            ->assertSee('Undangan sidang terbaru')
+            ->assertSee('Ruang Sidang 1')
+            ->assertSee('Apotek Sehat');
+
+        $this->actingAs($this->supervisorUser)->withSession(['active_role' => 'pembimbing_dalam'])
+            ->get('/undangan-sidang')
+            ->assertOk()
+            ->assertSee('Undangan sidang terbaru')
+            ->assertSee('Ruang Sidang 1');
+
+        $this->actingAs($this->fieldUser)->withSession(['active_role' => 'pembimbing_lapangan'])
+            ->get('/undangan-sidang')
+            ->assertOk()
+            ->assertSee('Undangan sidang terbaru')
+            ->assertSee('Apotek Sehat');
+
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->get('/undangan-sidang')
+            ->assertOk()
+            ->assertSee('Undangan sidang terbaru')
+            ->assertSee('Ruang Sidang 1');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/undangan-sidang')
+            ->assertOk()
+            ->assertSee('Undangan sidang terbaru')
+            ->assertSee('Ruang Sidang 1');
+
+        $otherStudentUser = $this->makeUser('other-student-exam@test.local', ['mahasiswa']);
+        $this->makeStudent($otherStudentUser, '2210631230999');
+
+        $this->actingAs($otherStudentUser)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/undangan-sidang')
+            ->assertOk()
+            ->assertSee('Belum ada undangan sidang.')
+            ->assertDontSee('Ruang Sidang 1');
+
+        $this->assertSame('dijadwalkan', $exam->fresh()->status);
+    }
+
     public function test_schedule_validation_rejects_invalid_examiner_time_room_and_link(): void
     {
         $request = $this->approvedExamRequest();

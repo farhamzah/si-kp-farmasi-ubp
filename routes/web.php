@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\UserImportController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExamInvitationInboxController;
 use App\Http\Controllers\Examiner\ExamScheduleController as ExaminerExamScheduleController;
 use App\Http\Controllers\Examiner\AssessmentController as ExaminerAssessmentController;
 use App\Http\Controllers\FieldSupervisor\AssessmentController as FieldAssessmentController;
@@ -85,6 +86,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::post('/profile/sync-core', [ProfileController::class, 'syncCore'])->name('profile.sync-core');
         Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::get('/undangan-sidang', ExamInvitationInboxController::class)->name('exam-invitations.index');
 
         Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
             Route::post('users/sync-core', [UserManagementController::class, 'bulkSyncFromCore'])->name('users.sync-core');
