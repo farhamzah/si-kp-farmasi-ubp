@@ -15,36 +15,57 @@
         @php
             $guidanceLogs = $assignment->reportGuidanceLogs->sortByDesc('guidance_date');
             $approvedGuidance = $assignment->reportGuidanceLogs->where('status', 'disetujui')->count();
+            $guidanceProgress = min(100, (int) round(($approvedGuidance / 8) * 100));
             $eligibilityItems = $examEligibility['items'] ?? [];
         @endphp
 
-        <section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 md:p-6">
-            <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <section class="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-cyan-100">
+            <div class="border-b border-cyan-100 bg-gradient-to-r from-cyan-50 via-white to-emerald-50 px-5 py-5 md:px-6">
+                <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                    <div class="min-w-0">
+                        <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Ruang kerja laporan akhir</p>
+                        <h2 class="mt-1 text-2xl font-black text-slate-950">{{ $assignment->place->name }}</h2>
+                        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Kerjakan laporan di Google Docs/Drive, catat setiap sesi bimbingan, lalu submit link final setelah pembimbing dalam dan pembimbing lapangan sepakat dokumen siap dinilai.</p>
+                    </div>
+                    @if($report)
+                        <span class="inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $report->statusBadgeClass() }}">{{ $report->statusLabel() }}</span>
+                    @endif
+                </div>
+            </div>
+            <div class="grid gap-4 p-5 md:grid-cols-3 md:p-6">
                 <div class="min-w-0">
-                    <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Dokumen kerja & laporan final</p>
-                    <h2 class="mt-1 text-2xl font-black text-slate-950">{{ $assignment->place->name }}</h2>
-                    <div class="mt-3 grid gap-2 text-sm text-slate-600 md:grid-cols-2">
-                        <p>Pembimbing Dalam: <span class="font-bold text-slate-900">{{ $assignment->internalSupervisor ? lecturer_display_name($assignment->internalSupervisor) : '-' }}</span></p>
-                        <p>Pembimbing Lapangan: <span class="font-bold text-slate-900">{{ $assignment->fieldSupervisor ? field_supervisor_display_name($assignment->fieldSupervisor) : '-' }}</span></p>
+                    <p class="text-xs font-black uppercase tracking-widest text-slate-500">Pembimbing Dalam</p>
+                    <p class="mt-1 font-black text-slate-950">{{ $assignment->internalSupervisor ? lecturer_display_name($assignment->internalSupervisor) : '-' }}</p>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs font-black uppercase tracking-widest text-slate-500">Pembimbing Lapangan</p>
+                    <p class="mt-1 font-black text-slate-950">{{ $assignment->fieldSupervisor ? field_supervisor_display_name($assignment->fieldSupervisor) : '-' }}</p>
+                </div>
+                <div>
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="text-xs font-black uppercase tracking-widest text-slate-500">Bimbingan Disetujui</p>
+                        <p class="font-black text-cyan-700">{{ $approvedGuidance }}/8</p>
+                    </div>
+                    <div class="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-100">
+                        <div class="h-full rounded-full bg-gradient-to-r from-cyan-600 to-emerald-500" style="width: {{ $guidanceProgress }}%"></div>
                     </div>
                 </div>
-                @if($report)
-                    <span class="inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $report->statusBadgeClass() }}">{{ $report->statusLabel() }}</span>
-                @endif
             </div>
 
-            <div class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                @foreach($eligibilityItems as $item)
-                    <div class="rounded-2xl border {{ $item['ready'] ? 'border-emerald-200 bg-emerald-50/60' : 'border-amber-200 bg-amber-50/60' }} p-4">
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <p class="text-sm font-black text-slate-950">{{ $item['label'] }}</p>
-                                <p class="mt-1 text-xs text-slate-600">{{ $item['description'] }}</p>
+            <div class="px-5 pb-5 md:px-6 md:pb-6">
+                <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    @foreach($eligibilityItems as $item)
+                        <div class="rounded-2xl border {{ $item['ready'] ? 'border-emerald-200 bg-emerald-50/60' : 'border-amber-200 bg-amber-50/60' }} p-4">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-black text-slate-950">{{ $item['label'] }}</p>
+                                    <p class="mt-1 text-xs text-slate-600">{{ $item['description'] }}</p>
+                                </div>
+                                <span class="rounded-full px-2.5 py-1 text-[11px] font-black {{ $item['ready'] ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">{{ $item['ready'] ? 'OK' : 'Belum' }}</span>
                             </div>
-                            <span class="rounded-full px-2.5 py-1 text-[11px] font-black {{ $item['ready'] ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">{{ $item['ready'] ? 'OK' : 'Belum' }}</span>
                         </div>
-                    </div>
-                @endforeach
+                    @endforeach
+                </div>
             </div>
         </section>
 
@@ -54,10 +75,13 @@
                     <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div>
                             <h3 class="text-lg font-black text-slate-950">Link Laporan Final</h3>
-                            <p class="mt-1 text-sm text-slate-500">Gunakan link Google Docs/Drive final yang sudah disepakati pembimbing. Link ini terlihat oleh pembimbing dalam dan lapangan.</p>
+                            <p class="mt-1 text-sm text-slate-500">Simpan link final setelah proses bimbingan selesai. Untuk proses revisi harian, isi link dokumen pada log bimbingan di samping.</p>
                         </div>
                         @if($report?->final_document_url)
-                            <a href="{{ $report->final_document_url }}" target="_blank" rel="noopener" class="rounded-xl border border-cyan-200 px-4 py-2 text-sm font-bold text-cyan-700">Buka Link</a>
+                            <div class="flex flex-wrap gap-2">
+                                <a href="{{ $report->final_document_url }}" target="_blank" rel="noopener" class="rounded-xl border border-cyan-200 px-4 py-2 text-sm font-bold text-cyan-700">Preview</a>
+                                <a href="{{ $report->final_document_url }}" target="_blank" rel="noopener" class="rounded-xl bg-cyan-700 px-4 py-2 text-sm font-bold text-white">Buka Dokumen</a>
+                            </div>
                         @endif
                     </div>
 
@@ -130,12 +154,20 @@
                 </section>
 
                 <section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-                    <h3 class="font-black text-slate-950">Bimbingan Laporan</h3>
-                    <p class="mt-1 text-sm text-slate-500">{{ $approvedGuidance }}/8 bimbingan disetujui pembimbing dalam.</p>
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <h3 class="font-black text-slate-950">Log Bimbingan Laporan</h3>
+                            <p class="mt-1 text-sm text-slate-500">Catat topik, hasil diskusi, dan link dokumen kerja yang sedang diperiksa.</p>
+                        </div>
+                        <span class="rounded-full bg-cyan-50 px-3 py-1 text-xs font-black text-cyan-700">{{ $approvedGuidance }}/8 OK</span>
+                    </div>
                     <form method="POST" action="{{ route('student.final-reports.guidance.store') }}" class="mt-4 space-y-3">
                         @csrf
                         <input type="date" name="guidance_date" value="{{ old('guidance_date', now()->toDateString()) }}" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm shadow-sm">
                         <input name="topic" value="{{ old('topic') }}" placeholder="Topik bimbingan laporan" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm shadow-sm">
+                        <input name="document_url" value="{{ old('document_url', $report?->final_document_url) }}" placeholder="Link Google Docs/Drive yang dibahas" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm shadow-sm">
+                        <input name="document_label" value="{{ old('document_label') }}" placeholder="Label link opsional, contoh: Draft Bab 3" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm shadow-sm">
+                        <p class="rounded-xl bg-cyan-50 px-3 py-2 text-xs leading-5 text-cyan-800">Gunakan link Google Docs/Drive yang aksesnya sudah dibagikan ke pembimbing. Link ini akan tampil saat pembimbing memvalidasi sesi bimbingan.</p>
                         <textarea name="student_note" rows="3" placeholder="Catatan mahasiswa opsional" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm shadow-sm">{{ old('student_note') }}</textarea>
                         <button class="w-full rounded-xl bg-cyan-700 px-4 py-2 text-sm font-bold text-white">Kirim Log Bimbingan</button>
                     </form>
@@ -150,6 +182,12 @@
                                     <span class="rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 {{ $guidance->statusBadgeClass() }}">{{ $guidance->statusLabel() }}</span>
                                 </div>
                                 @if($guidance->validation_note)<p class="mt-2 text-xs text-slate-600">{{ $guidance->validation_note }}</p>@endif
+                                @if($guidance->document_url)
+                                    <div class="mt-3 flex flex-wrap gap-2">
+                                        <a href="{{ $guidance->document_url }}" target="_blank" rel="noopener" class="rounded-lg border border-cyan-200 px-3 py-1.5 text-xs font-bold text-cyan-700">Preview</a>
+                                        <a href="{{ $guidance->document_url }}" target="_blank" rel="noopener" class="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">{{ $guidance->document_label ?: 'Buka Dokumen' }}</a>
+                                    </div>
+                                @endif
                             </div>
                         @empty
                             <p class="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">Belum ada log bimbingan laporan.</p>

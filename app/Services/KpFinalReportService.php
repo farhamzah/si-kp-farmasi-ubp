@@ -199,6 +199,8 @@ class KpFinalReportService
             'guidance_date' => $data['guidance_date'],
             'topic' => $data['topic'],
             'student_note' => $data['student_note'] ?? null,
+            'document_url' => $data['document_url'] ?? null,
+            'document_label' => $data['document_label'] ?? null,
             'status' => 'menunggu_validasi',
             'submitted_at' => now(),
         ]);

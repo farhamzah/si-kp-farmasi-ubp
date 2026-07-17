@@ -12,6 +12,8 @@ class KpReportGuidanceLog extends Model
         'guidance_date',
         'topic',
         'student_note',
+        'document_url',
+        'document_label',
         'status',
         'submitted_at',
         'validated_by',

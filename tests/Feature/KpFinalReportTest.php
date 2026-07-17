@@ -164,16 +164,48 @@ class KpFinalReportTest extends TestCase
                 'guidance_date' => now()->toDateString(),
                 'topic' => 'Review bab hasil',
                 'student_note' => 'Sudah revisi pembahasan.',
+                'document_url' => ' docs.google.com/document/d/draft-report ',
+                'document_label' => ' Draft Bab Hasil ',
             ])->assertRedirect();
 
         $guidance = $this->assignment->reportGuidanceLogs()->first();
         $this->assertSame('menunggu_validasi', $guidance->status);
+        $this->assertSame('https://docs.google.com/document/d/draft-report', $guidance->document_url);
+        $this->assertSame('Draft Bab Hasil', $guidance->document_label);
+
+        $this->actingAs($this->lecturerUser)->withSession(['active_role' => 'pembimbing_dalam'])
+            ->get('/pembimbing-dalam/laporan-akhir/'.$report->id)
+            ->assertOk()
+            ->assertSee('Draft Bab Hasil')
+            ->assertSee('Preview Dokumen');
+
+        $this->actingAs($this->fieldUser)->withSession(['active_role' => 'pembimbing_lapangan'])
+            ->get('/pembimbing-lapangan/laporan-akhir/'.$report->id)
+            ->assertOk()
+            ->assertSee('Draft Bab Hasil')
+            ->assertSee('Validasi log bimbingan dilakukan oleh pembimbing dalam.');
 
         $this->actingAs($this->lecturerUser)->withSession(['active_role' => 'pembimbing_dalam'])
             ->post('/pembimbing-dalam/laporan-akhir/'.$report->id.'/bimbingan/'.$guidance->id.'/approve', ['review_note' => 'OK.'])
             ->assertRedirect();
 
         $this->assertSame('disetujui', $guidance->fresh()->status);
+    }
+
+    public function test_report_and_guidance_links_must_be_safe_http_urls(): void
+    {
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/laporan-akhir/link-final', [
+                'final_document_url' => 'javascript:alert(1)',
+                'final_document_label' => 'Unsafe',
+            ])->assertSessionHasErrors('final_document_url');
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/laporan-akhir/bimbingan', [
+                'guidance_date' => now()->toDateString(),
+                'topic' => 'Review link tidak aman',
+                'document_url' => 'javascript:alert(1)',
+            ])->assertSessionHasErrors('document_url');
     }
 
     public function test_internal_supervisor_can_reject_with_note_and_admin_koordinator_can_monitor(): void

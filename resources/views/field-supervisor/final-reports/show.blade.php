@@ -7,6 +7,9 @@
 @php
     $approvedLogbooks = $report->assignment->logbooks()->where('status', 'disetujui')->count();
     $openLogbooks = $report->assignment->logbooks()->whereIn('status', ['menunggu_validasi', 'revisi', 'ditolak'])->count();
+    $guidanceLogs = $report->assignment->reportGuidanceLogs->sortByDesc('guidance_date');
+    $approvedGuidance = $report->assignment->reportGuidanceLogs->where('status', 'disetujui')->count();
+    $guidanceProgress = min(100, (int) round(($approvedGuidance / 8) * 100));
 @endphp
 <div class="space-y-5">
     @if($errors->any())
@@ -61,6 +64,42 @@
                     @unless($report->final_document_url)
                         <p class="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">Belum ada dokumen final.</p>
                     @endunless
+                @endforelse
+            </div>
+
+            <div class="mt-6 rounded-2xl border border-cyan-100 bg-cyan-50/40 p-4">
+                <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h3 class="font-black text-slate-950">Log Bimbingan Laporan</h3>
+                        <p class="mt-1 text-sm text-slate-500">Anda dapat memantau proses bimbingan laporan dan membuka dokumen kerja mahasiswa. Validasi log bimbingan dilakukan oleh pembimbing dalam.</p>
+                    </div>
+                    <span class="inline-flex w-fit rounded-full bg-white px-3 py-1 text-xs font-black text-cyan-700 ring-1 ring-cyan-200">{{ $approvedGuidance }}/8 disetujui</span>
+                </div>
+                <div class="mt-3 h-2.5 overflow-hidden rounded-full bg-white">
+                    <div class="h-full rounded-full bg-gradient-to-r from-cyan-600 to-emerald-500" style="width: {{ $guidanceProgress }}%"></div>
+                </div>
+            </div>
+            <div class="mt-4 space-y-3">
+                @forelse($guidanceLogs as $guidance)
+                    <div class="rounded-2xl border border-slate-200 p-4">
+                        <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                            <div>
+                                <p class="font-black text-slate-950">{{ $guidance->topic }}</p>
+                                <p class="text-xs text-slate-500">{{ $guidance->guidance_date->format('d M Y') }}</p>
+                                @if($guidance->student_note)<p class="mt-2 text-sm text-slate-600">{{ $guidance->student_note }}</p>@endif
+                                @if($guidance->validation_note)<p class="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">{{ $guidance->validation_note }}</p>@endif
+                            </div>
+                            <span class="inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 {{ $guidance->statusBadgeClass() }}">{{ $guidance->statusLabel() }}</span>
+                        </div>
+                        @if($guidance->document_url)
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <a href="{{ $guidance->document_url }}" target="_blank" rel="noopener" class="rounded-lg border border-cyan-200 px-3 py-1.5 text-xs font-bold text-cyan-700">Preview Dokumen</a>
+                                <a href="{{ $guidance->document_url }}" target="_blank" rel="noopener" class="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">{{ $guidance->document_label ?: 'Buka Link Bimbingan' }}</a>
+                            </div>
+                        @endif
+                    </div>
+                @empty
+                    <p class="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">Belum ada bimbingan laporan.</p>
                 @endforelse
             </div>
         </section>

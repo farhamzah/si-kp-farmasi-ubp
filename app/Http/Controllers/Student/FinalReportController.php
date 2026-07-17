@@ -40,8 +40,13 @@ class FinalReportController extends Controller
 
     public function saveFinalLink(Request $request, KpFinalReportService $service): RedirectResponse
     {
+        $request->merge([
+            'final_document_url' => $this->normalizeDocumentUrl($request->input('final_document_url')),
+            'final_document_label' => $this->cleanNullableText($request->input('final_document_label')),
+        ]);
+
         $data = $request->validate([
-            'final_document_url' => ['required', 'url', 'max:2048'],
+            'final_document_url' => ['required', 'url:http,https', 'max:2048'],
             'final_document_label' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -54,10 +59,17 @@ class FinalReportController extends Controller
 
     public function storeGuidance(Request $request, KpFinalReportService $service): RedirectResponse
     {
+        $request->merge([
+            'document_url' => $this->normalizeDocumentUrl($request->input('document_url')),
+            'document_label' => $this->cleanNullableText($request->input('document_label')),
+        ]);
+
         $data = $request->validate([
             'guidance_date' => ['required', 'date'],
             'topic' => ['required', 'string', 'max:255'],
             'student_note' => ['nullable', 'string', 'max:2000'],
+            'document_url' => ['nullable', 'url:http,https', 'max:2048'],
+            'document_label' => ['nullable', 'string', 'max:255'],
         ]);
 
         $service->addGuidanceLog($request->user(), $this->requireActiveAssignment(), $data);
@@ -99,5 +111,37 @@ class FinalReportController extends Controller
         }
 
         return $assignment;
+    }
+
+    private function normalizeDocumentUrl(mixed $value): mixed
+    {
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        $url = trim($value);
+        $url = trim($url, "\"'<>");
+        $url = preg_replace('/\s+/', '', $url) ?? $url;
+
+        if ($url === '') {
+            return null;
+        }
+
+        if (! preg_match('~^[a-z][a-z0-9+.-]*://~i', $url) && preg_match('~^(drive\.google\.com/|docs\.google\.com/|forms\.gle/)~i', $url)) {
+            $url = 'https://'.$url;
+        }
+
+        return $url;
+    }
+
+    private function cleanNullableText(mixed $value): mixed
+    {
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        $value = trim($value);
+
+        return $value === '' ? null : $value;
     }
 }
