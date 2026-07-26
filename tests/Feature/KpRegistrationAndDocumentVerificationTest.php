@@ -268,7 +268,7 @@ class KpRegistrationAndDocumentVerificationTest extends TestCase
 
         $detailResponse->assertOk()
             ->assertSee('Kembali ke Antrian')
-            ->assertSee('href="http://localhost/management/kp-registrations?page=2&amp;q=Queue%20Test&amp;period='.$period->id.'&amp;status=menunggu_verifikasi"', false);
+            ->assertSee('href="'.e(url($queueUrl)).'"', false);
     }
 
     public function test_admin_can_preview_uploaded_registration_document_inline(): void

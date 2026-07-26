@@ -43,6 +43,13 @@ class ExamScheduleController extends Controller
                 ->withErrors(['request' => 'Kandidat harus disetujui koordinator sebelum dijadwalkan.']);
         }
 
+        $examRequest->loadMissing('assignment.finalReport');
+        if (! $examRequest->assignment?->isEligibleForExamRequest()) {
+            return redirect()
+                ->route('management.exam-requests.show', $examRequest)
+                ->withErrors(['request' => 'Checklist kesiapan sidang belum lengkap. Validasi akhir perlu diperiksa ulang.']);
+        }
+
         return view('management.exams.schedule', ['examRequest' => $examRequest->load(['assignment.student.user', 'assignment.period', 'assignment.place', 'assignment.internalSupervisor.user', 'assignment.fieldSupervisor.user', 'assignment.finalReport.latestFile']), 'exam' => null, 'examiners' => $this->examiners()]);
     }
 

@@ -1,21 +1,19 @@
 <?php
 
-use App\Http\Middleware\CheckRole;
-use App\Http\Middleware\CheckUserActive;
-use App\Http\Middleware\EnsureRoleSelected;
 use App\Console\Commands\AcademicUnitCleanupCommand;
 use App\Console\Commands\AssignmentCancelReconcileCommand;
-use App\Console\Commands\CoreHealthCheckCommand;
-use App\Console\Commands\CoreAcademicUnitCheckCommand;
-use App\Console\Commands\CoreMappingCoverageCommand;
-use App\Console\Commands\CoreModePreflightCommand;
-use App\Console\Commands\ExternalDocumentReferencePreviewCommand;
-use App\Console\Commands\SyncCoreMappingCommand;
 use App\Console\Commands\AuthBridgeCheckCommand;
 use App\Console\Commands\AuthBridgeSmokeTestCommand;
 use App\Console\Commands\AuthModeCommand;
+use App\Console\Commands\CoreAcademicUnitCheckCommand;
+use App\Console\Commands\CoreHealthCheckCommand;
+use App\Console\Commands\CoreMappingCoverageCommand;
+use App\Console\Commands\CoreModePreflightCommand;
+use App\Console\Commands\DeliverIntegrationOutboxCommand;
 use App\Console\Commands\DisplayAdapterCheckCommand;
+use App\Console\Commands\ExternalDocumentReferencePreviewCommand;
 use App\Console\Commands\IntegrationGapCheckCommand;
+use App\Console\Commands\KpIntegrationHealthCommand;
 use App\Console\Commands\MasterDataReadCheckCommand;
 use App\Console\Commands\ProductionReadinessGateCommand;
 use App\Console\Commands\ProvisionCoreBridgeUserCommand;
@@ -24,8 +22,13 @@ use App\Console\Commands\ReleaseCandidateGateCommand;
 use App\Console\Commands\ReleaseSensitiveScanCommand;
 use App\Console\Commands\SafaPublicInfoPreviewCommand;
 use App\Console\Commands\StagingRehearsalCheckCommand;
+use App\Console\Commands\SyncCoreMappingCommand;
 use App\Console\Commands\TuDocumentPayloadPreviewCommand;
 use App\Console\Commands\UiReadinessCheckCommand;
+use App\Http\Middleware\CheckRole;
+use App\Http\Middleware\CheckUserActive;
+use App\Http\Middleware\EnsureRoleSelected;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -43,6 +46,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withCommands([
         AcademicUnitCleanupCommand::class,
         AssignmentCancelReconcileCommand::class,
+        DeliverIntegrationOutboxCommand::class,
         AuthBridgeCheckCommand::class,
         AuthBridgeSmokeTestCommand::class,
         AuthModeCommand::class,
@@ -53,6 +57,7 @@ return Application::configure(basePath: dirname(__DIR__))
         DisplayAdapterCheckCommand::class,
         ExternalDocumentReferencePreviewCommand::class,
         IntegrationGapCheckCommand::class,
+        KpIntegrationHealthCommand::class,
         MasterDataReadCheckCommand::class,
         ProductionReadinessGateCommand::class,
         ProvisionCoreBridgeUserCommand::class,
@@ -65,6 +70,14 @@ return Application::configure(basePath: dirname(__DIR__))
         TuDocumentPayloadPreviewCommand::class,
         UiReadinessCheckCommand::class,
     ])
+    ->withSchedule(function (Schedule $schedule): void {
+        if ((bool) config('dosen_farmasi.integration.enabled')) {
+            $schedule->command('kp:deliver-integration-outbox --limit=50')
+                ->everyFiveMinutes()
+                ->withoutOverlapping()
+                ->onOneServer();
+        }
+    })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'active' => CheckUserActive::class,

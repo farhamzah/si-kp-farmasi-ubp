@@ -376,13 +376,29 @@ class KpExamSchedulingTest extends TestCase
             KpReportGuidanceLog::firstOrCreate(
                 [
                     'kp_assignment_id' => $this->assignment->id,
+                    'reviewer_type' => KpReportGuidanceLog::REVIEWER_INTERNAL,
                     'guidance_date' => now()->subDays($i)->toDateString(),
-                    'topic' => 'Bimbingan laporan '.$i,
+                    'topic' => 'Bimbingan laporan dalam '.$i,
                 ],
                 [
                     'status' => 'disetujui',
                     'submitted_at' => now()->subDays($i),
                     'validated_by' => $this->supervisorUser->id,
+                    'validated_at' => now()->subDays($i),
+                ]
+            );
+
+            KpReportGuidanceLog::firstOrCreate(
+                [
+                    'kp_assignment_id' => $this->assignment->id,
+                    'reviewer_type' => KpReportGuidanceLog::REVIEWER_FIELD,
+                    'guidance_date' => now()->subDays($i)->toDateString(),
+                    'topic' => 'Bimbingan laporan lapangan '.$i,
+                ],
+                [
+                    'status' => 'disetujui',
+                    'submitted_at' => now()->subDays($i),
+                    'validated_by' => $this->fieldUser->id,
                     'validated_at' => now()->subDays($i),
                 ]
             );

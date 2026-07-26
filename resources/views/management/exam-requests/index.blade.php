@@ -29,7 +29,7 @@
             <div>
                 <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Meja kerja koordinator</p>
                 <h2 class="mt-1 text-xl font-black text-slate-950">Validasi kandidat sebelum penjadwalan</h2>
-                <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-600">Mahasiswa masuk ke antrian ini setelah mengajukan sidang. Cek validasi logbook, minimal 8 bimbingan laporan, dan persetujuan laporan dari pembimbing dalam serta lapangan sebelum menjadwalkan.</p>
+                <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-600">Mahasiswa masuk ke antrian ini setelah mengajukan sidang. Cek validasi logbook, minimal 8 bimbingan laporan pembimbing dalam, minimal 8 pemeriksaan/bimbingan laporan pembimbing lapangan, dan persetujuan laporan dari kedua pembimbing sebelum menjadwalkan.</p>
             </div>
             <a href="{{ route('management.exams.index') }}" class="inline-flex justify-center rounded-xl border border-cyan-200 px-4 py-3 text-sm font-bold text-cyan-700 shadow-sm">Lihat Jadwal Sidang</a>
         </div>

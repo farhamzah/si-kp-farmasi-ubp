@@ -7,8 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class KpReportGuidanceLog extends Model
 {
+    public const REVIEWER_INTERNAL = 'internal';
+    public const REVIEWER_FIELD = 'field';
+
     protected $fillable = [
         'kp_assignment_id',
+        'reviewer_type',
         'guidance_date',
         'topic',
         'student_note',
@@ -57,5 +61,28 @@ class KpReportGuidanceLog extends Model
             'revisi' => 'bg-blue-100 text-blue-800 ring-blue-200',
             'ditolak' => 'bg-red-100 text-red-800 ring-red-200',
         ][$this->status] ?? 'bg-slate-100 text-slate-700 ring-slate-200';
+    }
+
+    public function reviewerType(): string
+    {
+        return $this->reviewer_type ?: self::REVIEWER_INTERNAL;
+    }
+
+    public function isForInternalSupervisor(): bool
+    {
+        return $this->reviewerType() === self::REVIEWER_INTERNAL;
+    }
+
+    public function isForFieldSupervisor(): bool
+    {
+        return $this->reviewerType() === self::REVIEWER_FIELD;
+    }
+
+    public function reviewerTypeLabel(): string
+    {
+        return [
+            self::REVIEWER_INTERNAL => 'Pembimbing Dalam',
+            self::REVIEWER_FIELD => 'Pembimbing Lapangan',
+        ][$this->reviewerType()] ?? 'Pembimbing Dalam';
     }
 }

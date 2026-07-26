@@ -65,6 +65,7 @@ class FinalReportController extends Controller
         ]);
 
         $data = $request->validate([
+            'reviewer_type' => ['required', 'in:internal,field'],
             'guidance_date' => ['required', 'date'],
             'topic' => ['required', 'string', 'max:255'],
             'student_note' => ['nullable', 'string', 'max:2000'],
@@ -74,7 +75,7 @@ class FinalReportController extends Controller
 
         $service->addGuidanceLog($request->user(), $this->requireActiveAssignment(), $data);
 
-        return back()->with('status', 'Log bimbingan laporan berhasil dikirim untuk validasi pembimbing dalam.');
+        return back()->with('status', 'Log bimbingan laporan berhasil dikirim untuk validasi pembimbing terkait.');
     }
 
     public function submit(SubmitFinalReportRequest $request, KpFinalReportService $service): RedirectResponse

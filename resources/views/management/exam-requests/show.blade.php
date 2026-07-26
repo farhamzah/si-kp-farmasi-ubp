@@ -7,11 +7,12 @@
     $eligibility = $assignment->examEligibility();
     $report = $assignment->finalReport;
     $canReview = in_array($examRequest->status, ['diajukan', 'revisi'], true);
+    $canApprove = $canReview && $eligibility['ready'];
 @endphp
 <div class="space-y-5">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <a href="{{ route('management.exam-requests.index') }}" class="inline-flex rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">Kembali ke Antrian</a>
-        @if($examRequest->canBeScheduled() && ! $examRequest->exam)
+        @if($examRequest->canBeScheduled() && $eligibility['ready'] && ! $examRequest->exam)
             <a href="{{ route('management.exam-requests.schedule', $examRequest) }}" class="inline-flex rounded-xl bg-cyan-700 px-4 py-2 text-sm font-bold text-white shadow-sm">Lanjut Jadwalkan Sidang</a>
         @endif
     </div>
@@ -101,7 +102,10 @@
                     <form method="POST" action="{{ route('management.exam-requests.approve', $examRequest) }}" class="mt-4">
                         @csrf
                         <textarea name="review_note" rows="2" placeholder="Catatan opsional untuk persetujuan" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm shadow-sm"></textarea>
-                        <button class="mt-3 w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-sm">Setujui Masuk Jadwal</button>
+                        <button @disabled(! $canApprove) class="mt-3 w-full rounded-xl px-4 py-3 text-sm font-bold text-white shadow-sm {{ $canApprove ? 'bg-emerald-600' : 'cursor-not-allowed bg-slate-300' }}">Setujui Masuk Jadwal</button>
+                        @unless($canApprove)
+                            <p class="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">Validasi akhir terkunci sampai semua checklist kesiapan sidang berstatus OK.</p>
+                        @endunless
                     </form>
                     <form method="POST" action="{{ route('management.exam-requests.revision', $examRequest) }}" class="mt-4">
                         @csrf
@@ -119,7 +123,7 @@
 
                 @if($examRequest->exam)
                     <a href="{{ route('management.exams.show', $examRequest->exam) }}" class="mt-4 block rounded-xl bg-cyan-700 px-4 py-3 text-center text-sm font-bold text-white shadow-sm">Lihat Jadwal Sidang</a>
-                @elseif($examRequest->canBeScheduled())
+                @elseif($examRequest->canBeScheduled() && $eligibility['ready'])
                     <a href="{{ route('management.exam-requests.schedule', $examRequest) }}" class="mt-4 block rounded-xl border border-cyan-200 px-4 py-3 text-center text-sm font-bold text-cyan-700 shadow-sm">Buka Form Jadwal</a>
                 @endif
             </x-ui.card>

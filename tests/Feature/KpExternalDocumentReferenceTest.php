@@ -93,7 +93,8 @@ class KpExternalDocumentReferenceTest extends TestCase
         $this->assertSame(1, $result['created']);
         $this->assertSame(0, $result['updated']);
         $this->assertSame(1, $result['created_or_updated']);
-        $this->assertSame([1], $result['reference_ids']);
+        $this->assertCount(1, $result['reference_ids']);
+        $this->assertIsInt($result['reference_ids'][0]);
         $this->assertDatabaseHas('kp_external_document_references', [
             'external_app' => 'tu-farmasi',
             'document_type' => 'placement_letter',

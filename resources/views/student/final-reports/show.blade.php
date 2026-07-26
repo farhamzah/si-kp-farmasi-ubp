@@ -14,8 +14,12 @@
     @else
         @php
             $guidanceLogs = $assignment->reportGuidanceLogs->sortByDesc('guidance_date');
-            $approvedGuidance = $assignment->reportGuidanceLogs->where('status', 'disetujui')->count();
-            $guidanceProgress = min(100, (int) round(($approvedGuidance / 8) * 100));
+            $internalGuidanceLogs = $assignment->reportGuidanceLogs->filter(fn ($guidance) => $guidance->isForInternalSupervisor());
+            $fieldGuidanceLogs = $assignment->reportGuidanceLogs->filter(fn ($guidance) => $guidance->isForFieldSupervisor());
+            $approvedInternalGuidance = $internalGuidanceLogs->where('status', 'disetujui')->count();
+            $approvedFieldGuidance = $fieldGuidanceLogs->where('status', 'disetujui')->count();
+            $internalGuidanceProgress = min(100, (int) round(($approvedInternalGuidance / 8) * 100));
+            $fieldGuidanceProgress = min(100, (int) round(($approvedFieldGuidance / 8) * 100));
             $eligibilityItems = $examEligibility['items'] ?? [];
         @endphp
 
@@ -41,13 +45,20 @@
                     <p class="text-xs font-black uppercase tracking-widest text-slate-500">Pembimbing Lapangan</p>
                     <p class="mt-1 font-black text-slate-950">{{ $assignment->fieldSupervisor ? field_supervisor_display_name($assignment->fieldSupervisor) : '-' }}</p>
                 </div>
-                <div>
+                <div class="space-y-4">
                     <div class="flex items-center justify-between gap-3">
-                        <p class="text-xs font-black uppercase tracking-widest text-slate-500">Bimbingan Disetujui</p>
-                        <p class="font-black text-cyan-700">{{ $approvedGuidance }}/8</p>
+                        <p class="text-xs font-black uppercase tracking-widest text-slate-500">Bimbingan Dalam</p>
+                        <p class="font-black text-cyan-700">{{ $approvedInternalGuidance }}/8</p>
                     </div>
                     <div class="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-100">
-                        <div class="h-full rounded-full bg-gradient-to-r from-cyan-600 to-emerald-500" style="width: {{ $guidanceProgress }}%"></div>
+                        <div class="h-full rounded-full bg-gradient-to-r from-cyan-600 to-emerald-500" style="width: {{ $internalGuidanceProgress }}%"></div>
+                    </div>
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="text-xs font-black uppercase tracking-widest text-slate-500">Bimbingan Lapangan</p>
+                        <p class="font-black text-cyan-700">{{ $approvedFieldGuidance }}/8</p>
+                    </div>
+                    <div class="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-100">
+                        <div class="h-full rounded-full bg-gradient-to-r from-sky-500 to-teal-500" style="width: {{ $fieldGuidanceProgress }}%"></div>
                     </div>
                 </div>
             </div>
@@ -159,10 +170,14 @@
                             <h3 class="font-black text-slate-950">Log Bimbingan Laporan</h3>
                             <p class="mt-1 text-sm text-slate-500">Catat topik, hasil diskusi, dan link dokumen kerja yang sedang diperiksa.</p>
                         </div>
-                        <span class="rounded-full bg-cyan-50 px-3 py-1 text-xs font-black text-cyan-700">{{ $approvedGuidance }}/8 OK</span>
+                        <span class="rounded-full bg-cyan-50 px-3 py-1 text-xs font-black text-cyan-700">Dalam {{ $approvedInternalGuidance }}/8 | Lapangan {{ $approvedFieldGuidance }}/8</span>
                     </div>
                     <form method="POST" action="{{ route('student.final-reports.guidance.store') }}" class="mt-4 space-y-3">
                         @csrf
+                        <select name="reviewer_type" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold shadow-sm">
+                            <option value="internal" @selected(old('reviewer_type') === 'internal')>Validasi Pembimbing Dalam</option>
+                            <option value="field" @selected(old('reviewer_type') === 'field')>Validasi Pembimbing Lapangan</option>
+                        </select>
                         <input type="date" name="guidance_date" value="{{ old('guidance_date', now()->toDateString()) }}" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm shadow-sm">
                         <input name="topic" value="{{ old('topic') }}" placeholder="Topik bimbingan laporan" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm shadow-sm">
                         <input name="document_url" value="{{ old('document_url', $report?->final_document_url) }}" placeholder="Link Google Docs/Drive yang dibahas" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm shadow-sm">
@@ -176,8 +191,8 @@
                             <div class="rounded-xl border border-slate-200 p-3 text-sm">
                                 <div class="flex items-start justify-between gap-2">
                                     <div>
-                                        <p class="font-bold text-slate-950">{{ $guidance->topic }}</p>
-                                        <p class="text-xs text-slate-500">{{ $guidance->guidance_date->format('d M Y') }}</p>
+                                <p class="font-bold text-slate-950">{{ $guidance->topic }}</p>
+                                        <p class="text-xs text-slate-500">{{ $guidance->guidance_date->format('d M Y') }} | {{ $guidance->reviewerTypeLabel() }}</p>
                                     </div>
                                     <span class="rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 {{ $guidance->statusBadgeClass() }}">{{ $guidance->statusLabel() }}</span>
                                 </div>

@@ -7,8 +7,10 @@
 @php
     $approvedLogbooks = $report->assignment->logbooks()->where('status', 'disetujui')->count();
     $openLogbooks = $report->assignment->logbooks()->whereIn('status', ['menunggu_validasi', 'revisi', 'ditolak'])->count();
-    $guidanceLogs = $report->assignment->reportGuidanceLogs->sortByDesc('guidance_date');
-    $approvedGuidance = $report->assignment->reportGuidanceLogs->where('status', 'disetujui')->count();
+    $guidanceLogs = $report->assignment->reportGuidanceLogs
+        ->filter(fn ($guidance) => $guidance->isForFieldSupervisor())
+        ->sortByDesc('guidance_date');
+    $approvedGuidance = $guidanceLogs->where('status', 'disetujui')->count();
     $guidanceProgress = min(100, (int) round(($approvedGuidance / 8) * 100));
 @endphp
 <div class="space-y-5">
@@ -71,7 +73,7 @@
                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h3 class="font-black text-slate-950">Log Bimbingan Laporan</h3>
-                        <p class="mt-1 text-sm text-slate-500">Anda dapat memantau proses bimbingan laporan dan membuka dokumen kerja mahasiswa. Validasi log bimbingan dilakukan oleh pembimbing dalam.</p>
+                        <p class="mt-1 text-sm text-slate-500">Validasi minimal 8 sesi pemeriksaan/bimbingan laporan lapangan. Pembimbing dalam tetap memiliki validasi bimbingan laporan terpisah.</p>
                     </div>
                     <span class="inline-flex w-fit rounded-full bg-white px-3 py-1 text-xs font-black text-cyan-700 ring-1 ring-cyan-200">{{ $approvedGuidance }}/8 disetujui</span>
                 </div>
@@ -85,7 +87,7 @@
                         <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                             <div>
                                 <p class="font-black text-slate-950">{{ $guidance->topic }}</p>
-                                <p class="text-xs text-slate-500">{{ $guidance->guidance_date->format('d M Y') }}</p>
+                                <p class="text-xs text-slate-500">{{ $guidance->guidance_date->format('d M Y') }} | {{ $guidance->reviewerTypeLabel() }}</p>
                                 @if($guidance->student_note)<p class="mt-2 text-sm text-slate-600">{{ $guidance->student_note }}</p>@endif
                                 @if($guidance->validation_note)<p class="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">{{ $guidance->validation_note }}</p>@endif
                             </div>
@@ -95,6 +97,20 @@
                             <div class="mt-3 flex flex-wrap gap-2">
                                 <a href="{{ $guidance->document_url }}" target="_blank" rel="noopener" class="rounded-lg border border-cyan-200 px-3 py-1.5 text-xs font-bold text-cyan-700">Preview Dokumen</a>
                                 <a href="{{ $guidance->document_url }}" target="_blank" rel="noopener" class="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">{{ $guidance->document_label ?: 'Buka Link Bimbingan' }}</a>
+                            </div>
+                        @endif
+                        @if($guidance->status !== 'disetujui')
+                            <div class="mt-3 grid gap-2 md:grid-cols-2">
+                                <form method="POST" action="{{ route('field-supervisor.final-reports.guidance.approve', [$report, $guidance]) }}">
+                                    @csrf
+                                    <input name="review_note" placeholder="Catatan opsional" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                                    <button class="mt-2 w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white">Setujui Bimbingan</button>
+                                </form>
+                                <form method="POST" action="{{ route('field-supervisor.final-reports.guidance.revision', [$report, $guidance]) }}">
+                                    @csrf
+                                    <input name="review_note" required placeholder="Catatan revisi wajib" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                                    <button class="mt-2 w-full rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-white">Minta Revisi</button>
+                                </form>
                             </div>
                         @endif
                     </div>

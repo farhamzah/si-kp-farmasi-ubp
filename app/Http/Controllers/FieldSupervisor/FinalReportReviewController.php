@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Management\ReviewFinalReportRequest;
 use App\Models\KpFinalReport;
 use App\Models\KpFinalReportFile;
+use App\Models\KpReportGuidanceLog;
 use App\Services\KpFinalReportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -87,10 +88,35 @@ class FinalReportReviewController extends Controller
         return back()->with('status', 'Laporan akhir berhasil ditolak.');
     }
 
+    public function approveGuidance(ReviewFinalReportRequest $request, KpFinalReport $report, KpReportGuidanceLog $guidance, KpFinalReportService $service): RedirectResponse
+    {
+        $this->ensureGuidanceBelongsToReport($report, $guidance);
+        $service->approveGuidanceByFieldSupervisor($request->user(), $guidance, $request->review_note);
+
+        return back()->with('status', 'Bimbingan laporan lapangan berhasil divalidasi.');
+    }
+
+    public function revisionGuidance(ReviewFinalReportRequest $request, KpFinalReport $report, KpReportGuidanceLog $guidance, KpFinalReportService $service): RedirectResponse
+    {
+        if (! $request->filled('review_note')) {
+            throw ValidationException::withMessages(['review_note' => 'Catatan revisi wajib diisi.']);
+        }
+
+        $this->ensureGuidanceBelongsToReport($report, $guidance);
+        $service->requestGuidanceRevisionByFieldSupervisor($request->user(), $guidance, $request->review_note);
+
+        return back()->with('status', 'Revisi bimbingan laporan lapangan berhasil diminta.');
+    }
+
     public function download(KpFinalReportFile $file, KpFinalReportService $service): StreamedResponse
     {
         $service->ensureFieldSupervisorCanDownload(request()->user(), $file);
 
         return Storage::disk($file->file_disk ?: 'local')->download($file->file_path, $file->original_filename);
+    }
+
+    private function ensureGuidanceBelongsToReport(KpFinalReport $report, KpReportGuidanceLog $guidance): void
+    {
+        abort_unless($guidance->kp_assignment_id === $report->kp_assignment_id, 404);
     }
 }

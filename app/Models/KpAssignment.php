@@ -19,7 +19,7 @@ class KpAssignment extends Model
     protected $fillable = [
         'kp_period_id', 'kp_registration_id', 'kp_place_selection_id', 'student_id', 'kp_place_id',
         'internal_supervisor_id', 'field_supervisor_id', 'status', 'assigned_by', 'assigned_at',
-        'started_at', 'ended_at', 'workday_pattern', 'active_key', 'note',
+        'started_at', 'ended_at', 'workday_pattern', 'active_key', 'note', 'integration_revision',
     ];
 
     protected function casts(): array
@@ -110,8 +110,28 @@ class KpAssignment extends Model
 
         $approvedLogbooks = $this->logbooks()->where('status', 'disetujui')->count();
         $openLogbooks = $this->logbooks()->whereIn('status', ['menunggu_validasi', 'revisi', 'ditolak'])->count();
-        $approvedGuidance = $this->reportGuidanceLogs()->where('status', 'disetujui')->count();
-        $openGuidance = $this->reportGuidanceLogs()->whereIn('status', ['menunggu_validasi', 'revisi', 'ditolak'])->count();
+        $approvedInternalGuidance = $this->reportGuidanceLogs()
+            ->where(function ($query): void {
+                $query->where('reviewer_type', KpReportGuidanceLog::REVIEWER_INTERNAL)
+                    ->orWhereNull('reviewer_type');
+            })
+            ->where('status', 'disetujui')
+            ->count();
+        $openInternalGuidance = $this->reportGuidanceLogs()
+            ->where(function ($query): void {
+                $query->where('reviewer_type', KpReportGuidanceLog::REVIEWER_INTERNAL)
+                    ->orWhereNull('reviewer_type');
+            })
+            ->whereIn('status', ['menunggu_validasi', 'revisi', 'ditolak'])
+            ->count();
+        $approvedFieldGuidance = $this->reportGuidanceLogs()
+            ->where('reviewer_type', KpReportGuidanceLog::REVIEWER_FIELD)
+            ->where('status', 'disetujui')
+            ->count();
+        $openFieldGuidance = $this->reportGuidanceLogs()
+            ->where('reviewer_type', KpReportGuidanceLog::REVIEWER_FIELD)
+            ->whereIn('status', ['menunggu_validasi', 'revisi', 'ditolak'])
+            ->count();
         $report = $this->finalReport;
 
         $items = [
@@ -128,10 +148,16 @@ class KpAssignment extends Model
                 'description' => $approvedLogbooks.' disetujui, '.$openLogbooks.' perlu tindak lanjut',
             ],
             [
-                'key' => 'report_guidance_minimum',
-                'label' => 'Bimbingan laporan minimal 8 kali',
-                'ready' => $approvedGuidance >= 8 && $openGuidance === 0,
-                'description' => $approvedGuidance.'/8 disetujui, '.$openGuidance.' perlu tindak lanjut',
+                'key' => 'field_report_guidance_minimum',
+                'label' => 'Pemeriksaan laporan pembimbing lapangan minimal 8 kali',
+                'ready' => $approvedFieldGuidance >= 8 && $openFieldGuidance === 0,
+                'description' => $approvedFieldGuidance.'/8 disetujui, '.$openFieldGuidance.' perlu tindak lanjut',
+            ],
+            [
+                'key' => 'internal_report_guidance_minimum',
+                'label' => 'Bimbingan laporan pembimbing dalam minimal 8 kali',
+                'ready' => $approvedInternalGuidance >= 8 && $openInternalGuidance === 0,
+                'description' => $approvedInternalGuidance.'/8 disetujui, '.$openInternalGuidance.' perlu tindak lanjut',
             ],
             [
                 'key' => 'final_report_submitted',

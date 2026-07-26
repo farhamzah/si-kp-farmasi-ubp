@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\FieldSupervisor;
 use App\Models\KpAssignment;
 use App\Models\KpFinalReport;
+use App\Models\KpLogbook;
+use App\Models\KpReportGuidanceLog;
 use App\Models\KpPeriod;
 use App\Models\KpPlace;
 use App\Models\KpRegistration;
@@ -161,6 +163,7 @@ class KpFinalReportTest extends TestCase
 
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
             ->post('/mahasiswa/laporan-akhir/bimbingan', [
+                'reviewer_type' => KpReportGuidanceLog::REVIEWER_INTERNAL,
                 'guidance_date' => now()->toDateString(),
                 'topic' => 'Review bab hasil',
                 'student_note' => 'Sudah revisi pembahasan.',
@@ -170,6 +173,7 @@ class KpFinalReportTest extends TestCase
 
         $guidance = $this->assignment->reportGuidanceLogs()->first();
         $this->assertSame('menunggu_validasi', $guidance->status);
+        $this->assertSame(KpReportGuidanceLog::REVIEWER_INTERNAL, $guidance->reviewer_type);
         $this->assertSame('https://docs.google.com/document/d/draft-report', $guidance->document_url);
         $this->assertSame('Draft Bab Hasil', $guidance->document_label);
 
@@ -182,14 +186,93 @@ class KpFinalReportTest extends TestCase
         $this->actingAs($this->fieldUser)->withSession(['active_role' => 'pembimbing_lapangan'])
             ->get('/pembimbing-lapangan/laporan-akhir/'.$report->id)
             ->assertOk()
-            ->assertSee('Draft Bab Hasil')
-            ->assertSee('Validasi log bimbingan dilakukan oleh pembimbing dalam.');
+            ->assertDontSee('Draft Bab Hasil')
+            ->assertSee('Validasi minimal 8 sesi pemeriksaan/bimbingan laporan lapangan.');
 
         $this->actingAs($this->lecturerUser)->withSession(['active_role' => 'pembimbing_dalam'])
             ->post('/pembimbing-dalam/laporan-akhir/'.$report->id.'/bimbingan/'.$guidance->id.'/approve', ['review_note' => 'OK.'])
             ->assertRedirect();
 
         $this->assertSame('disetujui', $guidance->fresh()->status);
+    }
+
+    public function test_field_supervisor_validates_field_guidance_and_exam_eligibility_needs_both_guidance_tracks(): void
+    {
+        KpLogbook::create([
+            'kp_assignment_id' => $this->assignment->id,
+            'activity_date' => now()->toDateString(),
+            'activity_title' => 'Kegiatan KP',
+            'start_time' => '08:00',
+            'end_time' => '12:00',
+            'activity_description' => 'Kegiatan lapangan.',
+            'learning_outcome' => 'Memahami kegiatan lapangan.',
+            'status' => 'disetujui',
+            'submitted_at' => now(),
+            'validated_by' => $this->fieldUser->id,
+            'validated_at' => now(),
+        ]);
+
+        $report = KpFinalReport::create([
+            'kp_assignment_id' => $this->assignment->id,
+            'current_version' => 1,
+            'status' => 'disetujui',
+            'final_document_url' => 'https://docs.google.com/document/d/final',
+            'internal_review_status' => 'disetujui',
+            'internal_reviewed_by' => $this->lecturerUser->id,
+            'internal_reviewed_at' => now(),
+            'field_review_status' => 'disetujui',
+            'field_reviewed_by' => $this->fieldUser->id,
+            'field_reviewed_at' => now(),
+            'approved_at' => now(),
+        ]);
+
+        for ($i = 1; $i <= 8; $i++) {
+            KpReportGuidanceLog::create([
+                'kp_assignment_id' => $this->assignment->id,
+                'reviewer_type' => KpReportGuidanceLog::REVIEWER_INTERNAL,
+                'guidance_date' => now()->subDays($i)->toDateString(),
+                'topic' => 'Bimbingan dalam '.$i,
+                'status' => 'disetujui',
+                'submitted_at' => now()->subDays($i),
+                'validated_by' => $this->lecturerUser->id,
+                'validated_at' => now()->subDays($i),
+            ]);
+        }
+
+        $this->assertFalse($this->assignment->fresh()->isEligibleForExamRequest());
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/laporan-akhir/bimbingan', [
+                'reviewer_type' => KpReportGuidanceLog::REVIEWER_FIELD,
+                'guidance_date' => now()->toDateString(),
+                'topic' => 'Review laporan lapangan',
+                'document_url' => 'https://docs.google.com/document/d/lapangan',
+            ])->assertRedirect();
+
+        $fieldGuidance = $this->assignment->reportGuidanceLogs()->where('reviewer_type', KpReportGuidanceLog::REVIEWER_FIELD)->first();
+
+        $this->actingAs($this->lecturerUser)->withSession(['active_role' => 'pembimbing_dalam'])
+            ->post('/pembimbing-dalam/laporan-akhir/'.$report->id.'/bimbingan/'.$fieldGuidance->id.'/approve')
+            ->assertForbidden();
+
+        $this->actingAs($this->fieldUser)->withSession(['active_role' => 'pembimbing_lapangan'])
+            ->post('/pembimbing-lapangan/laporan-akhir/'.$report->id.'/bimbingan/'.$fieldGuidance->id.'/approve', ['review_note' => 'Sesuai lapangan.'])
+            ->assertRedirect();
+
+        for ($i = 2; $i <= 8; $i++) {
+            KpReportGuidanceLog::create([
+                'kp_assignment_id' => $this->assignment->id,
+                'reviewer_type' => KpReportGuidanceLog::REVIEWER_FIELD,
+                'guidance_date' => now()->subDays($i)->toDateString(),
+                'topic' => 'Bimbingan lapangan '.$i,
+                'status' => 'disetujui',
+                'submitted_at' => now()->subDays($i),
+                'validated_by' => $this->fieldUser->id,
+                'validated_at' => now()->subDays($i),
+            ]);
+        }
+
+        $this->assertTrue($this->assignment->fresh()->isEligibleForExamRequest());
     }
 
     public function test_report_and_guidance_links_must_be_safe_http_urls(): void
@@ -202,6 +285,7 @@ class KpFinalReportTest extends TestCase
 
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
             ->post('/mahasiswa/laporan-akhir/bimbingan', [
+                'reviewer_type' => KpReportGuidanceLog::REVIEWER_INTERNAL,
                 'guidance_date' => now()->toDateString(),
                 'topic' => 'Review link tidak aman',
                 'document_url' => 'javascript:alert(1)',

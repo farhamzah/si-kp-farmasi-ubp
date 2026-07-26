@@ -196,6 +196,7 @@ class KpFinalReportService
         $this->ensureAssignmentAcceptsReport($assignment);
 
         return $assignment->reportGuidanceLogs()->create([
+            'reviewer_type' => $data['reviewer_type'] ?? KpReportGuidanceLog::REVIEWER_INTERNAL,
             'guidance_date' => $data['guidance_date'],
             'topic' => $data['topic'],
             'student_note' => $data['student_note'] ?? null,
@@ -210,9 +211,35 @@ class KpFinalReportService
     {
         $this->ensureLecturerCanReviewGuidance($lecturerUser, $guidance);
 
+        return $this->approveGuidanceBy($lecturerUser, $guidance, $note);
+    }
+
+    public function requestGuidanceRevision(User $lecturerUser, KpReportGuidanceLog $guidance, string $note): KpReportGuidanceLog
+    {
+        $this->ensureLecturerCanReviewGuidance($lecturerUser, $guidance);
+
+        return $this->requestGuidanceRevisionBy($lecturerUser, $guidance, $note);
+    }
+
+    public function approveGuidanceByFieldSupervisor(User $fieldUser, KpReportGuidanceLog $guidance, ?string $note = null): KpReportGuidanceLog
+    {
+        $this->ensureFieldSupervisorCanReviewGuidance($fieldUser, $guidance);
+
+        return $this->approveGuidanceBy($fieldUser, $guidance, $note);
+    }
+
+    public function requestGuidanceRevisionByFieldSupervisor(User $fieldUser, KpReportGuidanceLog $guidance, string $note): KpReportGuidanceLog
+    {
+        $this->ensureFieldSupervisorCanReviewGuidance($fieldUser, $guidance);
+
+        return $this->requestGuidanceRevisionBy($fieldUser, $guidance, $note);
+    }
+
+    private function approveGuidanceBy(User $reviewer, KpReportGuidanceLog $guidance, ?string $note = null): KpReportGuidanceLog
+    {
         $guidance->update([
             'status' => 'disetujui',
-            'validated_by' => $lecturerUser->id,
+            'validated_by' => $reviewer->id,
             'validated_at' => now(),
             'validation_note' => $note,
         ]);
@@ -220,13 +247,11 @@ class KpFinalReportService
         return $guidance->fresh();
     }
 
-    public function requestGuidanceRevision(User $lecturerUser, KpReportGuidanceLog $guidance, string $note): KpReportGuidanceLog
+    private function requestGuidanceRevisionBy(User $reviewer, KpReportGuidanceLog $guidance, string $note): KpReportGuidanceLog
     {
-        $this->ensureLecturerCanReviewGuidance($lecturerUser, $guidance);
-
         $guidance->update([
             'status' => 'revisi',
-            'validated_by' => $lecturerUser->id,
+            'validated_by' => $reviewer->id,
             'validated_at' => now(),
             'validation_note' => $note,
         ]);
@@ -324,7 +349,23 @@ class KpFinalReportService
     private function ensureLecturerCanReviewGuidance(User $lecturerUser, KpReportGuidanceLog $guidance): void
     {
         $guidance->loadMissing('assignment');
+        if (! $guidance->isForInternalSupervisor()) {
+            abort(403, 'Log bimbingan ini ditujukan untuk pembimbing lapangan.');
+        }
+
         if (! $lecturerUser->lecturer || $lecturerUser->lecturer->id !== $guidance->assignment->internal_supervisor_id) {
+            abort(403, 'Anda tidak berhak memvalidasi bimbingan laporan ini.');
+        }
+    }
+
+    private function ensureFieldSupervisorCanReviewGuidance(User $fieldUser, KpReportGuidanceLog $guidance): void
+    {
+        $guidance->loadMissing('assignment');
+        if (! $guidance->isForFieldSupervisor()) {
+            abort(403, 'Log bimbingan ini ditujukan untuk pembimbing dalam.');
+        }
+
+        if (! $fieldUser->fieldSupervisor || $fieldUser->fieldSupervisor->id !== $guidance->assignment->field_supervisor_id) {
             abort(403, 'Anda tidak berhak memvalidasi bimbingan laporan ini.');
         }
     }

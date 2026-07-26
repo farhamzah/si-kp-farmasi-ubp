@@ -12,6 +12,8 @@ use Illuminate\Validation\ValidationException;
 
 class KpExamService
 {
+    public function __construct(private readonly KpIntegrationOutboxService $outbox) {}
+
     public function submitRequest(User $studentUser, KpAssignment $assignment, ?string $note = null): KpExamRequest
     {
         $this->ensureStudentOwnsAssignment($studentUser, $assignment);
@@ -44,6 +46,8 @@ class KpExamService
 
     public function approveRequest(User $actor, KpExamRequest $request, ?string $note = null): KpExamRequest
     {
+        $this->ensureRequestEligibleForScheduling($request);
+
         $old = $request->status;
         $request->update(['status' => 'disetujui', 'reviewed_by' => $actor->id, 'reviewed_at' => now(), 'review_note' => $note]);
         $this->logActivity($actor, $request->fresh(), null, 'request_approved', $old, 'disetujui', $note);
@@ -94,6 +98,8 @@ class KpExamService
             }
 
             $assignment = $request->assignment;
+            $this->ensureRequestEligibleForScheduling($request);
+
             if (! $assignment->internal_supervisor_id) {
                 throw ValidationException::withMessages(['supervisor_id' => 'Pembimbing dalam belum ditentukan.']);
             }
@@ -103,9 +109,11 @@ class KpExamService
 
             $exam = KpExam::create($this->examPayload($request, $assignment, $actor, $data));
             $this->syncExaminers($exam, $examinerIds);
+            $exam->update(['integration_revision' => 1]);
             $oldRequestStatus = $request->status;
             $request->update(['status' => 'dijadwalkan', 'reviewed_by' => $actor->id, 'reviewed_at' => now()]);
             $this->logActivity($actor, $request, $exam, 'exam_scheduled', $oldRequestStatus, 'dijadwalkan', $data['note'] ?? null, ['exam_date' => $data['exam_date'], 'examiner_ids' => $examinerIds]);
+            $this->outbox->enqueueExamScheduled($exam->fresh(['assignment.student.user', 'assignment.period', 'supervisor', 'examiner', 'examiners']));
 
             return $exam;
         });
@@ -118,6 +126,7 @@ class KpExamService
             if (! $exam->canBeRescheduled()) {
                 throw ValidationException::withMessages(['exam' => 'Sidang ini tidak bisa dijadwalkan ulang.']);
             }
+            $oldExaminerIds = $exam->examinerIds();
             $examinerIds = $this->examinerIdsFrom($data);
             $this->ensureExaminers($examinerIds);
             $oldStatus = $exam->status;
@@ -131,9 +140,11 @@ class KpExamService
                 'meeting_link' => $data['meeting_link'] ?? null,
                 'status' => 'dijadwalkan',
                 'note' => $data['note'] ?? null,
+                'integration_revision' => ((int) $exam->integration_revision) + 1,
             ]);
             $this->syncExaminers($exam, $examinerIds);
             $this->logActivity($actor, $exam->request, $exam->fresh(), 'exam_rescheduled', $oldStatus, 'dijadwalkan', $data['note'] ?? null, ['examiner_ids' => $examinerIds]);
+            $this->outbox->enqueueExamRescheduled($exam->fresh(['assignment.student.user', 'assignment.period', 'supervisor', 'examiner', 'examiners']), $oldExaminerIds, $data['note'] ?? null);
 
             return $exam->fresh(['examiners']);
         });
@@ -141,16 +152,32 @@ class KpExamService
 
     public function cancelExam(User $actor, KpExam $exam, string $reason): void
     {
-        $old = $exam->status;
-        $exam->update(['status' => 'dibatalkan', 'note' => $reason]);
-        $this->logActivity($actor, $exam->request, $exam->fresh(), 'exam_cancelled', $old, 'dibatalkan', $reason);
+        DB::transaction(function () use ($actor, $exam, $reason): void {
+            $exam = KpExam::query()->lockForUpdate()->findOrFail($exam->id);
+            $old = $exam->status;
+            $exam->update([
+                'status' => 'dibatalkan',
+                'note' => $reason,
+                'integration_revision' => ((int) $exam->integration_revision) + 1,
+            ]);
+            $this->logActivity($actor, $exam->request, $exam->fresh(), 'exam_cancelled', $old, 'dibatalkan', $reason);
+            $this->outbox->enqueueExamCancelled($exam->fresh(['assignment.student.user', 'assignment.period', 'supervisor', 'examiner', 'examiners']), $reason);
+        });
     }
 
     public function completeExam(User $actor, KpExam $exam, ?string $note = null): void
     {
-        $old = $exam->status;
-        $exam->update(['status' => 'selesai', 'note' => $note]);
-        $this->logActivity($actor, $exam->request, $exam->fresh(), 'exam_completed', $old, 'selesai', $note);
+        DB::transaction(function () use ($actor, $exam, $note): void {
+            $exam = KpExam::query()->lockForUpdate()->findOrFail($exam->id);
+            $old = $exam->status;
+            $exam->update([
+                'status' => 'selesai',
+                'note' => $note,
+                'integration_revision' => ((int) $exam->integration_revision) + 1,
+            ]);
+            $this->logActivity($actor, $exam->request, $exam->fresh(), 'exam_completed', $old, 'selesai', $note);
+            $this->outbox->enqueueExamCompleted($exam->fresh(['assignment.student.user', 'assignment.period', 'supervisor', 'examiner', 'examiners']));
+        });
     }
 
     public function logActivity(User $user, KpExamRequest $request, ?KpExam $exam, string $action, ?string $oldStatus, ?string $newStatus, ?string $note = null, ?array $metadata = null): void
@@ -170,6 +197,20 @@ class KpExamService
     {
         if (! $studentUser->student || $studentUser->student->id !== $assignment->student_id) {
             abort(403, 'Anda tidak berhak mengajukan sidang untuk penempatan ini.');
+        }
+    }
+
+    private function ensureRequestEligibleForScheduling(KpExamRequest $request): void
+    {
+        $request->loadMissing('assignment.finalReport');
+        $assignment = $request->assignment;
+
+        if (! $assignment || ! $assignment->isEligibleForExamRequest()) {
+            $pending = $assignment ? collect($assignment->examEligibility()['items'])->first(fn (array $item): bool => ! $item['ready']) : null;
+
+            throw ValidationException::withMessages([
+                'request' => 'Validasi akhir belum bisa dilakukan. Lengkapi: '.($pending['label'] ?? 'syarat sidang').'.',
+            ]);
         }
     }
 

@@ -5,8 +5,10 @@
 
 @section('content')
 @php
-    $guidanceLogs = $report->assignment->reportGuidanceLogs->sortByDesc('guidance_date');
-    $approvedGuidance = $report->assignment->reportGuidanceLogs->where('status', 'disetujui')->count();
+    $guidanceLogs = $report->assignment->reportGuidanceLogs
+        ->filter(fn ($guidance) => $guidance->isForInternalSupervisor())
+        ->sortByDesc('guidance_date');
+    $approvedGuidance = $guidanceLogs->where('status', 'disetujui')->count();
     $guidanceProgress = min(100, (int) round(($approvedGuidance / 8) * 100));
 @endphp
 <div class="space-y-5">
@@ -67,7 +69,7 @@
                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h3 class="font-black text-slate-950">Log Bimbingan Laporan</h3>
-                        <p class="mt-1 text-sm text-slate-500">Validasi minimal 8 sesi bimbingan laporan sebelum mahasiswa layak masuk daftar sidang.</p>
+                        <p class="mt-1 text-sm text-slate-500">Validasi minimal 8 sesi bimbingan laporan pembimbing dalam sebelum mahasiswa layak masuk daftar sidang.</p>
                     </div>
                     <span class="inline-flex w-fit rounded-full bg-white px-3 py-1 text-xs font-black text-cyan-700 ring-1 ring-cyan-200">{{ $approvedGuidance }}/8 disetujui</span>
                 </div>
@@ -81,7 +83,7 @@
                         <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                             <div>
                                 <p class="font-black text-slate-950">{{ $guidance->topic }}</p>
-                                <p class="text-xs text-slate-500">{{ $guidance->guidance_date->format('d M Y') }}</p>
+                                <p class="text-xs text-slate-500">{{ $guidance->guidance_date->format('d M Y') }} | {{ $guidance->reviewerTypeLabel() }}</p>
                                 @if($guidance->student_note)<p class="mt-2 text-sm text-slate-600">{{ $guidance->student_note }}</p>@endif
                                 @if($guidance->validation_note)<p class="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">{{ $guidance->validation_note }}</p>@endif
                             </div>

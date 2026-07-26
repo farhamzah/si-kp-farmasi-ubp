@@ -13,6 +13,8 @@ use Illuminate\Validation\ValidationException;
 
 class KpAssignmentService
 {
+    public function __construct(private readonly KpIntegrationOutboxService $outbox) {}
+
     public function createFromSelection(User $actor, KpPlaceSelection $selection, ?int $internalSupervisorId = null, ?int $fieldSupervisorId = null, ?string $note = null): KpAssignment
     {
         return DB::transaction(function () use ($actor, $selection, $internalSupervisorId, $fieldSupervisorId, $note) {
@@ -49,6 +51,7 @@ class KpAssignmentService
                 'assigned_at' => now(),
                 'active_key' => $this->activeKey($selection->kp_period_id, $selection->student_id),
                 'note' => $note,
+                'integration_revision' => $lecturer ? 1 : 0,
             ]);
 
             if ($fieldSupervisor) {
@@ -56,6 +59,10 @@ class KpAssignmentService
             }
 
             $this->logAssignment($actor, $assignment, 'assignment_created', null, $status, null, $lecturer?->id, null, $fieldSupervisor?->id, $note);
+
+            if ($lecturer) {
+                $this->outbox->enqueueSupervisorAssigned($assignment->fresh(['student.user', 'period']), $lecturer);
+            }
 
             return $assignment;
         });
@@ -93,12 +100,14 @@ class KpAssignmentService
             $oldInternal = $assignment->internal_supervisor_id;
             $oldField = $assignment->field_supervisor_id;
             $newStatus = ($lecturer && $fieldSupervisor) ? 'aktif' : 'menunggu_pembimbing';
+            $internalChanged = (int) $oldInternal !== (int) ($lecturer?->id ?? 0);
 
             $assignment->update([
                 'internal_supervisor_id' => $lecturer?->id,
                 'field_supervisor_id' => $fieldSupervisor?->id,
                 'status' => $newStatus,
                 'note' => $note ?? $assignment->note,
+                'integration_revision' => $internalChanged && $lecturer ? ((int) $assignment->integration_revision) + 1 : $assignment->integration_revision,
             ]);
 
             if ($fieldSupervisor) {
@@ -107,7 +116,19 @@ class KpAssignmentService
 
             $this->logAssignment($actor, $assignment, $oldStatus === 'menunggu_pembimbing' && $newStatus === 'aktif' ? 'assignment_activated' : $action, $oldStatus, $newStatus, $oldInternal, $lecturer?->id, $oldField, $fieldSupervisor?->id, $note);
 
-            return $assignment->fresh();
+            $assignment = $assignment->fresh(['student.user', 'period']);
+            if ($internalChanged && $lecturer) {
+                if ($oldInternal) {
+                    $oldLecturer = Lecturer::find($oldInternal);
+                    if ($oldLecturer) {
+                        $this->outbox->enqueueSupervisorChanged($assignment, $oldLecturer, $lecturer, $note);
+                    }
+                } else {
+                    $this->outbox->enqueueSupervisorAssigned($assignment, $lecturer);
+                }
+            }
+
+            return $assignment;
         });
     }
 
