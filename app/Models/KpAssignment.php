@@ -104,6 +104,35 @@ class KpAssignment extends Model
         return collect($this->examEligibility()['items'])->every(fn (array $item): bool => $item['ready']);
     }
 
+    public function isReadyForAssessment(string $assessorType): bool
+    {
+        return $this->assessmentEligibility($assessorType)['ready'];
+    }
+
+    public function assessmentEligibility(string $assessorType): array
+    {
+        $this->loadMissing('finalReport');
+
+        $items = match ($assessorType) {
+            'pembimbing_lapangan' => $this->fieldSupervisorAssessmentItems(),
+            'pembimbing_dalam' => $this->internalSupervisorAssessmentItems(),
+            default => [
+                [
+                    'key' => 'assessment_available',
+                    'label' => 'Penilaian tersedia',
+                    'ready' => true,
+                    'description' => 'Tidak ada prasyarat tambahan.',
+                ],
+            ],
+        };
+
+        return [
+            'ready' => collect($items)->every(fn (array $item): bool => $item['ready']),
+            'items' => $items,
+            'pending' => collect($items)->filter(fn (array $item): bool => ! $item['ready'])->values()->all(),
+        ];
+    }
+
     public function examEligibility(): array
     {
         $this->loadMissing('finalReport');
@@ -263,5 +292,75 @@ class KpAssignment extends Model
         }
 
         return $days;
+    }
+
+    private function fieldSupervisorAssessmentItems(): array
+    {
+        $totalLogbooks = $this->logbooks()->count();
+        $approvedLogbooks = $this->logbooks()->where('status', 'disetujui')->count();
+        $unfinishedLogbooks = $this->logbooks()->where('status', '!=', 'disetujui')->count();
+        [$approvedFieldGuidance, $openFieldGuidance] = $this->reportGuidanceCounts(KpReportGuidanceLog::REVIEWER_FIELD);
+        $report = $this->finalReport;
+
+        return [
+            [
+                'key' => 'field_logbook_all_validated',
+                'label' => 'Semua logbook KP sudah divalidasi',
+                'ready' => $totalLogbooks > 0 && $unfinishedLogbooks === 0,
+                'description' => $approvedLogbooks.'/'.$totalLogbooks.' logbook disetujui',
+            ],
+            [
+                'key' => 'field_report_guidance_minimum',
+                'label' => 'Review/bimbingan laporan lapangan minimal 8 kali',
+                'ready' => $approvedFieldGuidance >= 8 && $openFieldGuidance === 0,
+                'description' => $approvedFieldGuidance.'/8 disetujui, '.$openFieldGuidance.' perlu tindak lanjut',
+            ],
+            [
+                'key' => 'field_report_approved',
+                'label' => 'Laporan akhir sudah disetujui pembimbing lapangan',
+                'ready' => $report?->field_review_status === 'disetujui',
+                'description' => $report?->fieldReviewStatusLabel() ?? 'Belum review',
+            ],
+        ];
+    }
+
+    private function internalSupervisorAssessmentItems(): array
+    {
+        [$approvedInternalGuidance, $openInternalGuidance] = $this->reportGuidanceCounts(KpReportGuidanceLog::REVIEWER_INTERNAL);
+        $report = $this->finalReport;
+
+        return [
+            [
+                'key' => 'internal_report_guidance_minimum',
+                'label' => 'Bimbingan laporan pembimbing dalam minimal 8 kali',
+                'ready' => $approvedInternalGuidance >= 8 && $openInternalGuidance === 0,
+                'description' => $approvedInternalGuidance.'/8 disetujui, '.$openInternalGuidance.' perlu tindak lanjut',
+            ],
+            [
+                'key' => 'internal_report_approved',
+                'label' => 'Laporan akhir sudah disetujui pembimbing dalam',
+                'ready' => $report?->internal_review_status === 'disetujui',
+                'description' => $report?->internalReviewStatusLabel() ?? 'Belum review',
+            ],
+        ];
+    }
+
+    private function reportGuidanceCounts(string $reviewerType): array
+    {
+        $query = $this->reportGuidanceLogs();
+
+        if ($reviewerType === KpReportGuidanceLog::REVIEWER_INTERNAL) {
+            $query->where(function ($query): void {
+                $query->where('reviewer_type', KpReportGuidanceLog::REVIEWER_INTERNAL)
+                    ->orWhereNull('reviewer_type');
+            });
+        } else {
+            $query->where('reviewer_type', $reviewerType);
+        }
+
+        $approved = (clone $query)->where('status', 'disetujui')->count();
+        $open = (clone $query)->where('status', '!=', 'disetujui')->count();
+
+        return [$approved, $open];
     }
 }

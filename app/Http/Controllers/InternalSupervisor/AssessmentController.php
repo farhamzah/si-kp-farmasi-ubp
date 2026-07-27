@@ -51,6 +51,7 @@ class AssessmentController extends Controller
             'assignment' => $assignment->load(['student.user', 'period', 'place', 'scores.component', 'finalScore']),
             'components' => $assignment->period->assessmentComponents()->where('status', 'aktif')->where('assessor_type', $type)->orderBy('sort_order')->get(),
             'assessorType' => $type,
+            'assessmentEligibility' => $assignment->assessmentEligibility($type),
         ];
     }
 }

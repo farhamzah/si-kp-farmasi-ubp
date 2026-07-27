@@ -1,6 +1,9 @@
 @php
     $componentWeightTotal = max(0.01, (float) $components->sum('weight'));
     $activeUserId = auth()->id();
+    $assessmentEligibility = $assessmentEligibility ?? ['ready' => true, 'items' => [], 'pending' => []];
+    $assessmentLocked = ! $assessmentEligibility['ready'];
+    $scoreLocked = $assignment->finalScore?->isLocked() || $assessmentLocked;
 @endphp
 <div class="space-y-6">
     <section class="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
@@ -15,6 +18,20 @@
         </div>
         @if($assignment->finalScore?->isLocked())
             <div class="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">Nilai sudah dikunci/dipublish dan tidak dapat diubah.</div>
+        @endif
+        @if($assessmentLocked)
+            <div class="mt-4 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-100">
+                <p class="font-black">Penilaian belum dibuka untuk mahasiswa ini.</p>
+                <p class="mt-1 text-amber-800">Selesaikan tahapan berikut agar nilai tidak bisa diinput sebelum proses bimbingan dan validasi selesai.</p>
+                <div class="mt-4 grid gap-2 md:grid-cols-2">
+                    @foreach($assessmentEligibility['items'] as $item)
+                        <div class="rounded-2xl bg-white/70 px-4 py-3 ring-1 {{ $item['ready'] ? 'ring-emerald-100' : 'ring-amber-200' }}">
+                            <p class="font-bold {{ $item['ready'] ? 'text-emerald-700' : 'text-amber-800' }}">{{ $item['ready'] ? 'Selesai' : 'Belum selesai' }} - {{ $item['label'] }}</p>
+                            <p class="mt-1 text-xs text-slate-500">{{ $item['description'] }}</p>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
         @endif
     </section>
 
@@ -63,7 +80,7 @@
                                     value="{{ $oldScore }}"
                                     data-weight="{{ $normalizedWeight }}"
                                     class="score-input w-28 rounded-2xl border-slate-200 text-sm font-bold"
-                                    @disabled($assignment->finalScore?->isLocked())
+                                    @disabled($scoreLocked)
                                 >
                                 <p class="mt-1 text-xs text-slate-500">Maks {{ $component->max_score }}</p>
                             </td>
@@ -71,7 +88,7 @@
                                 <span class="score-preview rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">0.00</span>
                             </td>
                             <td class="px-4 py-4 align-top">
-                                <textarea name="scores[{{ $index }}][note]" rows="2" class="w-72 rounded-2xl border-slate-200 text-sm" placeholder="Catatan opsional" @disabled($assignment->finalScore?->isLocked())>{{ $oldNote }}</textarea>
+                                <textarea name="scores[{{ $index }}][note]" rows="2" class="w-72 rounded-2xl border-slate-200 text-sm" placeholder="Catatan opsional" @disabled($scoreLocked)>{{ $oldNote }}</textarea>
                             </td>
                             <td class="px-4 py-4 align-top">
                                 <span class="rounded-full {{ $score?->statusBadgeClass() ?? 'bg-slate-100 text-slate-700' }} px-3 py-1 text-xs font-bold">{{ $score?->statusLabel() ?? 'Belum diisi' }}</span>
@@ -84,9 +101,9 @@
             </table>
         </div>
         @if($errors->any())<div class="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{{ $errors->first() }}</div>@endif
-        <div class="mt-6 flex justify-end gap-2"><button class="rounded-2xl border border-cyan-200 px-4 py-2 text-sm font-bold text-cyan-700" @disabled($assignment->finalScore?->isLocked())>Simpan Draft</button></div>
+        <div class="mt-6 flex justify-end gap-2"><button class="rounded-2xl border border-cyan-200 px-4 py-2 text-sm font-bold text-cyan-700 disabled:cursor-not-allowed disabled:opacity-50" @disabled($scoreLocked)>Simpan Draft</button></div>
     </form>
-    <form method="POST" action="{{ $submitRoute }}" onsubmit="return confirm('Submit nilai? Nilai tidak dapat diubah setelah nilai akhir dikunci.')" class="flex justify-end">@csrf<button class="rounded-2xl bg-cyan-700 px-5 py-3 text-sm font-bold text-white" @disabled($assignment->finalScore?->isLocked())>Submit Nilai</button></form>
+    <form method="POST" action="{{ $submitRoute }}" onsubmit="return confirm('Submit nilai? Nilai tidak dapat diubah setelah nilai akhir dikunci.')" class="flex justify-end">@csrf<button class="rounded-2xl bg-cyan-700 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50" @disabled($scoreLocked)>Submit Nilai</button></form>
 </div>
 
 @push('scripts')

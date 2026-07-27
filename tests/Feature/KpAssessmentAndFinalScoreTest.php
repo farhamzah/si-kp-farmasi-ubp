@@ -7,11 +7,13 @@ use App\Models\KpAssessmentComponent;
 use App\Models\KpAssignment;
 use App\Models\KpExam;
 use App\Models\KpExamRequest;
+use App\Models\KpFinalReport;
 use App\Models\KpFinalScore;
 use App\Models\KpLogbook;
 use App\Models\KpPeriod;
 use App\Models\KpPlace;
 use App\Models\KpRegistration;
+use App\Models\KpReportGuidanceLog;
 use App\Models\Lecturer;
 use App\Models\Role;
 use App\Models\Student;
@@ -95,6 +97,7 @@ class KpAssessmentAndFinalScoreTest extends TestCase
     public function test_each_assessor_can_score_only_their_own_assignment_and_invalid_score_is_rejected(): void
     {
         [$internal] = $this->components();
+        $this->makeReadyForInternalAssessment($this->assignment);
         $otherUser = $this->makeUser('other-supervisor-score@test.local', ['pembimbing_dalam']);
         Lecturer::create(['user_id' => $otherUser->id, 'nidn_nip' => '881103', 'status' => 'active']);
 
@@ -117,6 +120,7 @@ class KpAssessmentAndFinalScoreTest extends TestCase
     public function test_field_supervisor_and_examiner_can_score_assigned_records_only(): void
     {
         [, $fieldComponent, $examinerComponent] = $this->components();
+        $this->makeReadyForFieldAssessment($this->assignment);
         $otherStudentUser = $this->makeUser('other-field-score-student@test.local', ['mahasiswa']);
         $otherStudentUser->update(['name' => 'Mahasiswa Nilai Lain']);
         $otherStudent = Student::create(['user_id' => $otherStudentUser->id, 'nim' => '2210631231888', 'study_program' => 'Farmasi', 'semester' => 6, 'phone' => '081234567890', 'status' => 'active']);
@@ -276,6 +280,7 @@ class KpAssessmentAndFinalScoreTest extends TestCase
     public function test_published_score_cannot_be_changed_by_assessor_and_can_be_unlocked_by_management(): void
     {
         [$internal] = $this->components();
+        $this->makeReadyForInternalAssessment($this->assignment);
         KpFinalScore::create(['kp_assignment_id' => $this->assignment->id, 'final_score' => 90, 'final_grade' => 'A', 'status' => 'published', 'published_at' => now()]);
 
         $this->actingAs($this->supervisorUser)->withSession(['active_role' => 'pembimbing_dalam'])
@@ -312,6 +317,30 @@ class KpAssessmentAndFinalScoreTest extends TestCase
         $this->assertSame('86.50', (string) KpFinalScore::where('kp_assignment_id', $this->assignment->id)->firstOrFail()->final_score);
     }
 
+    public function test_supervisor_assessments_are_blocked_until_previous_review_steps_are_complete(): void
+    {
+        [$internal, $field] = $this->components();
+
+        $this->actingAs($this->supervisorUser)->withSession(['active_role' => 'pembimbing_dalam'])
+            ->post('/pembimbing-dalam/penilaian/'.$this->assignment->id.'/save', ['scores' => [['component_id' => $internal->id, 'score' => 90]]])
+            ->assertSessionHasErrors('assessment');
+
+        $this->actingAs($this->fieldUser)->withSession(['active_role' => 'pembimbing_lapangan'])
+            ->post('/pembimbing-lapangan/penilaian/'.$this->assignment->id.'/save', ['scores' => [['component_id' => $field->id, 'score' => 80]]])
+            ->assertSessionHasErrors('assessment');
+
+        $this->makeReadyForInternalAssessment($this->assignment);
+        $this->makeReadyForFieldAssessment($this->assignment);
+
+        $this->actingAs($this->supervisorUser)->withSession(['active_role' => 'pembimbing_dalam'])
+            ->post('/pembimbing-dalam/penilaian/'.$this->assignment->id.'/save', ['scores' => [['component_id' => $internal->id, 'score' => 90]]])
+            ->assertRedirect();
+
+        $this->actingAs($this->fieldUser)->withSession(['active_role' => 'pembimbing_lapangan'])
+            ->post('/pembimbing-lapangan/penilaian/'.$this->assignment->id.'/save', ['scores' => [['component_id' => $field->id, 'score' => 80]]])
+            ->assertRedirect();
+    }
+
     private function components(): array
     {
         return [
@@ -324,6 +353,16 @@ class KpAssessmentAndFinalScoreTest extends TestCase
     private function saveAndSubmit(User $user, string $prefix, int $assignmentId, KpAssessmentComponent $component, int $score): void
     {
         $role = $prefix === 'pembimbing-dalam' ? 'pembimbing_dalam' : 'pembimbing_lapangan';
+        $assignment = KpAssignment::findOrFail($assignmentId);
+
+        if ($role === 'pembimbing_dalam') {
+            $this->makeReadyForInternalAssessment($assignment);
+        }
+
+        if ($role === 'pembimbing_lapangan') {
+            $this->makeReadyForFieldAssessment($assignment);
+        }
+
         $this->actingAs($user)->withSession(['active_role' => $role])
             ->post("/{$prefix}/penilaian/{$assignmentId}/save", ['scores' => [['component_id' => $component->id, 'score' => $score]]])
             ->assertRedirect();
@@ -339,6 +378,83 @@ class KpAssessmentAndFinalScoreTest extends TestCase
         $registration = KpRegistration::create(['kp_period_id' => $period->id, 'student_id' => $student->id, 'status' => 'terverifikasi']);
 
         return KpAssignment::create(['kp_period_id' => $period->id, 'kp_registration_id' => $registration->id, 'student_id' => $student->id, 'kp_place_id' => $place->id, 'internal_supervisor_id' => $this->supervisor->id, 'field_supervisor_id' => $this->field->id, 'status' => 'aktif', 'assigned_by' => $this->admin->id, 'assigned_at' => now(), 'active_key' => $period->id.'-'.$student->id]);
+    }
+
+    private function makeReadyForInternalAssessment(KpAssignment $assignment): void
+    {
+        KpFinalReport::updateOrCreate(
+            ['kp_assignment_id' => $assignment->id],
+            [
+                'student_id' => $assignment->student_id,
+                'status' => 'submitted',
+                'internal_review_status' => 'disetujui',
+                'field_review_status' => $assignment->finalReport?->field_review_status ?? 'menunggu_review',
+                'final_document_url' => 'https://drive.google.com/example-report',
+            ]
+        );
+
+        for ($i = 1; $i <= 8; $i++) {
+            KpReportGuidanceLog::firstOrCreate(
+                [
+                    'kp_assignment_id' => $assignment->id,
+                    'reviewer_type' => KpReportGuidanceLog::REVIEWER_INTERNAL,
+                    'guidance_date' => now()->subDays($i)->toDateString(),
+                    'topic' => 'Bimbingan Internal '.$i,
+                ],
+                [
+                    'status' => 'disetujui',
+                    'submitted_at' => now(),
+                    'validated_by' => $this->supervisorUser->id,
+                    'validated_at' => now(),
+                ]
+            );
+        }
+    }
+
+    private function makeReadyForFieldAssessment(KpAssignment $assignment): void
+    {
+        KpFinalReport::updateOrCreate(
+            ['kp_assignment_id' => $assignment->id],
+            [
+                'student_id' => $assignment->student_id,
+                'status' => 'submitted',
+                'internal_review_status' => $assignment->finalReport?->internal_review_status ?? 'menunggu_review',
+                'field_review_status' => 'disetujui',
+                'final_document_url' => 'https://drive.google.com/example-report',
+            ]
+        );
+
+        KpLogbook::firstOrCreate(
+            [
+                'kp_assignment_id' => $assignment->id,
+                'activity_date' => now()->subDay()->toDateString(),
+            ],
+            [
+                'activity_title' => 'Kegiatan KP',
+                'activity_description' => 'Kegiatan harian.',
+                'status' => 'disetujui',
+                'submitted_at' => now(),
+                'validated_by' => $this->fieldUser->id,
+                'validated_at' => now(),
+            ]
+        );
+
+        for ($i = 1; $i <= 8; $i++) {
+            KpReportGuidanceLog::firstOrCreate(
+                [
+                    'kp_assignment_id' => $assignment->id,
+                    'reviewer_type' => KpReportGuidanceLog::REVIEWER_FIELD,
+                    'guidance_date' => now()->subDays($i)->toDateString(),
+                    'topic' => 'Review Laporan Lapangan '.$i,
+                ],
+                [
+                    'status' => 'disetujui',
+                    'submitted_at' => now(),
+                    'validated_by' => $this->fieldUser->id,
+                    'validated_at' => now(),
+                ]
+            );
+        }
     }
 
     private function makeUser(string $email, array $roles): User

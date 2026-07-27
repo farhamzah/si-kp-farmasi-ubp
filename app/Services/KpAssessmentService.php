@@ -68,6 +68,7 @@ class KpAssessmentService
     public function saveScore(User $assessor, KpAssignment $assignment, KpAssessmentComponent $component, float $score, ?string $note = null): KpScore
     {
         $this->ensureCanAssess($assessor, $assignment, $component->assessor_type);
+        $this->ensureAssessmentPrerequisitesMet($assignment, $component->assessor_type);
         $this->ensureFinalScoreEditable($assignment);
 
         if ($component->kp_period_id !== $assignment->kp_period_id || $component->status !== 'aktif') {
@@ -106,6 +107,7 @@ class KpAssessmentService
     public function submitScores(User $assessor, KpAssignment $assignment, string $assessorType): void
     {
         $this->ensureCanAssess($assessor, $assignment, $assessorType);
+        $this->ensureAssessmentPrerequisitesMet($assignment, $assessorType);
         $this->ensureFinalScoreEditable($assignment);
 
         $components = $assignment->period->assessmentComponents()
@@ -264,6 +266,25 @@ class KpAssessmentService
         if ($final?->isLocked()) {
             throw ValidationException::withMessages(['final_score' => 'Nilai sudah dikunci/dipublikasikan dan tidak bisa diubah.']);
         }
+    }
+
+    private function ensureAssessmentPrerequisitesMet(KpAssignment $assignment, string $assessorType): void
+    {
+        if (! in_array($assessorType, ['pembimbing_dalam', 'pembimbing_lapangan'], true)) {
+            return;
+        }
+
+        $eligibility = $assignment->assessmentEligibility($assessorType);
+
+        if ($eligibility['ready']) {
+            return;
+        }
+
+        $pending = collect($eligibility['pending'])->pluck('label')->implode(', ');
+
+        throw ValidationException::withMessages([
+            'assessment' => 'Penilaian belum bisa dilakukan. Selesaikan dulu: '.$pending.'.',
+        ]);
     }
 
     private function gradeFor(float $score): string
