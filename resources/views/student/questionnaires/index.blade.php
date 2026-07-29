@@ -44,11 +44,11 @@
                         <div><span class="block text-xs font-black uppercase text-slate-400">Pertanyaan</span>{{ $questionnaire->active_questions_count }} item</div>
                     </div>
                     @if($response?->isSubmitted())
-                        <a href="{{ route('student.questionnaires.show', $questionnaire) }}" class="mt-4 inline-flex w-full items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-black text-emerald-700 shadow-sm transition hover:bg-emerald-100">
+                        <a href="{{ route('student.questionnaires.show', $questionnaire) }}" class="mt-4 inline-flex w-full items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-black text-emerald-700 shadow-sm transition hover:bg-emerald-100" style="background-color: #ecfdf5 !important; border-color: #a7f3d0 !important; color: #047857 !important; text-decoration: none;">
                             Lihat / Perbarui Jawaban
                         </a>
                     @else
-                        <a href="{{ route('student.questionnaires.show', $questionnaire) }}" class="mt-4 inline-flex w-full items-center justify-center rounded-2xl border border-cyan-700 bg-cyan-800 px-5 py-3 text-sm font-black text-white shadow-lg shadow-cyan-900/15 transition hover:bg-cyan-700">
+                        <a href="{{ route('student.questionnaires.show', $questionnaire) }}" class="mt-4 inline-flex w-full items-center justify-center rounded-2xl border border-cyan-700 bg-cyan-800 px-5 py-3 text-sm font-black text-white shadow-lg shadow-cyan-900/15 transition hover:bg-cyan-700" style="background-color: #155e75 !important; border-color: #0e7490 !important; color: #ffffff !important; text-decoration: none;">
                             Isi Sekarang
                         </a>
                     @endif
