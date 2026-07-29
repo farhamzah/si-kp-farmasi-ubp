@@ -43,9 +43,15 @@
                         <div><span class="block text-xs font-black uppercase text-slate-400">Tempat KP</span>{{ $assignment->place?->name ?? '-' }}</div>
                         <div><span class="block text-xs font-black uppercase text-slate-400">Pertanyaan</span>{{ $questionnaire->active_questions_count }} item</div>
                     </div>
-                    <a href="{{ route('student.questionnaires.show', $questionnaire) }}" class="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-cyan-800 px-5 py-3 text-sm font-black text-white shadow-lg shadow-cyan-900/15 transition group-hover:bg-cyan-700">
-                        {{ $response?->isSubmitted() ? 'Lihat / Perbarui Jawaban' : 'Isi Sekarang' }}
-                    </a>
+                    @if($response?->isSubmitted())
+                        <a href="{{ route('student.questionnaires.show', $questionnaire) }}" class="mt-4 inline-flex w-full items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-black text-emerald-700 shadow-sm transition hover:bg-emerald-100">
+                            Lihat / Perbarui Jawaban
+                        </a>
+                    @else
+                        <a href="{{ route('student.questionnaires.show', $questionnaire) }}" class="mt-4 inline-flex w-full items-center justify-center rounded-2xl border border-cyan-700 bg-cyan-800 px-5 py-3 text-sm font-black text-white shadow-lg shadow-cyan-900/15 transition hover:bg-cyan-700">
+                            Isi Sekarang
+                        </a>
+                    @endif
                 </article>
             @empty
                 <div class="rounded-3xl border border-dashed border-sky-200 bg-white/70 p-8 text-center text-slate-500 lg:col-span-2">

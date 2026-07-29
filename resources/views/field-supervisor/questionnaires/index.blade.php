@@ -38,9 +38,15 @@
                     <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap xl:justify-end">
                         @forelse($availableQuestionnaires as $questionnaire)
                             @php $done = ($submitted[$assignment->id] ?? collect())->contains('kp_questionnaire_id', $questionnaire->id); @endphp
-                            <a href="{{ route('field-supervisor.questionnaires.show', [$assignment, $questionnaire]) }}" class="inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-black shadow-sm {{ $done ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' : 'bg-cyan-800 text-white shadow-cyan-900/15' }}">
-                                {{ $done ? 'Lihat / Perbarui' : 'Isi Sekarang' }}
-                            </a>
+                            @if($done)
+                                <a href="{{ route('field-supervisor.questionnaires.show', [$assignment, $questionnaire]) }}" class="inline-flex min-w-36 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-black text-emerald-700 shadow-sm transition hover:bg-emerald-100">
+                                    Lihat / Perbarui
+                                </a>
+                            @else
+                                <a href="{{ route('field-supervisor.questionnaires.show', [$assignment, $questionnaire]) }}" class="inline-flex min-w-36 items-center justify-center rounded-2xl border border-cyan-700 bg-cyan-800 px-5 py-3 text-sm font-black text-white shadow-lg shadow-cyan-900/15 transition hover:bg-cyan-700">
+                                    Isi Sekarang
+                                </a>
+                            @endif
                         @empty
                             <div class="rounded-2xl border border-dashed border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
                                 Kuisioner belum tersedia untuk periode penempatan ini.
