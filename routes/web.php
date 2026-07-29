@@ -12,6 +12,7 @@ use App\Http\Controllers\FieldSupervisor\CompetencyController as FieldCompetency
 use App\Http\Controllers\FieldSupervisor\FieldStudentController;
 use App\Http\Controllers\FieldSupervisor\FinalReportReviewController as FieldFinalReportReviewController;
 use App\Http\Controllers\FieldSupervisor\LogbookValidationController;
+use App\Http\Controllers\FieldSupervisor\QuestionnaireController as FieldQuestionnaireController;
 use App\Http\Controllers\InternalSupervisor\AssessmentController as InternalAssessmentController;
 use App\Http\Controllers\InternalSupervisor\CompetencyController as InternalCompetencyController;
 use App\Http\Controllers\InternalSupervisor\ExamScheduleController as InternalExamScheduleController;
@@ -28,6 +29,7 @@ use App\Http\Controllers\Management\FinalReportLogController;
 use App\Http\Controllers\Management\FinalReportMonitoringController;
 use App\Http\Controllers\Management\IntegrationOutboxController;
 use App\Http\Controllers\Management\IntegrationReviewController;
+use App\Http\Controllers\Management\InternalSupervisorWorkloadReportController;
 use App\Http\Controllers\Management\KpAssignmentController;
 use App\Http\Controllers\Management\KpAssignmentLogController;
 use App\Http\Controllers\Management\KpCompetencyController;
@@ -41,6 +43,9 @@ use App\Http\Controllers\Management\LogbookLogController;
 use App\Http\Controllers\Management\LogbookMonitoringController;
 use App\Http\Controllers\Management\OrientationTestResultController;
 use App\Http\Controllers\Management\PlaceSelectionMonitoringController;
+use App\Http\Controllers\Management\QuestionnaireController as ManagementQuestionnaireController;
+use App\Http\Controllers\Management\QuestionnaireQuestionController;
+use App\Http\Controllers\Management\QuestionnaireResultController;
 use App\Http\Controllers\Management\RecapController;
 use App\Http\Controllers\Management\ScoreLogController;
 use App\Http\Controllers\Management\ScoreMonitoringController;
@@ -57,6 +62,7 @@ use App\Http\Controllers\Student\KpRegistrationController;
 use App\Http\Controllers\Student\LogbookController;
 use App\Http\Controllers\Student\OrientationTestController;
 use App\Http\Controllers\Student\PlaceSelectionController;
+use App\Http\Controllers\Student\QuestionnaireController as StudentQuestionnaireController;
 use App\Http\Controllers\Student\ScoreController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -136,6 +142,9 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('selection-logs', [SelectionLogController::class, 'index'])->name('selection-logs.index');
             Route::get('kp-assignments/report/preview', [KpAssignmentController::class, 'reportPreview'])->name('kp-assignments.report.preview');
             Route::get('kp-assignments/report/download/{format}', [KpAssignmentController::class, 'reportDownload'])->name('kp-assignments.report.download');
+            Route::get('internal-supervisor-workload', [InternalSupervisorWorkloadReportController::class, 'index'])->name('internal-supervisor-workload.index');
+            Route::get('internal-supervisor-workload/preview', [InternalSupervisorWorkloadReportController::class, 'preview'])->name('internal-supervisor-workload.preview');
+            Route::get('internal-supervisor-workload/download/{format}', [InternalSupervisorWorkloadReportController::class, 'download'])->name('internal-supervisor-workload.download');
             Route::resource('kp-assignments', KpAssignmentController::class)->except(['destroy']);
             Route::post('kp-assignments/{assignment}/assign-internal-supervisor', [KpAssignmentController::class, 'assignInternalSupervisor'])->name('kp-assignments.assign-internal-supervisor');
             Route::post('kp-assignments/{assignment}/assign-field-supervisor', [KpAssignmentController::class, 'assignFieldSupervisor'])->name('kp-assignments.assign-field-supervisor');
@@ -167,6 +176,12 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('exam-logs', [ExamLogController::class, 'index'])->name('exam-logs.index');
             Route::resource('assessment-components', AssessmentComponentController::class)->except(['show'])->parameters(['assessment-components' => 'component']);
             Route::resource('competencies', KpCompetencyController::class)->except(['show', 'create', 'edit'])->parameters(['competencies' => 'competency']);
+            Route::resource('questionnaires', ManagementQuestionnaireController::class)->except(['show', 'create', 'edit'])->parameters(['questionnaires' => 'questionnaire']);
+            Route::post('questionnaires/{questionnaire}/questions', [QuestionnaireQuestionController::class, 'store'])->name('questionnaires.questions.store');
+            Route::patch('questionnaire-questions/{question}', [QuestionnaireQuestionController::class, 'update'])->name('questionnaire-questions.update');
+            Route::delete('questionnaire-questions/{question}', [QuestionnaireQuestionController::class, 'destroy'])->name('questionnaire-questions.destroy');
+            Route::get('questionnaire-results', [QuestionnaireResultController::class, 'index'])->name('questionnaire-results.index');
+            Route::get('questionnaire-results/{response}', [QuestionnaireResultController::class, 'show'])->name('questionnaire-results.show');
             Route::get('orientation-tests', [OrientationTestResultController::class, 'index'])->name('orientation-tests.index');
             Route::get('orientation-tests/{attempt}', [OrientationTestResultController::class, 'show'])->name('orientation-tests.show');
             Route::get('scores', [ScoreMonitoringController::class, 'index'])->name('scores.index');
@@ -238,6 +253,9 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('pre-post-test/hasil/{attempt}', [OrientationTestController::class, 'result'])->name('orientation-tests.result');
             Route::get('pre-post-test/{test}', [OrientationTestController::class, 'show'])->name('orientation-tests.show');
             Route::post('pre-post-test/{test}', [OrientationTestController::class, 'submit'])->name('orientation-tests.submit');
+            Route::get('kuisioner', [StudentQuestionnaireController::class, 'index'])->name('questionnaires.index');
+            Route::get('kuisioner/{questionnaire}', [StudentQuestionnaireController::class, 'show'])->name('questionnaires.show');
+            Route::post('kuisioner/{questionnaire}', [StudentQuestionnaireController::class, 'submit'])->name('questionnaires.submit');
             Route::get('nilai', [ScoreController::class, 'show'])->name('scores.show');
         });
 
@@ -291,6 +309,9 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('kompetensi', [FieldCompetencyController::class, 'index'])->name('competencies.index');
             Route::get('kompetensi/{assignment}', [FieldCompetencyController::class, 'show'])->name('competencies.show');
             Route::put('kompetensi/{assignment}', [FieldCompetencyController::class, 'update'])->name('competencies.update');
+            Route::get('kuisioner', [FieldQuestionnaireController::class, 'index'])->name('questionnaires.index');
+            Route::get('kuisioner/{assignment}/{questionnaire}', [FieldQuestionnaireController::class, 'show'])->name('questionnaires.show');
+            Route::post('kuisioner/{assignment}/{questionnaire}', [FieldQuestionnaireController::class, 'submit'])->name('questionnaires.submit');
         });
 
         Route::middleware('role:penguji')->prefix('penguji')->name('examiner.')->group(function () {

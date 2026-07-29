@@ -22,7 +22,10 @@
         <a href="{{ route('management.kp-assignments.report.download', ['format' => 'excel'] + $reportQuery) }}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">Excel</a>
         <a href="{{ route('management.kp-assignments.report.download', ['format' => 'pdf'] + $reportQuery) }}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm">PDF</a>
     </div>
-    <a href="{{ route('management.kp-assignments.create') }}" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white">Buat Penempatan</a>
+    <div class="grid gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap">
+        <a href="{{ route('management.internal-supervisor-workload.index') }}" class="inline-flex min-h-11 items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800">Report Pembimbing</a>
+        <a href="{{ route('management.kp-assignments.create') }}" class="inline-flex min-h-11 items-center justify-center rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white">Buat Penempatan</a>
+    </div>
 </div>
 <section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
     <form method="GET" class="space-y-3">
