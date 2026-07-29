@@ -5,10 +5,20 @@
 
 @section('content')
 <div class="space-y-5">
-    <section class="rounded-3xl border border-sky-100 bg-white p-5 shadow-sm">
-        <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Evaluasi Mahasiswa</p>
-        <h2 class="mt-1 text-2xl font-black text-slate-950">Kuisioner Kepuasan KP</h2>
-        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Isi kuisioner berdasarkan pengalaman kerja praktek Anda. Jawaban membantu koordinator memperbaiki pelaksanaan KP berikutnya.</p>
+    <section class="rounded-3xl border border-cyan-100 bg-white p-5 shadow-sm ring-1 ring-white/70 md:p-6">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Evaluasi Mahasiswa</p>
+                <h2 class="mt-1 text-2xl font-black text-slate-950 md:text-3xl">Kuisioner Kepuasan KP</h2>
+                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Isi kuisioner setelah Anda memiliki penempatan KP. Jawaban dipakai koordinator untuk membaca mutu tempat KP, pembimbingan, dan layanan sistem.</p>
+            </div>
+            @if($assignment)
+                <div class="rounded-2xl bg-cyan-50 px-4 py-3 text-sm text-slate-700">
+                    <span class="block text-xs font-black uppercase tracking-widest text-cyan-700">Penempatan aktif</span>
+                    <strong>{{ $assignment->place?->name ?? '-' }}</strong>
+                </div>
+            @endif
+        </div>
     </section>
 
     @unless($assignment)
@@ -20,8 +30,8 @@
         <div class="grid gap-4 lg:grid-cols-2">
             @forelse($questionnaires as $questionnaire)
                 @php $response = $questionnaire->responses->first(); @endphp
-                <article class="rounded-3xl border border-sky-100 bg-white p-5 shadow-sm">
-                    <div class="flex items-start justify-between gap-3">
+                <article class="group rounded-3xl border border-cyan-100 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-200 hover:shadow-lg hover:shadow-cyan-900/10">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <p class="text-xs font-black uppercase tracking-widest text-cyan-700">{{ $assignment->period?->name ?? 'KP' }}</p>
                             <h3 class="mt-1 text-xl font-black text-slate-950">{{ $questionnaire->title }}</h3>
@@ -33,10 +43,15 @@
                         <div><span class="block text-xs font-black uppercase text-slate-400">Tempat KP</span>{{ $assignment->place?->name ?? '-' }}</div>
                         <div><span class="block text-xs font-black uppercase text-slate-400">Pertanyaan</span>{{ $questionnaire->active_questions_count }} item</div>
                     </div>
-                    <a href="{{ route('student.questionnaires.show', $questionnaire) }}" class="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-cyan-800 px-5 py-3 text-sm font-black text-white">{{ $response?->isSubmitted() ? 'Lihat / Perbarui Jawaban' : 'Isi Kuisioner' }}</a>
+                    <a href="{{ route('student.questionnaires.show', $questionnaire) }}" class="mt-4 inline-flex w-full items-center justify-center rounded-2xl bg-cyan-800 px-5 py-3 text-sm font-black text-white shadow-lg shadow-cyan-900/15 transition group-hover:bg-cyan-700">
+                        {{ $response?->isSubmitted() ? 'Lihat / Perbarui Jawaban' : 'Isi Sekarang' }}
+                    </a>
                 </article>
             @empty
-                <div class="rounded-3xl border border-dashed border-sky-200 bg-white/70 p-8 text-center text-slate-500 lg:col-span-2">Belum ada kuisioner aktif.</div>
+                <div class="rounded-3xl border border-dashed border-sky-200 bg-white/70 p-8 text-center text-slate-500 lg:col-span-2">
+                    <p class="text-lg font-black text-slate-900">Belum ada kuisioner aktif.</p>
+                    <p class="mt-2 text-sm">Admin atau koordinator perlu mengaktifkan kuisioner mahasiswa untuk periode ini.</p>
+                </div>
             @endforelse
         </div>
     @endunless
