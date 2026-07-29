@@ -74,7 +74,7 @@ class KpQuestionnaireAnalyticsService
     private function responsesFor(KpQuestionnaire $questionnaire, ?string $term): Builder
     {
         return KpQuestionnaireResponse::query()
-            ->with(['answers.question', 'respondent', 'assignment.student.user', 'assignment.period', 'assignment.place'])
+            ->with(['answers.question', 'respondent', 'assignment.student.user', 'assignment.period', 'assignment.place', 'place', 'period'])
             ->where('kp_questionnaire_id', $questionnaire->id)
             ->where('status', 'submitted')
             ->when($term, function (Builder $query) use ($term): void {
@@ -82,7 +82,9 @@ class KpQuestionnaireAnalyticsService
                 $query->where(function (Builder $query) use ($like): void {
                     $query->whereHas('respondent', fn (Builder $user) => $user->where('name', 'like', $like)->orWhere('email', 'like', $like))
                         ->orWhereHas('assignment.student.user', fn (Builder $user) => $user->where('name', 'like', $like)->orWhere('email', 'like', $like))
-                        ->orWhereHas('assignment.place', fn (Builder $place) => $place->where('name', 'like', $like));
+                        ->orWhereHas('assignment.place', fn (Builder $place) => $place->where('name', 'like', $like))
+                        ->orWhereHas('place', fn (Builder $place) => $place->where('name', 'like', $like))
+                        ->orWhereHas('period', fn (Builder $period) => $period->where('name', 'like', $like));
                 });
             });
     }

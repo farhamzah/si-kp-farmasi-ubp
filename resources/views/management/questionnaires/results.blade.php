@@ -144,6 +144,12 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @forelse($responses as $response)
+                        @php
+                            $contextPlace = $response->place?->name ?? $response->assignment?->place?->name ?? '-';
+                            $contextPeriod = $response->period?->name ?? $response->assignment?->period?->name ?? '-';
+                            $contextStudent = $response->assignment?->student?->user?->name;
+                            $isPlaceQuestionnaire = $response->questionnaire->audience === \App\Models\KpQuestionnaire::AUDIENCE_FIELD_SUPERVISOR;
+                        @endphp
                         <tr>
                             <td class="px-5 py-4">
                                 <p class="font-black text-slate-900">{{ $response->questionnaire->title }}</p>
@@ -154,8 +160,11 @@
                                 <p class="text-xs text-slate-500">{{ $response->respondent->email }}</p>
                             </td>
                             <td class="px-5 py-4 text-slate-600">
-                                <p>{{ $response->assignment?->student?->user?->name ?? '-' }}</p>
-                                <p class="text-xs">{{ $response->assignment?->place?->name ?? '-' }} · {{ $response->assignment?->period?->name ?? '-' }}</p>
+                                <p class="font-bold text-slate-900">{{ $isPlaceQuestionnaire ? $contextPlace : ($contextStudent ?? '-') }}</p>
+                                <p class="text-xs">{{ $contextPlace }} - {{ $contextPeriod }}</p>
+                                @if($isPlaceQuestionnaire)
+                                    <p class="mt-1 text-[11px] font-bold uppercase tracking-wider text-cyan-700">Respons per tempat</p>
+                                @endif
                             </td>
                             <td class="px-5 py-4">{{ $response->submitted_at?->format('d M Y H:i') }}</td>
                             <td class="px-5 py-4 text-right">

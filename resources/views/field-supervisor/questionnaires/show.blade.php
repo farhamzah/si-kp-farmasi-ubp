@@ -14,7 +14,13 @@
     <section class="rounded-3xl border border-cyan-100 bg-white p-5 shadow-sm md:p-6">
         <p class="text-xs font-black uppercase tracking-widest text-cyan-700">{{ $assignment->place?->name ?? 'Tempat KP' }}</p>
         <h2 class="mt-1 text-2xl font-black text-slate-950 md:text-3xl">{{ $questionnaire->title }}</h2>
-        <p class="mt-2 text-sm leading-6 text-slate-600">Mahasiswa: <strong>{{ $assignment->student?->user?->name }}</strong> &middot; {{ $assignment->student?->nim }}</p>
+        <p class="mt-2 text-sm leading-6 text-slate-600">
+            Periode: <strong>{{ $assignment->period?->name ?? '-' }}</strong> &middot;
+            {{ $studentCount }} mahasiswa bimbingan di tempat ini.
+        </p>
+        <div class="mt-4 rounded-2xl border border-cyan-100 bg-cyan-50 px-4 py-3 text-sm leading-6 text-cyan-900">
+            Kuisioner ini disimpan satu kali untuk tempat KP dan periode ini. Jumlah mahasiswa hanya menjadi konteks, bukan jumlah respons yang harus diisi.
+        </div>
     </section>
 
     @foreach($questionnaire->activeQuestions as $question)

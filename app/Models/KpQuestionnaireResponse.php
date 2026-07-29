@@ -9,6 +9,8 @@ class KpQuestionnaireResponse extends Model
     protected $fillable = [
         'kp_questionnaire_id',
         'kp_assignment_id',
+        'kp_place_id',
+        'kp_period_id',
         'respondent_user_id',
         'respondent_role',
         'status',
@@ -30,6 +32,16 @@ class KpQuestionnaireResponse extends Model
     public function assignment()
     {
         return $this->belongsTo(KpAssignment::class, 'kp_assignment_id');
+    }
+
+    public function place()
+    {
+        return $this->belongsTo(KpPlace::class, 'kp_place_id');
+    }
+
+    public function period()
+    {
+        return $this->belongsTo(KpPeriod::class, 'kp_period_id');
     }
 
     public function respondent()

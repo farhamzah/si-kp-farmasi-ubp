@@ -17,7 +17,7 @@ class QuestionnaireResultController extends Controller
         $defaults->ensureDefaults($request->user());
 
         $responses = KpQuestionnaireResponse::query()
-            ->with(['questionnaire', 'respondent', 'assignment.student.user', 'assignment.period', 'assignment.place'])
+            ->with(['questionnaire', 'respondent', 'assignment.student.user', 'assignment.period', 'assignment.place', 'place', 'period'])
             ->where('status', 'submitted')
             ->when($request->filled('audience'), fn ($query) => $query->whereHas('questionnaire', fn ($questionnaire) => $questionnaire->where('audience', $request->audience)))
             ->when($request->filled('q'), function ($query) use ($request): void {
@@ -25,7 +25,9 @@ class QuestionnaireResultController extends Controller
                 $query->where(function ($query) use ($term): void {
                     $query->whereHas('respondent', fn ($user) => $user->where('name', 'like', $term)->orWhere('email', 'like', $term))
                         ->orWhereHas('assignment.student.user', fn ($user) => $user->where('name', 'like', $term)->orWhere('email', 'like', $term))
-                        ->orWhereHas('assignment.place', fn ($place) => $place->where('name', 'like', $term));
+                        ->orWhereHas('assignment.place', fn ($place) => $place->where('name', 'like', $term))
+                        ->orWhereHas('place', fn ($place) => $place->where('name', 'like', $term))
+                        ->orWhereHas('period', fn ($period) => $period->where('name', 'like', $term));
                 });
             })
             ->latest('submitted_at')
@@ -43,7 +45,7 @@ class QuestionnaireResultController extends Controller
     public function show(KpQuestionnaireResponse $response, KpQuestionnaireAnalyticsService $analytics): View
     {
         return view('management.questionnaires.result-show', [
-            'response' => $response->load(['questionnaire.questions', 'answers.question', 'respondent', 'assignment.student.user', 'assignment.period', 'assignment.place']),
+            'response' => $response->load(['questionnaire.questions', 'answers.question', 'respondent', 'assignment.student.user', 'assignment.period', 'assignment.place', 'place', 'period']),
             'answerMap' => $response->answerMap(),
             'score' => $analytics->responseScore($response),
         ]);

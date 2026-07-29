@@ -8,6 +8,7 @@ use App\Models\KpPeriod;
 use App\Models\KpPlace;
 use App\Models\KpQuestionnaire;
 use App\Models\KpQuestionnaireQuestion;
+use App\Models\KpQuestionnaireResponse;
 use App\Models\KpRegistration;
 use App\Models\Lecturer;
 use App\Models\Role;
@@ -127,11 +128,70 @@ class KpQuestionnaireTest extends TestCase
 
         $this->assertDatabaseHas('kp_questionnaire_responses', [
             'kp_questionnaire_id' => $questionnaire->id,
-            'kp_assignment_id' => $this->assignment->id,
+            'kp_assignment_id' => null,
+            'kp_place_id' => $this->assignment->kp_place_id,
+            'kp_period_id' => $this->assignment->kp_period_id,
             'respondent_user_id' => $this->fieldUser->id,
             'respondent_role' => 'pembimbing_lapangan',
             'status' => 'submitted',
         ]);
+    }
+
+    public function test_field_supervisor_questionnaire_is_one_response_per_place_and_period(): void
+    {
+        $questionnaire = $this->makeQuestionnaire(KpQuestionnaire::AUDIENCE_FIELD_SUPERVISOR);
+        $question = $questionnaire->questions()->firstOrFail();
+        $otherStudentUser = $this->makeUser('second-student-questionnaire@test.local', ['mahasiswa']);
+        $otherStudent = $this->makeStudent($otherStudentUser, '2441624820888');
+        $registration = KpRegistration::create([
+            'kp_period_id' => $this->assignment->kp_period_id,
+            'student_id' => $otherStudent->id,
+            'status' => 'terverifikasi',
+        ]);
+        $secondAssignment = KpAssignment::create([
+            'kp_period_id' => $this->assignment->kp_period_id,
+            'kp_registration_id' => $registration->id,
+            'student_id' => $otherStudent->id,
+            'kp_place_id' => $this->assignment->kp_place_id,
+            'internal_supervisor_id' => $this->assignment->internal_supervisor_id,
+            'field_supervisor_id' => $this->fieldSupervisor->id,
+            'status' => 'aktif',
+            'assigned_by' => $this->admin->id,
+            'assigned_at' => now()->addMinute(),
+            'active_key' => $this->assignment->kp_period_id.'-'.$otherStudent->id,
+        ]);
+
+        $this->actingAs($this->fieldUser)
+            ->withSession(['active_role' => 'pembimbing_lapangan'])
+            ->get('/pembimbing-lapangan/kuisioner')
+            ->assertOk()
+            ->assertSee('1 tempat')
+            ->assertSee('2 mahasiswa')
+            ->assertSee($this->assignment->place->name);
+
+        $this->actingAs($this->fieldUser)
+            ->withSession(['active_role' => 'pembimbing_lapangan'])
+            ->post('/pembimbing-lapangan/kuisioner/'.$this->assignment->id.'/'.$questionnaire->id, [
+                'answers' => [$question->id => 4],
+            ])
+            ->assertRedirect(route('field-supervisor.questionnaires.index'));
+
+        $this->actingAs($this->fieldUser)
+            ->withSession(['active_role' => 'pembimbing_lapangan'])
+            ->post('/pembimbing-lapangan/kuisioner/'.$secondAssignment->id.'/'.$questionnaire->id, [
+                'answers' => [$question->id => 5],
+            ])
+            ->assertRedirect(route('field-supervisor.questionnaires.index'));
+
+        $responses = KpQuestionnaireResponse::query()
+            ->where('kp_questionnaire_id', $questionnaire->id)
+            ->where('respondent_user_id', $this->fieldUser->id)
+            ->where('kp_place_id', $this->assignment->kp_place_id)
+            ->where('kp_period_id', $this->assignment->kp_period_id)
+            ->get();
+
+        $this->assertCount(1, $responses);
+        $this->assertSame('5', $responses->first()->answerMap()[$question->id]);
     }
 
     private function makeQuestionnaire(string $audience): KpQuestionnaire

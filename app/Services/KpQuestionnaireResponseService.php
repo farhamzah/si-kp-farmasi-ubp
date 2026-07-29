@@ -13,7 +13,7 @@ use Illuminate\Validation\ValidationException;
 
 class KpQuestionnaireResponseService
 {
-    public function submit(Request $request, KpQuestionnaire $questionnaire, User $user, string $role, ?KpAssignment $assignment): KpQuestionnaireResponse
+    public function submit(Request $request, KpQuestionnaire $questionnaire, User $user, string $role, ?KpAssignment $assignment, bool $placeBased = false): KpQuestionnaireResponse
     {
         $questionnaire->loadMissing('activeQuestions');
         $answers = $request->input('answers', []);
@@ -29,14 +29,25 @@ class KpQuestionnaireResponseService
             $this->validateAnswer($question, $value);
         }
 
-        return DB::transaction(function () use ($questionnaire, $user, $role, $assignment, $answers): KpQuestionnaireResponse {
+        return DB::transaction(function () use ($questionnaire, $user, $role, $assignment, $answers, $placeBased): KpQuestionnaireResponse {
+            $lookup = [
+                'kp_questionnaire_id' => $questionnaire->id,
+                'respondent_user_id' => $user->id,
+            ];
+
+            if ($placeBased) {
+                $lookup['kp_place_id'] = $assignment?->kp_place_id;
+                $lookup['kp_period_id'] = $assignment?->kp_period_id;
+            } else {
+                $lookup['kp_assignment_id'] = $assignment?->id;
+            }
+
             $response = KpQuestionnaireResponse::updateOrCreate(
+                $lookup,
                 [
-                    'kp_questionnaire_id' => $questionnaire->id,
-                    'kp_assignment_id' => $assignment?->id,
-                    'respondent_user_id' => $user->id,
-                ],
-                [
+                    'kp_assignment_id' => $placeBased ? null : $assignment?->id,
+                    'kp_place_id' => $assignment?->kp_place_id,
+                    'kp_period_id' => $assignment?->kp_period_id,
                     'respondent_role' => $role,
                     'status' => 'submitted',
                     'submitted_at' => now(),
@@ -50,7 +61,7 @@ class KpQuestionnaireResponseService
                 );
             }
 
-            return $response->load(['questionnaire.questions', 'answers.question', 'assignment.student.user', 'assignment.period', 'assignment.place']);
+            return $response->load(['questionnaire.questions', 'answers.question', 'assignment.student.user', 'assignment.period', 'assignment.place', 'place', 'period']);
         });
     }
 
