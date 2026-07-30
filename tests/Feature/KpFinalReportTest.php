@@ -57,7 +57,9 @@ class KpFinalReportTest extends TestCase
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
             ->get('/mahasiswa/laporan-akhir')
             ->assertOk()
-            ->assertSee('Laporan Akhir');
+            ->assertSee('Laporan Akhir')
+            ->assertSee('Buka Folder Drive Resmi')
+            ->assertSee('2210631230201_USER_TEST_LAPORAN_AKHIR_KP_KP_GENAP_2026.pdf');
 
         $other = $this->makeUser('no-final-assignment@test.local', ['mahasiswa']);
         $this->makeStudent($other, '2210631230202');
@@ -290,6 +292,27 @@ class KpFinalReportTest extends TestCase
                 'topic' => 'Review link tidak aman',
                 'document_url' => 'javascript:alert(1)',
             ])->assertSessionHasErrors('document_url');
+    }
+
+    public function test_final_report_link_must_be_google_file_not_folder(): void
+    {
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/laporan-akhir/link-final', [
+                'final_document_url' => 'https://example.com/laporan-final.pdf',
+            ])->assertSessionHasErrors('final_document_url');
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/laporan-akhir/link-final', [
+                'final_document_url' => 'https://drive.google.com/drive/folders/1EwAC9_tEl1DJmKx8eG1313nVnl89fbWv',
+            ])->assertSessionHasErrors('final_document_url');
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/laporan-akhir/link-final', [
+                'final_document_url' => 'drive.google.com/file/d/final-report/view',
+                'final_document_label' => 'Laporan Final KP',
+            ])->assertRedirect();
+
+        $this->assertSame('https://drive.google.com/file/d/final-report/view', KpFinalReport::first()->final_document_url);
     }
 
     public function test_internal_supervisor_can_reject_with_note_and_admin_koordinator_can_monitor(): void

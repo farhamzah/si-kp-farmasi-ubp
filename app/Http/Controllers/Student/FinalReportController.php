@@ -26,6 +26,8 @@ class FinalReportController extends Controller
             'assignment' => $assignment?->load(['place', 'internalSupervisor.user', 'fieldSupervisor.user', 'reportGuidanceLogs.validatedBy']),
             'report' => $report,
             'examEligibility' => $assignment?->examEligibility(),
+            'driveFolderUrl' => config('kp_final_report.drive_folder_url'),
+            'suggestedFinalFilename' => $assignment ? $this->suggestedFinalReportFilename($assignment) : null,
         ]);
     }
 
@@ -49,6 +51,8 @@ class FinalReportController extends Controller
             'final_document_url' => ['required', 'url:http,https', 'max:2048'],
             'final_document_label' => ['nullable', 'string', 'max:255'],
         ]);
+
+        $this->ensureFinalDocumentUrlIsGoogleFile($data['final_document_url']);
 
         $assignment = $this->requireActiveAssignment();
         $report = $service->createOrGetReport($request->user(), $assignment);
@@ -135,6 +139,24 @@ class FinalReportController extends Controller
         return $url;
     }
 
+    private function ensureFinalDocumentUrlIsGoogleFile(string $url): void
+    {
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        $path = (string) parse_url($url, PHP_URL_PATH);
+
+        if (! in_array($host, ['drive.google.com', 'docs.google.com'], true)) {
+            throw ValidationException::withMessages([
+                'final_document_url' => 'Link laporan final harus berupa link file Google Drive atau Google Docs.',
+            ]);
+        }
+
+        if (str_starts_with($path, '/drive/folders')) {
+            throw ValidationException::withMessages([
+                'final_document_url' => 'Tempel link file laporan final, bukan link folder Google Drive.',
+            ]);
+        }
+    }
+
     private function cleanNullableText(mixed $value): mixed
     {
         if (! is_string($value)) {
@@ -144,5 +166,25 @@ class FinalReportController extends Controller
         $value = trim($value);
 
         return $value === '' ? null : $value;
+    }
+
+    private function suggestedFinalReportFilename(KpAssignment $assignment): string
+    {
+        $assignment->loadMissing(['student.user', 'period']);
+
+        $parts = [
+            $assignment->student?->nim,
+            $assignment->student?->user?->name,
+            'LAPORAN AKHIR KP',
+            $assignment->period?->name,
+        ];
+
+        $filename = collect($parts)
+            ->filter()
+            ->map(fn (mixed $part): string => preg_replace('/[^A-Za-z0-9]+/', '_', strtoupper(trim((string) $part))) ?: '')
+            ->filter()
+            ->implode('_');
+
+        return $filename.'.pdf';
     }
 }
