@@ -16,10 +16,11 @@
             </div>
         @endforeach
     </section>
-    <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+    <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         @foreach([
             'students' => ['Mahasiswa KP','Rekap status mahasiswa, pendaftaran, pembimbing, sidang, dan nilai.'],
             'placements' => ['Penempatan KP','Rekap tempat, pembimbing, dan status penempatan.'],
+            'supervisors' => ['Semua Pembimbing','Rekap beban mahasiswa per pembimbing dalam dan lapangan.'],
             'logbooks' => ['Logbook','Rekap jumlah dan status logbook per mahasiswa.'],
             'exams' => ['Sidang','Rekap jadwal dan status sidang KP.'],
             'scores' => ['Nilai','Rekap nilai per sumber penilai dan grade akhir.'],

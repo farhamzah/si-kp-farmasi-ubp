@@ -197,6 +197,7 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('recaps/{type}/download/{format}', [RecapController::class, 'download'])->name('recaps.download');
             Route::get('recaps/students', [RecapController::class, 'students'])->name('recaps.students');
             Route::get('recaps/placements', [RecapController::class, 'placements'])->name('recaps.placements');
+            Route::get('recaps/supervisors', [RecapController::class, 'supervisors'])->name('recaps.supervisors');
             Route::get('recaps/logbooks', [RecapController::class, 'logbooks'])->name('recaps.logbooks');
             Route::get('recaps/exams', [RecapController::class, 'exams'])->name('recaps.exams');
             Route::get('recaps/scores', [RecapController::class, 'scores'])->name('recaps.scores');

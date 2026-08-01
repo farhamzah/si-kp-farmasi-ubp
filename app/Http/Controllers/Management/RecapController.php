@@ -45,6 +45,11 @@ class RecapController extends Controller
         return $this->table('Rekap Nilai KP', 'scores', $request, $service);
     }
 
+    public function supervisors(Request $request, KpRecapService $service): View
+    {
+        return $this->table('Rekap Semua Pembimbing KP', 'supervisors', $request, $service);
+    }
+
     public function preview(string $type, Request $request, KpRecapService $service): View
     {
         abort_unless(array_key_exists($type, $this->types()), 404);
@@ -115,6 +120,7 @@ class RecapController extends Controller
             'logbooks' => 'Rekap Logbook KP',
             'exams' => 'Rekap Sidang KP',
             'scores' => 'Rekap Nilai KP',
+            'supervisors' => 'Rekap Semua Pembimbing KP',
         ];
     }
 

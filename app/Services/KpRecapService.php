@@ -6,6 +6,7 @@ use App\Models\KpAssignment;
 use App\Models\KpExam;
 use App\Models\KpLogbook;
 use App\Models\KpPeriod;
+use App\Models\KpPlace;
 use App\Models\KpRegistration;
 use App\Support\KpScoreCalculator;
 use Illuminate\Database\Eloquent\Builder;
@@ -148,6 +149,73 @@ class KpRecapService
             });
     }
 
+    public function supervisorRows(Request $request): Collection
+    {
+        $assignments = KpAssignment::query()
+            ->with(['student.user', 'period', 'place', 'internalSupervisor.user', 'fieldSupervisor.user'])
+            ->when($request->filled('period'), fn ($q) => $q->where('kp_period_id', $request->period))
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
+            ->when($request->filled('q'), function ($query) use ($request): void {
+                $keyword = (string) $request->q;
+
+                $query->where(function ($query) use ($keyword): void {
+                    $query
+                        ->whereHas('student', fn ($student) => $student
+                            ->where('nim', 'like', "%{$keyword}%")
+                            ->orWhereHas('user', fn ($user) => $user
+                                ->where('name', 'like', "%{$keyword}%")
+                                ->orWhere('email', 'like', "%{$keyword}%")))
+                        ->orWhereHas('place', fn ($place) => $place
+                            ->where('name', 'like', "%{$keyword}%")
+                            ->orWhere('type', 'like', "%{$keyword}%"))
+                        ->orWhereHas('internalSupervisor', fn ($lecturer) => $lecturer
+                            ->where('nidn_nip', 'like', "%{$keyword}%")
+                            ->orWhere('employee_number', 'like', "%{$keyword}%")
+                            ->orWhere('study_program', 'like', "%{$keyword}%")
+                            ->orWhere('department', 'like', "%{$keyword}%")
+                            ->orWhereHas('user', fn ($user) => $user
+                                ->where('name', 'like', "%{$keyword}%")
+                                ->orWhere('email', 'like', "%{$keyword}%")))
+                        ->orWhereHas('fieldSupervisor', fn ($fieldSupervisor) => $fieldSupervisor
+                            ->where('institution_name', 'like', "%{$keyword}%")
+                            ->orWhere('position', 'like', "%{$keyword}%")
+                            ->orWhere('phone', 'like', "%{$keyword}%")
+                            ->orWhereHas('user', fn ($user) => $user
+                                ->where('name', 'like', "%{$keyword}%")
+                                ->orWhere('email', 'like', "%{$keyword}%")));
+                });
+            })
+            ->get();
+
+        $rows = collect()
+            ->merge($this->supervisorGroupRows($assignments->whereNotNull('internal_supervisor_id'), 'internal'))
+            ->merge($this->supervisorGroupRows($assignments->whereNotNull('field_supervisor_id'), 'field'))
+            ->sortBy([['Jenis Pembimbing', 'asc'], ['Nama Pembimbing', 'asc']])
+            ->values();
+
+        if ($rows->isEmpty()) {
+            return $rows;
+        }
+
+        return $rows->push([
+            'Jenis Pembimbing' => 'TOTAL PERAN PEMBIMBING',
+            'Nama Pembimbing' => '-',
+            'Identitas/Kontak' => '-',
+            'Instansi/Unit' => '-',
+            'Mahasiswa Aktif' => $rows->sum('Mahasiswa Aktif'),
+            'RS' => $rows->sum('RS'),
+            'Apotek' => $rows->sum('Apotek'),
+            'Industri' => $rows->sum('Industri'),
+            'Lainnya' => $rows->sum('Lainnya'),
+            'Tempat Aktif' => $rows->sum('Tempat Aktif'),
+            'Menunggu Pembimbing' => $rows->sum('Menunggu Pembimbing'),
+            'Aktif/Berjalan' => $rows->sum('Aktif/Berjalan'),
+            'Selesai' => $rows->sum('Selesai'),
+            'Dibatalkan' => $rows->sum('Dibatalkan'),
+            'Total Baris' => $rows->sum('Total Baris'),
+        ]);
+    }
+
     public function rows(string $type, Request $request): Collection
     {
         return match ($type) {
@@ -156,6 +224,7 @@ class KpRecapService
             'logbooks' => $this->logbookRows($request),
             'exams' => $this->examRows($request),
             'scores' => $this->scoreRows($request),
+            'supervisors' => $this->supervisorRows($request),
             default => collect(),
         };
     }
@@ -172,5 +241,77 @@ class KpRecapService
     private function lecturerName(mixed $lecturer): string
     {
         return $lecturer ? lecturer_display_name($lecturer) : '-';
+    }
+
+    private function supervisorGroupRows(Collection $assignments, string $type): Collection
+    {
+        $supervisorKey = $type === 'internal' ? 'internal_supervisor_id' : 'field_supervisor_id';
+
+        return $assignments
+            ->groupBy($supervisorKey)
+            ->map(function (Collection $items) use ($type): array {
+                /** @var KpAssignment $sample */
+                $sample = $items->first();
+                $supervisor = $type === 'internal' ? $sample->internalSupervisor : $sample->fieldSupervisor;
+                $activeItems = $items->reject(fn (KpAssignment $assignment) => $assignment->status === 'dibatalkan');
+                $placeCounts = $activeItems->countBy(fn (KpAssignment $assignment) => $this->placeCategory($assignment->place));
+
+                return [
+                    'Jenis Pembimbing' => $type === 'internal' ? 'Pembimbing Dalam' : 'Pembimbing Lapangan',
+                    'Nama Pembimbing' => $type === 'internal' ? $this->lecturerName($supervisor) : field_supervisor_display_name($supervisor),
+                    'Identitas/Kontak' => $this->supervisorIdentifier($supervisor, $type),
+                    'Instansi/Unit' => $this->supervisorUnit($supervisor, $type),
+                    'Mahasiswa Aktif' => $activeItems->pluck('student_id')->unique()->count(),
+                    'RS' => (int) ($placeCounts['rs'] ?? 0),
+                    'Apotek' => (int) ($placeCounts['apotek'] ?? 0),
+                    'Industri' => (int) ($placeCounts['industri'] ?? 0),
+                    'Lainnya' => (int) ($placeCounts['lainnya'] ?? 0),
+                    'Tempat Aktif' => $activeItems->pluck('kp_place_id')->unique()->count(),
+                    'Menunggu Pembimbing' => $items->where('status', 'menunggu_pembimbing')->count(),
+                    'Aktif/Berjalan' => $items->whereIn('status', ['aktif', 'berjalan'])->count(),
+                    'Selesai' => $items->where('status', 'selesai')->count(),
+                    'Dibatalkan' => $items->where('status', 'dibatalkan')->count(),
+                    'Total Baris' => $items->count(),
+                ];
+            })
+            ->values();
+    }
+
+    private function supervisorIdentifier(mixed $supervisor, string $type): string
+    {
+        if (! $supervisor) {
+            return '-';
+        }
+
+        if ($type === 'internal') {
+            return $supervisor->nidn_nip ?: ($supervisor->employee_number ?: ($supervisor->user?->email ?? '-'));
+        }
+
+        return $supervisor->phone ?: ($supervisor->user?->email ?? '-');
+    }
+
+    private function supervisorUnit(mixed $supervisor, string $type): string
+    {
+        if (! $supervisor) {
+            return '-';
+        }
+
+        if ($type === 'internal') {
+            return collect([$supervisor->study_program, $supervisor->department])->filter()->implode(' / ') ?: '-';
+        }
+
+        return collect([$supervisor->institution_name, $supervisor->position])->filter()->implode(' / ') ?: '-';
+    }
+
+    private function placeCategory(?KpPlace $place): string
+    {
+        $value = strtolower(trim(($place?->type ?? '').' '.($place?->name ?? '')));
+
+        return match (true) {
+            str_contains($value, 'rumah sakit') || str_contains($value, 'rs') => 'rs',
+            str_contains($value, 'apotek') || str_contains($value, 'apotik') => 'apotek',
+            str_contains($value, 'industri') || str_contains($value, 'pt ') || str_starts_with($value, 'pt') || str_contains($value, 'cv ') || str_starts_with($value, 'cv') => 'industri',
+            default => 'lainnya',
+        };
     }
 }

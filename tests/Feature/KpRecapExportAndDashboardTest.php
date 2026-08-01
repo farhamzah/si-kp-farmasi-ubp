@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\FieldSupervisor;
 use App\Models\KpAssignment;
 use App\Models\KpPeriod;
 use App\Models\KpPlace;
 use App\Models\KpRegistration;
+use App\Models\Lecturer;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\User;
@@ -44,8 +46,11 @@ class KpRecapExportAndDashboardTest extends TestCase
             ->get('/management/recaps')
             ->assertOk()
             ->assertSee('Rekap, Monitoring, dan Export KP')
+            ->assertSee('Semua Pembimbing')
             ->assertSee('Preview')
             ->assertSee('Excel');
+
+        $this->createAssignmentWithSupervisors();
 
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->get('/management/recaps/students')
@@ -53,6 +58,14 @@ class KpRecapExportAndDashboardTest extends TestCase
             ->assertSee('Rekap Mahasiswa KP')
             ->assertSee('Print Preview')
             ->assertSee('PDF');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/recaps/supervisors')
+            ->assertOk()
+            ->assertSee('Rekap Semua Pembimbing KP')
+            ->assertSee('Pembimbing Dalam')
+            ->assertSee('Pembimbing Lapangan')
+            ->assertSee('Mahasiswa Aktif');
 
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
             ->get('/management/recaps')
@@ -95,6 +108,13 @@ class KpRecapExportAndDashboardTest extends TestCase
 
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->get('/management/recaps/scores/download/excel')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        $this->createAssignmentWithSupervisors();
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/recaps/supervisors/download/excel')
             ->assertOk()
             ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
@@ -167,6 +187,58 @@ class KpRecapExportAndDashboardTest extends TestCase
             'kp_place_id' => $place->id,
             'internal_supervisor_id' => null,
             'field_supervisor_id' => null,
+            'status' => 'aktif',
+            'assigned_by' => $this->koordinator->id,
+            'assigned_at' => now(),
+            'active_key' => $period->id.'-'.$student->id,
+        ]);
+    }
+
+    private function createAssignmentWithSupervisors(): KpAssignment
+    {
+        $studentUser = $this->makeUser('supervisor-recap-student@test.local', ['mahasiswa']);
+        $studentUser->update(['name' => 'Mahasiswa Rekap Pembimbing']);
+        $student = Student::create([
+            'user_id' => $studentUser->id,
+            'nim' => '24416248201991',
+            'study_program' => 'Farmasi',
+            'semester' => 6,
+            'status' => 'active',
+        ]);
+
+        $this->internal->update(['name' => 'Dosen Rekap Pembimbing']);
+        $lecturer = Lecturer::create([
+            'user_id' => $this->internal->id,
+            'nidn_nip' => '0429990001',
+            'study_program' => 'Farmasi S1',
+            'department' => 'Farmasi',
+            'status' => 'active',
+        ]);
+
+        $this->field->update(['name' => 'Mitra Rekap Pembimbing']);
+        $fieldSupervisor = FieldSupervisor::create([
+            'user_id' => $this->field->id,
+            'institution_name' => 'Apotek Rekap',
+            'position' => 'Apoteker Pembimbing',
+            'phone' => '081234567890',
+            'status' => 'active',
+        ]);
+
+        $period = KpPeriod::create(['name' => 'KP Rekap Pembimbing 2026', 'status' => 'dibuka']);
+        $place = KpPlace::create(['name' => 'Apotek Rekap', 'type' => 'apotek', 'status' => 'aktif']);
+        $registration = KpRegistration::create([
+            'kp_period_id' => $period->id,
+            'student_id' => $student->id,
+            'status' => 'terverifikasi',
+        ]);
+
+        return KpAssignment::create([
+            'kp_period_id' => $period->id,
+            'kp_registration_id' => $registration->id,
+            'student_id' => $student->id,
+            'kp_place_id' => $place->id,
+            'internal_supervisor_id' => $lecturer->id,
+            'field_supervisor_id' => $fieldSupervisor->id,
             'status' => 'aktif',
             'assigned_by' => $this->koordinator->id,
             'assigned_at' => now(),

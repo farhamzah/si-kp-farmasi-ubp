@@ -85,6 +85,27 @@ class KpInternalSupervisorWorkloadReportTest extends TestCase
         $this->assertStringContainsString('.xlsx', (string) $excelResponse->headers->get('Content-Disposition'));
     }
 
+    public function test_internal_supervisor_workload_report_can_be_filtered_by_period(): void
+    {
+        $this->seed(RoleSeeder::class);
+        $admin = $this->makeUser('admin-period@test.local', ['admin']);
+        $firstLecturer = $this->lecturer('Dosen Periode Satu');
+        $secondLecturer = $this->lecturer('Dosen Periode Dua');
+        $firstPeriod = KpPeriod::create(['name' => 'KP Periode Terpilih', 'status' => 'dibuka']);
+        $secondPeriod = KpPeriod::create(['name' => 'KP Periode Lain', 'status' => 'dibuka']);
+
+        $this->assignment($firstPeriod, $firstLecturer, 'Apotek Periode Satu', 'apotek', 'aktif');
+        $this->assignment($secondPeriod, $secondLecturer, 'RS Periode Dua', 'rumah_sakit', 'aktif');
+
+        $this->actingAs($admin)
+            ->withSession(['active_role' => 'admin'])
+            ->get('/management/internal-supervisor-workload?period='.$firstPeriod->id)
+            ->assertOk()
+            ->assertSee('Dosen Periode Satu')
+            ->assertDontSee('Dosen Periode Dua')
+            ->assertSeeInOrder(['Dosen Periode Satu', '0', '1', '0', '0', '1']);
+    }
+
     private function lecturer(string $name): Lecturer
     {
         $user = $this->makeUser(Str::slug($name).'@test.local', ['pembimbing_dalam']);
