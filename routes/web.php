@@ -185,7 +185,9 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('orientation-tests', [OrientationTestResultController::class, 'index'])->name('orientation-tests.index');
             Route::get('orientation-tests/{attempt}', [OrientationTestResultController::class, 'show'])->name('orientation-tests.show');
             Route::get('scores', [ScoreMonitoringController::class, 'index'])->name('scores.index');
+            Route::patch('scores/periods/{period}/visibility', [ScoreMonitoringController::class, 'updatePeriodVisibility'])->name('scores.period-visibility.update');
             Route::get('scores/{assignment}', [ScoreMonitoringController::class, 'show'])->name('scores.show');
+            Route::patch('scores/{assignment}/visibility-override', [ScoreMonitoringController::class, 'updateVisibilityOverride'])->name('scores.visibility-override.update');
             Route::post('scores/{assignment}/override', [ScoreMonitoringController::class, 'override'])->name('scores.override');
             Route::post('scores/{assignment}/calculate', [ScoreMonitoringController::class, 'calculate'])->name('scores.calculate');
             Route::post('scores/{assignment}/finalize', [ScoreMonitoringController::class, 'finalize'])->name('scores.finalize');

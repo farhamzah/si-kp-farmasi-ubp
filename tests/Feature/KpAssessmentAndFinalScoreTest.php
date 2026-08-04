@@ -242,6 +242,19 @@ class KpAssessmentAndFinalScoreTest extends TestCase
             ->post('/management/final-scores/'.$final->id.'/publish')
             ->assertRedirect();
 
+        $this->assignment->period->update(['score_visible_to_students' => true]);
+        KpFinalReport::updateOrCreate(
+            ['kp_assignment_id' => $this->assignment->id],
+            [
+                'status' => 'disetujui',
+                'internal_review_status' => 'disetujui',
+                'field_review_status' => 'disetujui',
+                'final_document_url' => 'https://drive.google.com/example-final-report',
+                'submitted_at' => now(),
+                'approved_at' => now(),
+            ]
+        );
+
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
             ->get('/mahasiswa/nilai')
             ->assertOk()

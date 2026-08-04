@@ -21,6 +21,7 @@ class KpPeriod extends Model
         'kp_start_date',
         'kp_end_date',
         'status',
+        'score_visible_to_students',
         'description',
         'created_by',
         'updated_by',
@@ -37,6 +38,7 @@ class KpPeriod extends Model
             'selection_end_at' => 'datetime',
             'kp_start_date' => 'date',
             'kp_end_date' => 'date',
+            'score_visible_to_students' => 'boolean',
         ];
     }
 
@@ -83,6 +85,11 @@ class KpPeriod extends Model
     public function assessmentComponents()
     {
         return $this->hasMany(KpAssessmentComponent::class, 'kp_period_id');
+    }
+
+    public function scoreVisibilityOverrides()
+    {
+        return $this->hasMany(KpScoreVisibilityOverride::class, 'kp_period_id');
     }
 
     public function competencies()
@@ -134,5 +141,15 @@ class KpPeriod extends Model
             'selesai' => 'bg-slate-100 text-slate-700',
             default => 'bg-sky-50 text-sky-700',
         };
+    }
+
+    public function scoreVisibilityLabel(): string
+    {
+        return $this->score_visible_to_students ? 'Dibuka' : 'Ditutup';
+    }
+
+    public function scoreVisibilityBadgeClass(): string
+    {
+        return $this->score_visible_to_students ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-700';
     }
 }

@@ -75,6 +75,7 @@ class StabilizationDemoSeederTest extends TestCase
     public function test_demo_users_can_open_recaps_dashboards_and_score_pages(): void
     {
         $this->seed(DemoEndToEndSeeder::class);
+        KpPeriod::query()->update(['score_visible_to_students' => true]);
 
         $admin = User::where('email', 'admin@sikp.test')->firstOrFail();
         $studentA = User::where('email', 'mahasiswa@sikp.test')->firstOrFail();
@@ -99,7 +100,7 @@ class StabilizationDemoSeederTest extends TestCase
         $this->actingAs($studentB)->withSession(['active_role' => 'mahasiswa'])
             ->get('/mahasiswa/nilai')
             ->assertOk()
-            ->assertSee('Nilai sedang diproses');
+            ->assertSee('Nilai belum dapat dibuka');
     }
 
     public function test_legacy_demo_mode_does_not_require_core_profile_connection(): void

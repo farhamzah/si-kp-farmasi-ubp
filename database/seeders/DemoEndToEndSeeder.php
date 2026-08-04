@@ -392,6 +392,14 @@ class DemoEndToEndSeeder extends Seeder
                 'reviewed_at' => now()->subDay(),
                 'review_note' => 'Laporan akhir demo disetujui.',
                 'approved_at' => now()->subDay(),
+                'internal_review_status' => 'disetujui',
+                'internal_reviewed_by' => $reviewer->id,
+                'internal_reviewed_at' => now()->subDay(),
+                'internal_review_note' => 'Bimbingan laporan demo pembimbing dalam selesai.',
+                'field_review_status' => 'disetujui',
+                'field_reviewed_by' => $assignment->fieldSupervisor?->user_id,
+                'field_reviewed_at' => now()->subDay(),
+                'field_review_note' => 'Bimbingan laporan demo pembimbing lapangan selesai.',
             ]
         );
 

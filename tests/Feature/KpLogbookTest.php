@@ -119,7 +119,7 @@ class KpLogbookTest extends TestCase
     public function test_student_can_upload_mobile_photo_evidence_for_logbook(): void
     {
         $payload = $this->logbookPayload([
-            'activity_date' => now()->addDays(2)->toDateString(),
+            'activity_date' => now()->subDays(2)->toDateString(),
             'evidence' => UploadedFile::fake()->create('foto-kegiatan.webp', 512, 'image/webp'),
         ]);
 
@@ -137,7 +137,7 @@ class KpLogbookTest extends TestCase
     public function test_student_can_save_evidence_link_and_supervisors_can_view_it(): void
     {
         $payload = $this->logbookPayload([
-            'activity_date' => now()->addDays(3)->toDateString(),
+            'activity_date' => now()->subDays(3)->toDateString(),
             'evidence_url' => 'https://drive.google.com/file/d/abc123/view?usp=sharing',
             'evidence_url_label' => 'Foto kegiatan Drive',
         ]);
@@ -174,7 +174,7 @@ class KpLogbookTest extends TestCase
     public function test_student_can_submit_pasted_google_drive_link_without_protocol(): void
     {
         $payload = $this->logbookPayload([
-            'activity_date' => now()->addDays(4)->toDateString(),
+            'activity_date' => now()->subDays(4)->toDateString(),
             'action' => 'submit',
             'evidence_url' => " drive.google.com/file/d/mobile123/view?usp=sharing\n",
             'evidence_url_label' => ' Bukti kegiatan dari HP ',
@@ -194,7 +194,7 @@ class KpLogbookTest extends TestCase
     public function test_student_logbook_rejects_unsafe_evidence_link(): void
     {
         $payload = $this->logbookPayload([
-            'activity_date' => now()->addDays(5)->toDateString(),
+            'activity_date' => now()->subDays(5)->toDateString(),
             'evidence_url' => 'javascript:alert(1)',
         ]);
 
@@ -213,10 +213,26 @@ class KpLogbookTest extends TestCase
 
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
             ->post('/mahasiswa/logbook', $this->logbookPayload([
-                'activity_date' => now()->addDay()->toDateString(),
+                'activity_date' => now()->subDays(6)->toDateString(),
                 'evidence' => UploadedFile::fake()->create('bukti.exe', 10, 'application/octet-stream'),
             ]))
             ->assertSessionHasErrors('evidence');
+    }
+
+    public function test_student_cannot_create_logbook_with_future_activity_date(): void
+    {
+        $futureDate = now()->addDay()->toDateString();
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/logbook', $this->logbookPayload([
+                'activity_date' => $futureDate,
+            ]))
+            ->assertSessionHasErrors('activity_date');
+
+        $this->assertDatabaseMissing('kp_logbooks', [
+            'kp_assignment_id' => $this->assignment->id,
+            'activity_date' => $futureDate,
+        ]);
     }
 
     public function test_field_supervisor_can_review_only_assigned_logbook(): void

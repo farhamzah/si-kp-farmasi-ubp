@@ -18,7 +18,7 @@ class StoreKpLogbookRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'activity_date' => ['required', 'date'],
+            'activity_date' => ['required', 'date', 'before_or_equal:today'],
             'start_time' => ['nullable', 'date_format:H:i'],
             'end_time' => ['nullable', 'date_format:H:i', 'after:start_time'],
             'activity_title' => ['required', 'string', 'max:255'],
@@ -46,6 +46,7 @@ class StoreKpLogbookRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'activity_date.before_or_equal' => 'Tanggal kegiatan tidak boleh melebihi tanggal hari ini.',
             'evidence.mimes' => 'Bukti kegiatan harus berupa PDF atau foto JPG, JPEG, PNG, WebP, HEIC, atau HEIF.',
             'evidence.max' => 'Ukuran bukti kegiatan maksimal 5MB.',
             'evidence.file' => 'Bukti kegiatan harus berupa file yang valid.',

@@ -2,7 +2,8 @@
 <div class="grid gap-4 md:grid-cols-2">
     <div>
         <label class="text-sm font-semibold text-slate-700">Tanggal Kegiatan</label>
-        <input type="date" name="activity_date" value="{{ old('activity_date', optional($logbook?->activity_date ?? null)->format('Y-m-d')) }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+        <input type="date" name="activity_date" value="{{ old('activity_date', optional($logbook?->activity_date ?? null)->format('Y-m-d')) }}" max="{{ now()->toDateString() }}" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+        <p class="mt-1 text-xs text-slate-500">Tanggal maksimal hari ini. Satu tanggal hanya dapat dipakai untuk satu logbook.</p>
         @error('activity_date')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
     </div>
     <div class="grid grid-cols-2 gap-3">
