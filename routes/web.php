@@ -304,6 +304,7 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('laporan-akhir/{report}/reject', [FieldFinalReportReviewController::class, 'reject'])->name('final-reports.reject');
             Route::post('laporan-akhir/{report}/bimbingan/{guidance}/approve', [FieldFinalReportReviewController::class, 'approveGuidance'])->name('final-reports.guidance.approve');
             Route::post('laporan-akhir/{report}/bimbingan/{guidance}/revision', [FieldFinalReportReviewController::class, 'revisionGuidance'])->name('final-reports.guidance.revision');
+            Route::post('laporan-akhir/{report}/bimbingan-selesai', [FieldFinalReportReviewController::class, 'completeGuidance'])->name('final-reports.guidance.complete');
             Route::get('laporan-akhir/files/{file}/download', [FieldFinalReportReviewController::class, 'download'])->name('final-reports.files.download');
             Route::get('penilaian', [FieldAssessmentController::class, 'index'])->name('assessments.index');
             Route::get('penilaian/{assignment}', [FieldAssessmentController::class, 'show'])->name('assessments.show');

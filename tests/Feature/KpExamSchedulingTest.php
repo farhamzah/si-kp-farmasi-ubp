@@ -404,7 +404,7 @@ class KpExamSchedulingTest extends TestCase
             );
         }
 
-        return KpFinalReport::firstOrCreate(
+        return KpFinalReport::updateOrCreate(
             ['kp_assignment_id' => $this->assignment->id],
             [
                 'current_version' => 1,
@@ -416,6 +416,9 @@ class KpExamSchedulingTest extends TestCase
                 'field_review_status' => 'disetujui',
                 'field_reviewed_by' => $this->fieldUser->id,
                 'field_reviewed_at' => now(),
+                'field_guidance_completed_by' => $this->fieldUser->id,
+                'field_guidance_completed_at' => now(),
+                'field_guidance_completion_note' => 'Bimbingan lapangan selesai untuk sidang.',
                 'approved_at' => now(),
             ]
         );

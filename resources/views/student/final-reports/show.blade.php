@@ -18,8 +18,11 @@
             $fieldGuidanceLogs = $assignment->reportGuidanceLogs->filter(fn ($guidance) => $guidance->isForFieldSupervisor());
             $approvedInternalGuidance = $internalGuidanceLogs->where('status', 'disetujui')->count();
             $approvedFieldGuidance = $fieldGuidanceLogs->where('status', 'disetujui')->count();
+            $fieldOpenGuidance = $fieldGuidanceLogs->whereIn('status', ['menunggu_validasi', 'revisi', 'ditolak'])->count();
+            $fieldGuidanceCompleted = $report?->isFieldGuidanceCompleted() ?? false;
+            $fieldGuidanceLabel = $fieldGuidanceCompleted ? 'Selesai' : $approvedFieldGuidance.' sesi disetujui';
             $internalGuidanceProgress = min(100, (int) round(($approvedInternalGuidance / 8) * 100));
-            $fieldGuidanceProgress = min(100, (int) round(($approvedFieldGuidance / 8) * 100));
+            $fieldGuidanceProgress = $fieldGuidanceCompleted ? 100 : ($approvedFieldGuidance > 0 ? 60 : 0);
             $eligibilityItems = $examEligibility['items'] ?? [];
         @endphp
 
@@ -55,7 +58,7 @@
                     </div>
                     <div class="flex items-center justify-between gap-3">
                         <p class="text-xs font-black uppercase tracking-widest text-slate-500">Bimbingan Lapangan</p>
-                        <p class="font-black text-cyan-700">{{ $approvedFieldGuidance }}/8</p>
+                        <p class="font-black text-cyan-700">{{ $fieldGuidanceLabel }}</p>
                     </div>
                     <div class="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-100">
                         <div class="h-full rounded-full bg-gradient-to-r from-sky-500 to-teal-500" style="width: {{ $fieldGuidanceProgress }}%"></div>
@@ -76,7 +79,7 @@
                         @foreach([
                             ['no' => '01', 'title' => 'Draft di Drive', 'desc' => 'Gunakan Google Docs/Drive agar pembimbing mudah memberi catatan.'],
                             ['no' => '02', 'title' => 'Catat Bimbingan', 'desc' => 'Pilih pembimbing dalam atau lapangan setiap sesi bimbingan.'],
-                            ['no' => '03', 'title' => 'Validasi 8 Sesi', 'desc' => 'Masing-masing pembimbing memvalidasi minimal 8 sesi.'],
+                            ['no' => '03', 'title' => 'Validasi Bimbingan', 'desc' => 'Pembimbing dalam minimal 8 sesi. Pembimbing lapangan menandai selesai saat proses cukup.'],
                             ['no' => '04', 'title' => 'Upload Final', 'desc' => 'Simpan PDF final bertanda tangan di folder Drive resmi.'],
                             ['no' => '05', 'title' => 'Submit Review', 'desc' => 'Tempel link file final, lalu kirim untuk review kedua pembimbing.'],
                         ] as $step)
@@ -114,7 +117,7 @@
                             <h3 class="mt-1 text-xl font-black text-slate-950">Catat sesi bimbingan pembimbing</h3>
                             <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Isi satu log setiap kali ada pemeriksaan atau diskusi laporan. Pilih pembimbing yang benar agar validasinya masuk ke hitungan yang sesuai.</p>
                         </div>
-                        <span class="inline-flex w-fit rounded-full bg-cyan-50 px-3 py-1 text-xs font-black text-cyan-700">Dalam {{ $approvedInternalGuidance }}/8 | Lapangan {{ $approvedFieldGuidance }}/8</span>
+                        <span class="inline-flex w-fit rounded-full bg-cyan-50 px-3 py-1 text-xs font-black text-cyan-700">Dalam {{ $approvedInternalGuidance }}/8 | Lapangan {{ $fieldGuidanceLabel }}</span>
                     </div>
 
                     <form method="POST" action="{{ route('student.final-reports.guidance.store') }}" class="mt-5 grid gap-3">
@@ -149,7 +152,7 @@
                         <p class="rounded-xl bg-cyan-50 px-4 py-3 text-xs font-semibold leading-5 text-cyan-800">Bagikan akses Google Docs/Drive ke pembimbing sebelum submit log. Pembimbing akan melihat tombol preview dan memvalidasi sesi ini dari akun mereka.</p>
                         <label class="block">
                             <span class="text-xs font-black uppercase tracking-widest text-slate-500">Catatan mahasiswa</span>
-                            <textarea name="student_note" rows="3" placeholder="Catatan opsional, misalnya poin revisi yang sudah dikerjakan" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm shadow-sm">{{ old('student_note') }}</textarea>
+                            <textarea name="student_note" rows="5" placeholder="Tulis hasil diskusi, revisi yang diminta, atau progres yang sudah Anda kerjakan." class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm leading-6 shadow-sm">{{ old('student_note') }}</textarea>
                         </label>
                         <button class="w-full rounded-xl bg-cyan-700 px-4 py-3 text-sm font-black text-white shadow-lg shadow-cyan-700/15">Kirim Log Bimbingan</button>
                     </form>
@@ -163,7 +166,7 @@
                         </div>
                         <div class="flex flex-wrap gap-2">
                             <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">Dalam {{ $approvedInternalGuidance }}/8</span>
-                            <span class="rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-sky-700">Lapangan {{ $approvedFieldGuidance }}/8</span>
+                            <span class="rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-sky-700">Lapangan {{ $fieldGuidanceLabel }}</span>
                         </div>
                     </div>
                     <div class="mt-4 space-y-3">
@@ -173,8 +176,18 @@
                                     <div class="min-w-0">
                                         <p class="font-black text-slate-950">{{ $guidance->topic }}</p>
                                         <p class="mt-1 text-xs text-slate-500">{{ $guidance->guidance_date->format('d M Y') }} | {{ $guidance->reviewerTypeLabel() }}</p>
-                                        @if($guidance->student_note)<p class="mt-2 text-sm leading-6 text-slate-600">{{ $guidance->student_note }}</p>@endif
-                                        @if($guidance->validation_note)<p class="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">{{ $guidance->validation_note }}</p>@endif
+                                        @if($guidance->student_note)
+                                            <div class="mt-3 rounded-xl bg-slate-50 px-3 py-2">
+                                                <p class="text-[11px] font-black uppercase tracking-widest text-slate-400">Catatan Mahasiswa</p>
+                                                <p class="mt-1 text-sm leading-6 text-slate-600">{{ $guidance->student_note }}</p>
+                                            </div>
+                                        @endif
+                                        @if($guidance->validation_note)
+                                            <div class="mt-3 rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-2">
+                                                <p class="text-[11px] font-black uppercase tracking-widest text-cyan-600">Catatan Validasi Pembimbing</p>
+                                                <p class="mt-1 text-sm leading-6 text-slate-600">{{ $guidance->validation_note }}</p>
+                                            </div>
+                                        @endif
                                     </div>
                                     <span class="inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 {{ $guidance->statusBadgeClass() }}">{{ $guidance->statusLabel() }}</span>
                                 </div>
@@ -321,7 +334,7 @@
                         <div>
                             <div class="flex items-center justify-between gap-3">
                                 <span class="font-bold text-slate-700">Bimbingan Lapangan</span>
-                                <span class="font-black text-cyan-700">{{ $approvedFieldGuidance }}/8</span>
+                                <span class="font-black text-cyan-700">{{ $fieldGuidanceLabel }}</span>
                             </div>
                             <div class="mt-2 h-2 overflow-hidden rounded-full bg-white">
                                 <div class="h-full rounded-full bg-emerald-500" style="width: {{ $fieldGuidanceProgress }}%"></div>

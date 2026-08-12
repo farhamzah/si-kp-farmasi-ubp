@@ -235,6 +235,47 @@ class KpFinalReportService
         return $this->requestGuidanceRevisionBy($fieldUser, $guidance, $note);
     }
 
+    public function completeFieldGuidance(User $fieldUser, KpFinalReport $report, ?string $note = null): KpFinalReport
+    {
+        $report->loadMissing('assignment');
+        $this->ensureFieldSupervisorCanReview($fieldUser, $report);
+
+        $approved = $report->assignment->reportGuidanceLogs()
+            ->where('reviewer_type', KpReportGuidanceLog::REVIEWER_FIELD)
+            ->where('status', 'disetujui')
+            ->count();
+
+        $open = $report->assignment->reportGuidanceLogs()
+            ->where('reviewer_type', KpReportGuidanceLog::REVIEWER_FIELD)
+            ->whereIn('status', ['menunggu_validasi', 'revisi', 'ditolak'])
+            ->count();
+
+        if ($approved < 1) {
+            throw ValidationException::withMessages([
+                'field_guidance' => 'Setujui minimal satu bimbingan laporan lapangan terlebih dahulu.',
+            ]);
+        }
+
+        if ($open > 0) {
+            throw ValidationException::withMessages([
+                'field_guidance' => 'Selesaikan semua log bimbingan lapangan yang masih menunggu, revisi, atau ditolak sebelum menandai selesai.',
+            ]);
+        }
+
+        $oldStatus = $report->isFieldGuidanceCompleted() ? 'selesai' : 'belum_selesai';
+
+        $report->update([
+            'field_guidance_completed_by' => $fieldUser->id,
+            'field_guidance_completed_at' => now(),
+            'field_guidance_completion_note' => $note,
+        ]);
+
+        $fresh = $report->fresh();
+        $this->logActivity($fieldUser, $fresh, 'field_guidance_completed', $oldStatus, 'selesai', $note);
+
+        return $fresh;
+    }
+
     private function approveGuidanceBy(User $reviewer, KpReportGuidanceLog $guidance, ?string $note = null): KpReportGuidanceLog
     {
         $guidance->update([

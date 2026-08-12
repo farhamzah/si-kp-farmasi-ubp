@@ -433,6 +433,9 @@ class KpAssessmentAndFinalScoreTest extends TestCase
                 'status' => 'submitted',
                 'internal_review_status' => $assignment->finalReport?->internal_review_status ?? 'menunggu_review',
                 'field_review_status' => 'disetujui',
+                'field_guidance_completed_by' => $this->fieldUser->id,
+                'field_guidance_completed_at' => now(),
+                'field_guidance_completion_note' => 'Bimbingan lapangan selesai untuk penilaian.',
                 'final_document_url' => 'https://drive.google.com/example-report',
             ]
         );

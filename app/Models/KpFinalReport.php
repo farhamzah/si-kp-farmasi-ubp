@@ -25,6 +25,9 @@ class KpFinalReport extends Model
         'field_reviewed_by',
         'field_reviewed_at',
         'field_review_note',
+        'field_guidance_completed_by',
+        'field_guidance_completed_at',
+        'field_guidance_completion_note',
     ];
 
     protected function casts(): array
@@ -35,6 +38,7 @@ class KpFinalReport extends Model
             'approved_at' => 'datetime',
             'internal_reviewed_at' => 'datetime',
             'field_reviewed_at' => 'datetime',
+            'field_guidance_completed_at' => 'datetime',
         ];
     }
 
@@ -42,6 +46,7 @@ class KpFinalReport extends Model
     public function reviewedBy() { return $this->belongsTo(User::class, 'reviewed_by'); }
     public function internalReviewedBy() { return $this->belongsTo(User::class, 'internal_reviewed_by'); }
     public function fieldReviewedBy() { return $this->belongsTo(User::class, 'field_reviewed_by'); }
+    public function fieldGuidanceCompletedBy() { return $this->belongsTo(User::class, 'field_guidance_completed_by'); }
     public function files() { return $this->hasMany(KpFinalReportFile::class, 'kp_final_report_id'); }
     public function logs() { return $this->hasMany(KpFinalReportLog::class, 'kp_final_report_id'); }
     public function latestFile() { return $this->hasOne(KpFinalReportFile::class, 'kp_final_report_id')->latestOfMany('version'); }
@@ -83,6 +88,11 @@ class KpFinalReport extends Model
         return $this->status === 'disetujui'
             && $this->internal_review_status === 'disetujui'
             && $this->field_review_status === 'disetujui';
+    }
+
+    public function isFieldGuidanceCompleted(): bool
+    {
+        return filled($this->field_guidance_completed_at);
     }
 
     public function internalReviewStatusLabel(): string

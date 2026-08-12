@@ -55,6 +55,7 @@ class FinalReportReviewController extends Controller
                 'latestFile',
                 'internalReviewedBy',
                 'fieldReviewedBy',
+                'fieldGuidanceCompletedBy',
             ]),
         ]);
     }
@@ -106,6 +107,13 @@ class FinalReportReviewController extends Controller
         $service->requestGuidanceRevisionByFieldSupervisor($request->user(), $guidance, $request->review_note);
 
         return back()->with('status', 'Revisi bimbingan laporan lapangan berhasil diminta.');
+    }
+
+    public function completeGuidance(ReviewFinalReportRequest $request, KpFinalReport $report, KpFinalReportService $service): RedirectResponse
+    {
+        $service->completeFieldGuidance($request->user(), $report, $request->review_note);
+
+        return back()->with('status', 'Bimbingan laporan lapangan berhasil ditandai selesai.');
     }
 
     public function download(KpFinalReportFile $file, KpFinalReportService $service): StreamedResponse

@@ -162,6 +162,10 @@ class KpAssignment extends Model
             ->whereIn('status', ['menunggu_validasi', 'revisi', 'ditolak'])
             ->count();
         $report = $this->finalReport;
+        $fieldGuidanceCompleted = (bool) $report?->field_guidance_completed_at;
+        $fieldGuidanceDescription = $fieldGuidanceCompleted
+            ? $approvedFieldGuidance.' sesi disetujui, bimbingan lapangan selesai'
+            : $approvedFieldGuidance.' sesi disetujui, '.$openFieldGuidance.' perlu tindak lanjut';
 
         $items = [
             [
@@ -177,10 +181,10 @@ class KpAssignment extends Model
                 'description' => $approvedLogbooks.' disetujui, '.$openLogbooks.' perlu tindak lanjut',
             ],
             [
-                'key' => 'field_report_guidance_minimum',
-                'label' => 'Pemeriksaan laporan pembimbing lapangan minimal 8 kali',
-                'ready' => $approvedFieldGuidance >= 8 && $openFieldGuidance === 0,
-                'description' => $approvedFieldGuidance.'/8 disetujui, '.$openFieldGuidance.' perlu tindak lanjut',
+                'key' => 'field_report_guidance_completed',
+                'label' => 'Bimbingan laporan pembimbing lapangan selesai',
+                'ready' => $fieldGuidanceCompleted && $approvedFieldGuidance > 0 && $openFieldGuidance === 0,
+                'description' => $fieldGuidanceDescription,
             ],
             [
                 'key' => 'internal_report_guidance_minimum',
@@ -301,6 +305,7 @@ class KpAssignment extends Model
         $unfinishedLogbooks = $this->logbooks()->where('status', '!=', 'disetujui')->count();
         [$approvedFieldGuidance, $openFieldGuidance] = $this->reportGuidanceCounts(KpReportGuidanceLog::REVIEWER_FIELD);
         $report = $this->finalReport;
+        $fieldGuidanceCompleted = (bool) $report?->field_guidance_completed_at;
 
         return [
             [
@@ -310,10 +315,12 @@ class KpAssignment extends Model
                 'description' => $approvedLogbooks.'/'.$totalLogbooks.' logbook disetujui',
             ],
             [
-                'key' => 'field_report_guidance_minimum',
-                'label' => 'Review/bimbingan laporan lapangan minimal 8 kali',
-                'ready' => $approvedFieldGuidance >= 8 && $openFieldGuidance === 0,
-                'description' => $approvedFieldGuidance.'/8 disetujui, '.$openFieldGuidance.' perlu tindak lanjut',
+                'key' => 'field_report_guidance_completed',
+                'label' => 'Bimbingan laporan lapangan sudah ditandai selesai',
+                'ready' => $fieldGuidanceCompleted && $approvedFieldGuidance > 0 && $openFieldGuidance === 0,
+                'description' => $fieldGuidanceCompleted
+                    ? $approvedFieldGuidance.' sesi disetujui, selesai'
+                    : $approvedFieldGuidance.' sesi disetujui, '.$openFieldGuidance.' perlu tindak lanjut',
             ],
             [
                 'key' => 'field_report_approved',

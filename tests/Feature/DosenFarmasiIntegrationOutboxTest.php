@@ -292,6 +292,8 @@ class DosenFarmasiIntegrationOutboxTest extends TestCase
 
     private function examRequest(KpAssignment $assignment, User $studentUser): KpExamRequest
     {
+        $fieldReviewerId = $assignment->fieldSupervisor?->user_id;
+
         KpLogbook::query()->create([
             'kp_assignment_id' => $assignment->id,
             'activity_date' => now()->toDateString(),
@@ -314,6 +316,9 @@ class DosenFarmasiIntegrationOutboxTest extends TestCase
             'final_document_label' => 'Laporan final siap sidang',
             'internal_review_status' => 'disetujui',
             'field_review_status' => 'disetujui',
+            'field_guidance_completed_by' => $fieldReviewerId,
+            'field_guidance_completed_at' => now(),
+            'field_guidance_completion_note' => 'Bimbingan lapangan selesai untuk integrasi sidang.',
         ]);
 
         return KpExamRequest::query()->create(['kp_assignment_id' => $assignment->id, 'requested_by' => $studentUser->id, 'status' => 'disetujui', 'submitted_at' => now()]);

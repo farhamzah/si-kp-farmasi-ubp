@@ -189,7 +189,7 @@ class KpFinalReportTest extends TestCase
             ->get('/pembimbing-lapangan/laporan-akhir/'.$report->id)
             ->assertOk()
             ->assertDontSee('Draft Bab Hasil')
-            ->assertSee('Validasi minimal 8 sesi pemeriksaan/bimbingan laporan lapangan.');
+            ->assertSee('Validasi setiap sesi bimbingan laporan lapangan.');
 
         $this->actingAs($this->lecturerUser)->withSession(['active_role' => 'pembimbing_dalam'])
             ->post('/pembimbing-dalam/laporan-akhir/'.$report->id.'/bimbingan/'.$guidance->id.'/approve', ['review_note' => 'OK.'])
@@ -261,18 +261,21 @@ class KpFinalReportTest extends TestCase
             ->post('/pembimbing-lapangan/laporan-akhir/'.$report->id.'/bimbingan/'.$fieldGuidance->id.'/approve', ['review_note' => 'Sesuai lapangan.'])
             ->assertRedirect();
 
-        for ($i = 2; $i <= 8; $i++) {
-            KpReportGuidanceLog::create([
-                'kp_assignment_id' => $this->assignment->id,
-                'reviewer_type' => KpReportGuidanceLog::REVIEWER_FIELD,
-                'guidance_date' => now()->subDays($i)->toDateString(),
-                'topic' => 'Bimbingan lapangan '.$i,
-                'status' => 'disetujui',
-                'submitted_at' => now()->subDays($i),
-                'validated_by' => $this->fieldUser->id,
-                'validated_at' => now()->subDays($i),
-            ]);
-        }
+        $this->assertFalse($this->assignment->fresh()->isEligibleForExamRequest());
+
+        $this->actingAs($this->fieldUser)->withSession(['active_role' => 'pembimbing_lapangan'])
+            ->post('/pembimbing-lapangan/laporan-akhir/'.$report->id.'/bimbingan-selesai', [
+                'review_note' => 'Bimbingan lapangan cukup untuk lanjut sidang.',
+            ])
+            ->assertRedirect();
+
+        $report->refresh();
+        $this->assertNotNull($report->field_guidance_completed_at);
+        $this->assertSame($this->fieldUser->id, $report->field_guidance_completed_by);
+        $this->assertDatabaseHas('kp_final_report_logs', [
+            'kp_final_report_id' => $report->id,
+            'action' => 'field_guidance_completed',
+        ]);
 
         $this->assertTrue($this->assignment->fresh()->isEligibleForExamRequest());
     }

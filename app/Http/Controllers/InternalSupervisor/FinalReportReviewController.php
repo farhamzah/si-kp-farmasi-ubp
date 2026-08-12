@@ -52,6 +52,7 @@ class FinalReportReviewController extends Controller
                 'latestFile',
                 'internalReviewedBy',
                 'fieldReviewedBy',
+                'fieldGuidanceCompletedBy',
             ]),
         ]);
     }
