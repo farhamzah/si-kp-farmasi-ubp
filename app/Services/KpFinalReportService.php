@@ -195,6 +195,18 @@ class KpFinalReportService
         $this->ensureStudentOwnsAssignment($studentUser, $assignment);
         $this->ensureAssignmentAcceptsReport($assignment);
 
+        $pendingGuidance = $assignment->reportGuidanceLogs()
+            ->where('status', 'menunggu_validasi')
+            ->latest('guidance_date')
+            ->latest('id')
+            ->first();
+
+        if ($pendingGuidance) {
+            throw ValidationException::withMessages([
+                'guidance' => 'Masih ada '.$pendingGuidance->reviewerTypeLabel().' sesi '.str_pad((string) $this->guidanceSequenceNumber($pendingGuidance), 2, '0', STR_PAD_LEFT).' yang menunggu validasi. Tunggu pembimbing menyetujui atau meminta revisi sebelum mengajukan bimbingan berikutnya.',
+            ]);
+        }
+
         return $assignment->reportGuidanceLogs()->create([
             'reviewer_type' => $data['reviewer_type'] ?? KpReportGuidanceLog::REVIEWER_INTERNAL,
             'guidance_date' => $data['guidance_date'],
@@ -205,6 +217,20 @@ class KpFinalReportService
             'status' => 'menunggu_validasi',
             'submitted_at' => now(),
         ]);
+    }
+
+    private function guidanceSequenceNumber(KpReportGuidanceLog $guidance): int
+    {
+        return $guidance->assignment
+            ->reportGuidanceLogs()
+            ->where(function ($query) use ($guidance): void {
+                $query->where('guidance_date', '<', $guidance->guidance_date)
+                    ->orWhere(function ($query) use ($guidance): void {
+                        $query->whereDate('guidance_date', $guidance->guidance_date)
+                            ->where('id', '<=', $guidance->id);
+                    });
+            })
+            ->count();
     }
 
     public function approveGuidance(User $lecturerUser, KpReportGuidanceLog $guidance, ?string $note = null): KpReportGuidanceLog
@@ -235,30 +261,57 @@ class KpFinalReportService
         return $this->requestGuidanceRevisionBy($fieldUser, $guidance, $note);
     }
 
+    public function completeInternalGuidance(User $lecturerUser, KpFinalReport $report, ?string $note = null): KpFinalReport
+    {
+        $report->loadMissing('assignment');
+        $this->ensureLecturerCanReview($lecturerUser, $report);
+
+        $reviewed = $this->reviewedGuidanceCount($report->assignment, KpReportGuidanceLog::REVIEWER_INTERNAL);
+        $pending = $this->pendingGuidanceCount($report->assignment, KpReportGuidanceLog::REVIEWER_INTERNAL);
+
+        if ($reviewed < 8) {
+            throw ValidationException::withMessages([
+                'internal_guidance' => 'Review minimal 8 bimbingan laporan pembimbing dalam terlebih dahulu. Sesi disetujui dan revisi sama-sama dihitung.',
+            ]);
+        }
+
+        if ($pending > 0) {
+            throw ValidationException::withMessages([
+                'internal_guidance' => 'Selesaikan semua log bimbingan pembimbing dalam yang masih menunggu validasi sebelum menandai selesai.',
+            ]);
+        }
+
+        $oldStatus = $report->isInternalGuidanceCompleted() ? 'selesai' : 'belum_selesai';
+
+        $report->update([
+            'internal_guidance_completed_by' => $lecturerUser->id,
+            'internal_guidance_completed_at' => now(),
+            'internal_guidance_completion_note' => $note,
+        ]);
+
+        $fresh = $report->fresh();
+        $this->logActivity($lecturerUser, $fresh, 'internal_guidance_completed', $oldStatus, 'selesai', $note);
+
+        return $fresh;
+    }
+
     public function completeFieldGuidance(User $fieldUser, KpFinalReport $report, ?string $note = null): KpFinalReport
     {
         $report->loadMissing('assignment');
         $this->ensureFieldSupervisorCanReview($fieldUser, $report);
 
-        $approved = $report->assignment->reportGuidanceLogs()
-            ->where('reviewer_type', KpReportGuidanceLog::REVIEWER_FIELD)
-            ->where('status', 'disetujui')
-            ->count();
+        $reviewed = $this->reviewedGuidanceCount($report->assignment, KpReportGuidanceLog::REVIEWER_FIELD);
+        $pending = $this->pendingGuidanceCount($report->assignment, KpReportGuidanceLog::REVIEWER_FIELD);
 
-        $open = $report->assignment->reportGuidanceLogs()
-            ->where('reviewer_type', KpReportGuidanceLog::REVIEWER_FIELD)
-            ->whereIn('status', ['menunggu_validasi', 'revisi', 'ditolak'])
-            ->count();
-
-        if ($approved < 1) {
+        if ($reviewed < 1) {
             throw ValidationException::withMessages([
-                'field_guidance' => 'Setujui minimal satu bimbingan laporan lapangan terlebih dahulu.',
+                'field_guidance' => 'Review minimal satu bimbingan laporan lapangan terlebih dahulu. Sesi disetujui dan revisi sama-sama dihitung.',
             ]);
         }
 
-        if ($open > 0) {
+        if ($pending > 0) {
             throw ValidationException::withMessages([
-                'field_guidance' => 'Selesaikan semua log bimbingan lapangan yang masih menunggu, revisi, atau ditolak sebelum menandai selesai.',
+                'field_guidance' => 'Selesaikan semua log bimbingan lapangan yang masih menunggu validasi sebelum menandai selesai.',
             ]);
         }
 
@@ -274,6 +327,34 @@ class KpFinalReportService
         $this->logActivity($fieldUser, $fresh, 'field_guidance_completed', $oldStatus, 'selesai', $note);
 
         return $fresh;
+    }
+
+    private function reviewedGuidanceCount(KpAssignment $assignment, string $reviewerType): int
+    {
+        return $this->guidanceQuery($assignment, $reviewerType)
+            ->whereIn('status', ['disetujui', 'revisi'])
+            ->count();
+    }
+
+    private function pendingGuidanceCount(KpAssignment $assignment, string $reviewerType): int
+    {
+        return $this->guidanceQuery($assignment, $reviewerType)
+            ->where('status', 'menunggu_validasi')
+            ->count();
+    }
+
+    private function guidanceQuery(KpAssignment $assignment, string $reviewerType)
+    {
+        $query = $assignment->reportGuidanceLogs();
+
+        if ($reviewerType === KpReportGuidanceLog::REVIEWER_INTERNAL) {
+            return $query->where(function ($query): void {
+                $query->where('reviewer_type', KpReportGuidanceLog::REVIEWER_INTERNAL)
+                    ->orWhereNull('reviewer_type');
+            });
+        }
+
+        return $query->where('reviewer_type', $reviewerType);
     }
 
     private function approveGuidanceBy(User $reviewer, KpReportGuidanceLog $guidance, ?string $note = null): KpReportGuidanceLog

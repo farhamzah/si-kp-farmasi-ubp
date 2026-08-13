@@ -179,6 +179,16 @@ class KpFinalReportTest extends TestCase
         $this->assertSame('https://docs.google.com/document/d/draft-report', $guidance->document_url);
         $this->assertSame('Draft Bab Hasil', $guidance->document_label);
 
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/laporan-akhir/bimbingan', [
+                'reviewer_type' => KpReportGuidanceLog::REVIEWER_INTERNAL,
+                'guidance_date' => now()->addDay()->toDateString(),
+                'topic' => 'Review lanjutan sebelum diputuskan',
+                'student_note' => 'Saya mencoba mengirim sesi berikutnya sebelum sesi sebelumnya divalidasi.',
+            ])->assertSessionHasErrors('guidance');
+
+        $this->assertSame(1, $this->assignment->reportGuidanceLogs()->count());
+
         $this->actingAs($this->lecturerUser)->withSession(['active_role' => 'pembimbing_dalam'])
             ->get('/pembimbing-dalam/laporan-akhir/'.$report->id)
             ->assertOk()
@@ -189,13 +199,31 @@ class KpFinalReportTest extends TestCase
             ->get('/pembimbing-lapangan/laporan-akhir/'.$report->id)
             ->assertOk()
             ->assertDontSee('Draft Bab Hasil')
-            ->assertSee('Validasi setiap sesi bimbingan laporan lapangan.');
+            ->assertSee('Review minimal 1 sesi bimbingan laporan lapangan.');
 
         $this->actingAs($this->lecturerUser)->withSession(['active_role' => 'pembimbing_dalam'])
             ->post('/pembimbing-dalam/laporan-akhir/'.$report->id.'/bimbingan/'.$guidance->id.'/approve', ['review_note' => 'OK.'])
             ->assertRedirect();
 
         $this->assertSame('disetujui', $guidance->fresh()->status);
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/laporan-akhir/bimbingan', [
+                'reviewer_type' => KpReportGuidanceLog::REVIEWER_INTERNAL,
+                'guidance_date' => now()->addDay()->toDateString(),
+                'topic' => 'Review lanjutan setelah diputuskan',
+                'student_note' => 'Sesi sebelumnya sudah diputuskan, jadi saya bisa mengajukan lagi.',
+            ])->assertRedirect();
+
+        $this->assertSame(2, $this->assignment->reportGuidanceLogs()->count());
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/laporan-akhir')
+            ->assertOk()
+            ->assertSee('Yang diajukan mahasiswa')
+            ->assertSee('Sudah revisi pembahasan.')
+            ->assertSee('Catatan Pembimbing Dalam')
+            ->assertSee('OK.');
     }
 
     public function test_field_supervisor_validates_field_guidance_and_exam_eligibility_needs_both_guidance_tracks(): void
@@ -234,12 +262,29 @@ class KpFinalReportTest extends TestCase
                 'reviewer_type' => KpReportGuidanceLog::REVIEWER_INTERNAL,
                 'guidance_date' => now()->subDays($i)->toDateString(),
                 'topic' => 'Bimbingan dalam '.$i,
-                'status' => 'disetujui',
+                'status' => $i === 8 ? 'revisi' : 'disetujui',
                 'submitted_at' => now()->subDays($i),
                 'validated_by' => $this->lecturerUser->id,
                 'validated_at' => now()->subDays($i),
+                'validation_note' => $i === 8 ? 'Revisi tetap tercatat sebagai sesi bimbingan.' : null,
             ]);
         }
+
+        $this->assertFalse($this->assignment->fresh()->isEligibleForExamRequest());
+
+        $this->actingAs($this->lecturerUser)->withSession(['active_role' => 'pembimbing_dalam'])
+            ->post('/pembimbing-dalam/laporan-akhir/'.$report->id.'/bimbingan-selesai', [
+                'review_note' => 'Delapan sesi pembimbing dalam sudah tercatat.',
+            ])
+            ->assertRedirect();
+
+        $report->refresh();
+        $this->assertNotNull($report->internal_guidance_completed_at);
+        $this->assertSame($this->lecturerUser->id, $report->internal_guidance_completed_by);
+        $this->assertDatabaseHas('kp_final_report_logs', [
+            'kp_final_report_id' => $report->id,
+            'action' => 'internal_guidance_completed',
+        ]);
 
         $this->assertFalse($this->assignment->fresh()->isEligibleForExamRequest());
 
@@ -248,6 +293,7 @@ class KpFinalReportTest extends TestCase
                 'reviewer_type' => KpReportGuidanceLog::REVIEWER_FIELD,
                 'guidance_date' => now()->toDateString(),
                 'topic' => 'Review laporan lapangan',
+                'student_note' => 'Mohon validasi hasil revisi laporan berdasarkan masukan lapangan.',
                 'document_url' => 'https://docs.google.com/document/d/lapangan',
             ])->assertRedirect();
 
@@ -258,7 +304,7 @@ class KpFinalReportTest extends TestCase
             ->assertForbidden();
 
         $this->actingAs($this->fieldUser)->withSession(['active_role' => 'pembimbing_lapangan'])
-            ->post('/pembimbing-lapangan/laporan-akhir/'.$report->id.'/bimbingan/'.$fieldGuidance->id.'/approve', ['review_note' => 'Sesuai lapangan.'])
+            ->post('/pembimbing-lapangan/laporan-akhir/'.$report->id.'/bimbingan/'.$fieldGuidance->id.'/revision', ['review_note' => 'Tambahkan satu contoh kasus pelayanan resep.'])
             ->assertRedirect();
 
         $this->assertFalse($this->assignment->fresh()->isEligibleForExamRequest());

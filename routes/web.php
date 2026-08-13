@@ -276,6 +276,7 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('laporan-akhir/{report}/reject', [FinalReportReviewController::class, 'reject'])->name('final-reports.reject');
             Route::post('laporan-akhir/{report}/bimbingan/{guidance}/approve', [FinalReportReviewController::class, 'approveGuidance'])->name('final-reports.guidance.approve');
             Route::post('laporan-akhir/{report}/bimbingan/{guidance}/revision', [FinalReportReviewController::class, 'revisionGuidance'])->name('final-reports.guidance.revision');
+            Route::post('laporan-akhir/{report}/bimbingan-selesai', [FinalReportReviewController::class, 'completeGuidance'])->name('final-reports.guidance.complete');
             Route::get('laporan-akhir/files/{file}/download', [FinalReportReviewController::class, 'download'])->name('final-reports.files.download');
             Route::get('jadwal-sidang', [InternalExamScheduleController::class, 'index'])->name('exams.index');
             Route::get('jadwal-sidang/{exam}', [InternalExamScheduleController::class, 'show'])->name('exams.show');

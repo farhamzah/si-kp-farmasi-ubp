@@ -21,6 +21,9 @@ class KpFinalReport extends Model
         'internal_reviewed_by',
         'internal_reviewed_at',
         'internal_review_note',
+        'internal_guidance_completed_by',
+        'internal_guidance_completed_at',
+        'internal_guidance_completion_note',
         'field_review_status',
         'field_reviewed_by',
         'field_reviewed_at',
@@ -37,6 +40,7 @@ class KpFinalReport extends Model
             'reviewed_at' => 'datetime',
             'approved_at' => 'datetime',
             'internal_reviewed_at' => 'datetime',
+            'internal_guidance_completed_at' => 'datetime',
             'field_reviewed_at' => 'datetime',
             'field_guidance_completed_at' => 'datetime',
         ];
@@ -46,6 +50,7 @@ class KpFinalReport extends Model
     public function reviewedBy() { return $this->belongsTo(User::class, 'reviewed_by'); }
     public function internalReviewedBy() { return $this->belongsTo(User::class, 'internal_reviewed_by'); }
     public function fieldReviewedBy() { return $this->belongsTo(User::class, 'field_reviewed_by'); }
+    public function internalGuidanceCompletedBy() { return $this->belongsTo(User::class, 'internal_guidance_completed_by'); }
     public function fieldGuidanceCompletedBy() { return $this->belongsTo(User::class, 'field_guidance_completed_by'); }
     public function files() { return $this->hasMany(KpFinalReportFile::class, 'kp_final_report_id'); }
     public function logs() { return $this->hasMany(KpFinalReportLog::class, 'kp_final_report_id'); }
@@ -93,6 +98,11 @@ class KpFinalReport extends Model
     public function isFieldGuidanceCompleted(): bool
     {
         return filled($this->field_guidance_completed_at);
+    }
+
+    public function isInternalGuidanceCompleted(): bool
+    {
+        return filled($this->internal_guidance_completed_at);
     }
 
     public function internalReviewStatusLabel(): string

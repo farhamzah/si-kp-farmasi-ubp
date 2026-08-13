@@ -248,6 +248,9 @@ class KpAssessmentAndFinalScoreTest extends TestCase
             [
                 'status' => 'disetujui',
                 'internal_review_status' => 'disetujui',
+                'internal_guidance_completed_by' => $this->supervisorUser->id,
+                'internal_guidance_completed_at' => now(),
+                'internal_guidance_completion_note' => 'Bimbingan dalam selesai untuk tampilan nilai.',
                 'field_review_status' => 'disetujui',
                 'final_document_url' => 'https://drive.google.com/example-final-report',
                 'submitted_at' => now(),
@@ -401,6 +404,9 @@ class KpAssessmentAndFinalScoreTest extends TestCase
                 'student_id' => $assignment->student_id,
                 'status' => 'submitted',
                 'internal_review_status' => 'disetujui',
+                'internal_guidance_completed_by' => $this->supervisorUser->id,
+                'internal_guidance_completed_at' => now(),
+                'internal_guidance_completion_note' => 'Bimbingan dalam selesai untuk penilaian.',
                 'field_review_status' => $assignment->finalReport?->field_review_status ?? 'menunggu_review',
                 'final_document_url' => 'https://drive.google.com/example-report',
             ]

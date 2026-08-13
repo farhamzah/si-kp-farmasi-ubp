@@ -16,13 +16,18 @@
             $guidanceLogs = $assignment->reportGuidanceLogs->sortBy('guidance_date');
             $internalGuidanceLogs = $assignment->reportGuidanceLogs->filter(fn ($guidance) => $guidance->isForInternalSupervisor());
             $fieldGuidanceLogs = $assignment->reportGuidanceLogs->filter(fn ($guidance) => $guidance->isForFieldSupervisor());
-            $approvedInternalGuidance = $internalGuidanceLogs->where('status', 'disetujui')->count();
-            $approvedFieldGuidance = $fieldGuidanceLogs->where('status', 'disetujui')->count();
-            $fieldOpenGuidance = $fieldGuidanceLogs->whereIn('status', ['menunggu_validasi', 'revisi', 'ditolak'])->count();
+            $pendingGuidance = $guidanceLogs->where('status', 'menunggu_validasi')->sortByDesc('guidance_date')->first();
+            $guidanceSubmissionLocked = (bool) $pendingGuidance;
+            $reviewedInternalGuidance = $internalGuidanceLogs->whereIn('status', ['disetujui', 'revisi'])->count();
+            $reviewedFieldGuidance = $fieldGuidanceLogs->whereIn('status', ['disetujui', 'revisi'])->count();
+            $pendingInternalGuidance = $internalGuidanceLogs->where('status', 'menunggu_validasi')->count();
+            $pendingFieldGuidance = $fieldGuidanceLogs->where('status', 'menunggu_validasi')->count();
+            $internalGuidanceCompleted = $report?->isInternalGuidanceCompleted() ?? false;
             $fieldGuidanceCompleted = $report?->isFieldGuidanceCompleted() ?? false;
-            $fieldGuidanceLabel = $fieldGuidanceCompleted ? 'Selesai' : $approvedFieldGuidance.' sesi disetujui';
-            $internalGuidanceProgress = min(100, (int) round(($approvedInternalGuidance / 8) * 100));
-            $fieldGuidanceProgress = $fieldGuidanceCompleted ? 100 : ($approvedFieldGuidance > 0 ? 60 : 0);
+            $internalGuidanceLabel = $internalGuidanceCompleted ? 'Selesai' : $reviewedInternalGuidance.'/8 sesi direview';
+            $fieldGuidanceLabel = $fieldGuidanceCompleted ? 'Selesai' : $reviewedFieldGuidance.' sesi direview';
+            $internalGuidanceProgress = $internalGuidanceCompleted ? 100 : min(100, (int) round(($reviewedInternalGuidance / 8) * 100));
+            $fieldGuidanceProgress = $fieldGuidanceCompleted ? 100 : ($reviewedFieldGuidance > 0 ? 60 : 0);
             $eligibilityItems = $examEligibility['items'] ?? [];
         @endphp
 
@@ -51,7 +56,7 @@
                 <div class="space-y-4">
                     <div class="flex items-center justify-between gap-3">
                         <p class="text-xs font-black uppercase tracking-widest text-slate-500">Bimbingan Dalam</p>
-                        <p class="font-black text-cyan-700">{{ $approvedInternalGuidance }}/8</p>
+                        <p class="font-black text-cyan-700">{{ $internalGuidanceLabel }}</p>
                     </div>
                     <div class="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-100">
                         <div class="h-full rounded-full bg-gradient-to-r from-cyan-600 to-emerald-500" style="width: {{ $internalGuidanceProgress }}%"></div>
@@ -78,8 +83,8 @@
                     <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                         @foreach([
                             ['no' => '01', 'title' => 'Draft di Drive', 'desc' => 'Gunakan Google Docs/Drive agar pembimbing mudah memberi catatan.'],
-                            ['no' => '02', 'title' => 'Catat Bimbingan', 'desc' => 'Pilih pembimbing dalam atau lapangan setiap sesi bimbingan.'],
-                            ['no' => '03', 'title' => 'Validasi Bimbingan', 'desc' => 'Pembimbing dalam minimal 8 sesi. Pembimbing lapangan menandai selesai saat proses cukup.'],
+                            ['no' => '02', 'title' => 'Catat Bimbingan', 'desc' => 'Kirim satu sesi, tunggu disetujui atau direvisi, lalu ajukan sesi berikutnya.'],
+                            ['no' => '03', 'title' => 'Validasi Bimbingan', 'desc' => 'Sesi disetujui maupun revisi tetap tercatat. Pembimbing dalam minimal 8 sesi, lapangan minimal 1 sesi, lalu ditandai selesai.'],
                             ['no' => '04', 'title' => 'Upload Final', 'desc' => 'Simpan PDF final bertanda tangan di folder Drive resmi.'],
                             ['no' => '05', 'title' => 'Submit Review', 'desc' => 'Tempel link file final, lalu kirim untuk review kedua pembimbing.'],
                         ] as $step)
@@ -114,47 +119,55 @@
                     <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div>
                             <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Bimbingan laporan</p>
-                            <h3 class="mt-1 text-xl font-black text-slate-950">Catat sesi bimbingan pembimbing</h3>
-                            <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Isi satu log setiap kali ada pemeriksaan atau diskusi laporan. Pilih pembimbing yang benar agar validasinya masuk ke hitungan yang sesuai.</p>
+                            <h3 class="mt-1 text-xl font-black text-slate-950">Catat hasil bimbingan laporan</h3>
+                        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Setiap catatan menjadi record resmi proses bimbingan. Mahasiswa hanya dapat mengirim satu sesi yang menunggu validasi; setelah pembimbing menyetujui atau meminta revisi, form akan terbuka lagi.</p>
                         </div>
-                        <span class="inline-flex w-fit rounded-full bg-cyan-50 px-3 py-1 text-xs font-black text-cyan-700">Dalam {{ $approvedInternalGuidance }}/8 | Lapangan {{ $fieldGuidanceLabel }}</span>
+                        <span class="inline-flex w-fit rounded-full bg-cyan-50 px-3 py-1 text-xs font-black text-cyan-700">Dalam {{ $internalGuidanceLabel }} | Lapangan {{ $fieldGuidanceLabel }}</span>
                     </div>
+
+                    @if($pendingGuidance)
+                        <div class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-800">
+                            <p class="font-black">Menunggu keputusan {{ $pendingGuidance->reviewerTypeLabel() }}</p>
+                            <p class="mt-1">Selesaikan dulu sesi {{ str_pad((string) ($guidanceLogs->values()->search(fn ($item) => $item->id === $pendingGuidance->id) + 1), 2, '0', STR_PAD_LEFT) }}: {{ $pendingGuidance->topic }}. Setelah pembimbing menyetujui atau meminta revisi, Anda bisa mengajukan bimbingan berikutnya.</p>
+                        </div>
+                    @endif
 
                     <form method="POST" action="{{ route('student.final-reports.guidance.store') }}" class="mt-5 grid gap-3">
                         @csrf
                         <div class="grid gap-3 md:grid-cols-2">
                             <label class="block">
                                 <span class="text-xs font-black uppercase tracking-widest text-slate-500">Divalidasi oleh</span>
-                                <select name="reviewer_type" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm font-semibold shadow-sm">
+                                <select name="reviewer_type" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm font-semibold shadow-sm" @disabled($guidanceSubmissionLocked)>
                                     <option value="internal" @selected(old('reviewer_type') === 'internal')>Pembimbing Dalam</option>
                                     <option value="field" @selected(old('reviewer_type') === 'field')>Pembimbing Lapangan</option>
                                 </select>
                             </label>
                             <label class="block">
                                 <span class="text-xs font-black uppercase tracking-widest text-slate-500">Tanggal bimbingan</span>
-                                <input type="date" name="guidance_date" value="{{ old('guidance_date', now()->toDateString()) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm shadow-sm">
+                                <input type="date" name="guidance_date" value="{{ old('guidance_date', now()->toDateString()) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm shadow-sm" @disabled($guidanceSubmissionLocked)>
                             </label>
                         </div>
                         <label class="block">
                             <span class="text-xs font-black uppercase tracking-widest text-slate-500">Topik</span>
-                            <input name="topic" value="{{ old('topic') }}" placeholder="Contoh: Revisi Bab 3 dan pembahasan" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm shadow-sm">
+                            <input name="topic" value="{{ old('topic') }}" placeholder="Contoh: Revisi Bab 3 dan pembahasan" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm shadow-sm" @disabled($guidanceSubmissionLocked)>
                         </label>
                         <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_280px]">
                             <label class="block">
                                 <span class="text-xs font-black uppercase tracking-widest text-slate-500">Link dokumen kerja</span>
-                                <input name="document_url" value="{{ old('document_url', $report?->final_document_url) }}" placeholder="https://docs.google.com/document/d/..." class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm shadow-sm">
+                                <input name="document_url" value="{{ old('document_url', $report?->final_document_url) }}" placeholder="https://docs.google.com/document/d/..." class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm shadow-sm" @disabled($guidanceSubmissionLocked)>
                             </label>
                             <label class="block">
                                 <span class="text-xs font-black uppercase tracking-widest text-slate-500">Label link</span>
-                                <input name="document_label" value="{{ old('document_label') }}" placeholder="Draft Bab 3" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm shadow-sm">
+                                <input name="document_label" value="{{ old('document_label') }}" placeholder="Draft Bab 3" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm shadow-sm" @disabled($guidanceSubmissionLocked)>
                             </label>
                         </div>
                         <p class="rounded-xl bg-cyan-50 px-4 py-3 text-xs font-semibold leading-5 text-cyan-800">Bagikan akses Google Docs/Drive ke pembimbing sebelum submit log. Pembimbing akan melihat tombol preview dan memvalidasi sesi ini dari akun mereka.</p>
                         <label class="block">
-                            <span class="text-xs font-black uppercase tracking-widest text-slate-500">Catatan mahasiswa</span>
-                            <textarea name="student_note" rows="5" placeholder="Tulis hasil diskusi, revisi yang diminta, atau progres yang sudah Anda kerjakan." class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm leading-6 shadow-sm">{{ old('student_note') }}</textarea>
+                            <span class="text-xs font-black uppercase tracking-widest text-slate-500">Catatan hasil bimbingan dari mahasiswa <span class="text-rose-600">*</span></span>
+                            <textarea name="student_note" rows="6" required placeholder="Tuliskan ringkasan diskusi, arahan pembimbing, bagian yang direvisi, dan tindak lanjut yang akan Anda kerjakan." class="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm leading-6 shadow-sm focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-100" @disabled($guidanceSubmissionLocked)>{{ old('student_note') }}</textarea>
+                            <span class="mt-2 block text-xs leading-5 text-slate-500">Catatan ini wajib diisi agar riwayat bimbingan berisi konteks mahasiswa dan mudah divalidasi pembimbing.</span>
                         </label>
-                        <button class="w-full rounded-xl bg-cyan-700 px-4 py-3 text-sm font-black text-white shadow-lg shadow-cyan-700/15">Kirim Log Bimbingan</button>
+                        <button @disabled($guidanceSubmissionLocked) class="w-full rounded-xl px-4 py-3 text-sm font-black text-white shadow-lg {{ $guidanceSubmissionLocked ? 'cursor-not-allowed bg-slate-400 shadow-slate-400/10' : 'bg-cyan-700 shadow-cyan-700/15' }}">{{ $guidanceSubmissionLocked ? 'Menunggu Keputusan Pembimbing' : 'Kirim Log Bimbingan' }}</button>
                     </form>
                 </section>
 
@@ -162,10 +175,10 @@
                     <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div>
                             <h3 class="text-lg font-black text-slate-950">Riwayat Bimbingan Laporan</h3>
-                            <p class="mt-1 text-sm text-slate-500">Pantau mana yang sudah disetujui, revisi, atau masih menunggu validasi pembimbing.</p>
+                            <p class="mt-1 text-sm text-slate-500">Pantau catatan mahasiswa, catatan pembimbing, status persetujuan, dan sesi yang masih perlu tindak lanjut.</p>
                         </div>
                         <div class="flex flex-wrap gap-2">
-                            <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">Dalam {{ $approvedInternalGuidance }}/8</span>
+                            <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">Dalam {{ $internalGuidanceLabel }}</span>
                             <span class="rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-sky-700">Lapangan {{ $fieldGuidanceLabel }}</span>
                         </div>
                     </div>
@@ -299,7 +312,7 @@
                         <div>
                             <div class="flex items-center justify-between gap-3">
                                 <span class="font-bold text-slate-700">Bimbingan Dalam</span>
-                                <span class="font-black text-cyan-700">{{ $approvedInternalGuidance }}/8</span>
+                                <span class="font-black text-cyan-700">{{ $internalGuidanceLabel }}</span>
                             </div>
                             <div class="mt-2 h-2 overflow-hidden rounded-full bg-white">
                                 <div class="h-full rounded-full bg-cyan-700" style="width: {{ $internalGuidanceProgress }}%"></div>

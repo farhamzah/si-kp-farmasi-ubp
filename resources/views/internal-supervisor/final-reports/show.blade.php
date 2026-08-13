@@ -12,13 +12,16 @@
         ->filter(fn ($guidance) => $guidance->isForFieldSupervisor())
         ->sortBy('guidance_date');
     $guidanceLogs = $internalGuidanceLogs;
-    $approvedGuidance = $guidanceLogs->where('status', 'disetujui')->count();
+    $reviewedGuidance = $guidanceLogs->whereIn('status', ['disetujui', 'revisi'])->count();
     $pendingGuidance = $guidanceLogs->where('status', 'menunggu_validasi')->count();
-    $approvedFieldGuidance = $fieldGuidanceLogs->where('status', 'disetujui')->count();
-    $openFieldGuidance = $fieldGuidanceLogs->whereIn('status', ['menunggu_validasi', 'revisi', 'ditolak'])->count();
+    $reviewedFieldGuidance = $fieldGuidanceLogs->whereIn('status', ['disetujui', 'revisi'])->count();
+    $pendingFieldGuidance = $fieldGuidanceLogs->where('status', 'menunggu_validasi')->count();
+    $internalGuidanceCompleted = $report->isInternalGuidanceCompleted();
     $fieldGuidanceCompleted = $report->isFieldGuidanceCompleted();
-    $fieldGuidanceLabel = $fieldGuidanceCompleted ? 'Selesai' : $approvedFieldGuidance.' sesi disetujui';
-    $guidanceProgress = min(100, (int) round(($approvedGuidance / 8) * 100));
+    $canCompleteInternalGuidance = ! $internalGuidanceCompleted && $reviewedGuidance >= 8 && $pendingGuidance === 0;
+    $internalGuidanceLabel = $internalGuidanceCompleted ? 'Selesai' : $reviewedGuidance.'/8 sesi direview';
+    $fieldGuidanceLabel = $fieldGuidanceCompleted ? 'Selesai' : $reviewedFieldGuidance.' sesi direview';
+    $guidanceProgress = min(100, (int) round(($reviewedGuidance / 8) * 100));
     $hasFinalDocument = filled($report->final_document_url) || $report->files->isNotEmpty();
 @endphp
 <div class="space-y-5">
@@ -42,7 +45,7 @@
             <div class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 <div class="rounded-2xl bg-cyan-50/70 p-4">
                     <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Bimbingan Anda</p>
-                    <p class="mt-1 font-black text-slate-950">{{ $approvedGuidance }}/8 disetujui</p>
+                    <p class="mt-1 font-black text-slate-950">{{ $internalGuidanceLabel }}</p>
                     <p class="mt-1 text-xs text-slate-500">{{ $pendingGuidance }} menunggu validasi</p>
                 </div>
                 <div class="rounded-2xl bg-slate-50 p-4">
@@ -58,7 +61,7 @@
                 <div class="rounded-2xl bg-emerald-50/70 p-4">
                     <p class="text-xs font-black uppercase tracking-widest text-emerald-700">Bimbingan Lapangan</p>
                     <p class="mt-1 font-black text-slate-950">{{ $fieldGuidanceLabel }}</p>
-                    <p class="mt-1 text-xs text-slate-500">{{ $openFieldGuidance }} perlu tindak lanjut</p>
+                    <p class="mt-1 text-xs text-slate-500">{{ $pendingFieldGuidance }} menunggu validasi</p>
                 </div>
             </div>
 
@@ -94,9 +97,9 @@
                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h3 class="font-black text-slate-950">Log Bimbingan Pembimbing Dalam</h3>
-                        <p class="mt-1 text-sm text-slate-500">Validasi minimal 8 sesi bimbingan laporan pembimbing dalam sebelum mahasiswa layak masuk daftar sidang.</p>
+                        <p class="mt-1 text-sm text-slate-500">Review minimal 8 sesi bimbingan laporan. Sesi disetujui maupun revisi tetap dihitung, lalu tandai bimbingan dalam selesai.</p>
                     </div>
-                    <span class="inline-flex w-fit rounded-full bg-white px-3 py-1 text-xs font-black text-cyan-700 ring-1 ring-cyan-200">{{ $approvedGuidance }}/8 disetujui</span>
+                    <span class="inline-flex w-fit rounded-full bg-white px-3 py-1 text-xs font-black text-cyan-700 ring-1 ring-cyan-200">{{ $internalGuidanceLabel }}</span>
                 </div>
                 <div class="mt-3 h-2.5 overflow-hidden rounded-full bg-white">
                     <div class="h-full rounded-full bg-gradient-to-r from-cyan-600 to-emerald-500" style="width: {{ $guidanceProgress }}%"></div>
@@ -111,6 +114,28 @@
                     'minimumSessions' => 8,
                 ])
             </div>
+
+            @if($internalGuidanceCompleted)
+                <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-800">
+                    Bimbingan laporan pembimbing dalam sudah ditandai selesai
+                    @if($report->internal_guidance_completed_at) pada {{ $report->internal_guidance_completed_at->format('d M Y H:i') }} @endif
+                    @if($report->internalGuidanceCompletedBy) oleh {{ $report->internalGuidanceCompletedBy->name }} @endif.
+                    @if($report->internal_guidance_completion_note)
+                        <p class="mt-2 text-xs leading-5">{{ $report->internal_guidance_completion_note }}</p>
+                    @endif
+                </div>
+            @elseif($canCompleteInternalGuidance)
+                <form method="POST" action="{{ route('internal-supervisor.final-reports.guidance.complete', $report) }}" class="mt-4 rounded-2xl border border-emerald-200 bg-white p-4">
+                    @csrf
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-widest text-emerald-700">Catatan penyelesaian bimbingan pembimbing dalam</span>
+                        <textarea name="review_note" rows="3" placeholder="Contoh: Delapan sesi bimbingan sudah tercatat dan mahasiswa siap lanjut validasi akhir laporan." class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm leading-6 shadow-sm"></textarea>
+                    </label>
+                    <button onclick="return confirm('Tandai bimbingan laporan pembimbing dalam selesai?')" class="mt-3 w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white">Tandai Bimbingan Dalam Selesai</button>
+                </form>
+            @else
+                <p class="mt-4 rounded-xl bg-white px-4 py-3 text-xs font-semibold leading-5 text-slate-600 ring-1 ring-cyan-100">Tombol selesai muncul setelah minimal 8 sesi bimbingan pembimbing dalam sudah direview dan tidak ada log yang masih menunggu validasi.</p>
+            @endif
 
             <div class="mt-6 rounded-2xl border border-sky-100 bg-sky-50/40 p-4">
                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

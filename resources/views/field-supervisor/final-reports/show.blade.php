@@ -10,13 +10,12 @@
     $guidanceLogs = $report->assignment->reportGuidanceLogs
         ->filter(fn ($guidance) => $guidance->isForFieldSupervisor())
         ->sortBy('guidance_date');
-    $approvedGuidance = $guidanceLogs->where('status', 'disetujui')->count();
+    $reviewedGuidance = $guidanceLogs->whereIn('status', ['disetujui', 'revisi'])->count();
     $pendingGuidance = $guidanceLogs->where('status', 'menunggu_validasi')->count();
-    $openGuidance = $guidanceLogs->whereIn('status', ['menunggu_validasi', 'revisi', 'ditolak'])->count();
     $fieldGuidanceCompleted = $report->isFieldGuidanceCompleted();
-    $canCompleteFieldGuidance = ! $fieldGuidanceCompleted && $approvedGuidance > 0 && $openGuidance === 0;
-    $guidanceLabel = $fieldGuidanceCompleted ? 'Selesai' : $approvedGuidance.' sesi disetujui';
-    $guidanceProgress = $fieldGuidanceCompleted ? 100 : ($approvedGuidance > 0 ? 60 : 0);
+    $canCompleteFieldGuidance = ! $fieldGuidanceCompleted && $reviewedGuidance > 0 && $pendingGuidance === 0;
+    $guidanceLabel = $fieldGuidanceCompleted ? 'Selesai' : $reviewedGuidance.' sesi direview';
+    $guidanceProgress = $fieldGuidanceCompleted ? 100 : ($reviewedGuidance > 0 ? 60 : 0);
     $hasFinalDocument = filled($report->final_document_url) || $report->files->isNotEmpty();
 @endphp
 <div class="space-y-5">
@@ -46,7 +45,7 @@
                 <div class="rounded-2xl bg-cyan-50/70 p-4">
                     <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Bimbingan Anda</p>
                     <p class="mt-1 font-black text-slate-950">{{ $guidanceLabel }}</p>
-                    <p class="mt-1 text-xs text-slate-500">{{ $openGuidance }} perlu tindak lanjut</p>
+                    <p class="mt-1 text-xs text-slate-500">{{ $pendingGuidance }} menunggu validasi</p>
                 </div>
                 <div class="rounded-2xl bg-slate-50 p-4">
                     <p class="text-xs font-black uppercase tracking-widest text-slate-500">Review Pembimbing Dalam</p>
@@ -91,7 +90,7 @@
                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h3 class="font-black text-slate-950">Log Bimbingan Laporan</h3>
-                        <p class="mt-1 text-sm text-slate-500">Validasi setiap sesi bimbingan laporan lapangan. Bimbingan lapangan tidak dibatasi 8 kali; setelah seluruh catatan selesai, tandai bimbingan lapangan selesai agar mahasiswa dapat lanjut ke validasi akhir sidang.</p>
+                        <p class="mt-1 text-sm text-slate-500">Review minimal 1 sesi bimbingan laporan lapangan. Sesi disetujui maupun revisi tetap dihitung, lalu tandai bimbingan lapangan selesai.</p>
                     </div>
                     <span class="inline-flex w-fit rounded-full bg-white px-3 py-1 text-xs font-black text-cyan-700 ring-1 ring-cyan-200">{{ $guidanceLabel }}</span>
                 </div>
@@ -125,7 +124,7 @@
                         <button onclick="return confirm('Tandai bimbingan laporan lapangan selesai?')" class="mt-3 w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white">Tandai Bimbingan Lapangan Selesai</button>
                     </form>
                 @else
-                    <p class="mt-4 rounded-xl bg-white px-4 py-3 text-xs font-semibold leading-5 text-slate-600 ring-1 ring-cyan-100">Tombol selesai muncul setelah minimal 1 sesi bimbingan lapangan disetujui dan tidak ada log bimbingan lapangan yang masih menunggu, revisi, atau ditolak.</p>
+                    <p class="mt-4 rounded-xl bg-white px-4 py-3 text-xs font-semibold leading-5 text-slate-600 ring-1 ring-cyan-100">Tombol selesai muncul setelah minimal 1 sesi bimbingan lapangan sudah direview dan tidak ada log yang masih menunggu validasi.</p>
                 @endif
             </div>
         </section>

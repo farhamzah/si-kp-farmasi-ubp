@@ -72,7 +72,7 @@ class FinalReportController extends Controller
             'reviewer_type' => ['required', 'in:internal,field'],
             'guidance_date' => ['required', 'date'],
             'topic' => ['required', 'string', 'max:255'],
-            'student_note' => ['nullable', 'string', 'max:2000'],
+            'student_note' => ['required', 'string', 'max:2000'],
             'document_url' => ['nullable', 'url:http,https', 'max:2048'],
             'document_label' => ['nullable', 'string', 'max:255'],
         ]);
