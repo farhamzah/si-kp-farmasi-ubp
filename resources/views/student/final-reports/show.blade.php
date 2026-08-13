@@ -13,7 +13,7 @@
         <x-ui.empty-state title="Anda belum memiliki penempatan KP aktif." description="Laporan akhir dapat diupload setelah penempatan KP aktif atau berjalan." />
     @else
         @php
-            $guidanceLogs = $assignment->reportGuidanceLogs->sortByDesc('guidance_date');
+            $guidanceLogs = $assignment->reportGuidanceLogs->sortBy('guidance_date');
             $internalGuidanceLogs = $assignment->reportGuidanceLogs->filter(fn ($guidance) => $guidance->isForInternalSupervisor());
             $fieldGuidanceLogs = $assignment->reportGuidanceLogs->filter(fn ($guidance) => $guidance->isForFieldSupervisor());
             $approvedInternalGuidance = $internalGuidanceLogs->where('status', 'disetujui')->count();
@@ -169,38 +169,12 @@
                             <span class="rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-sky-700">Lapangan {{ $fieldGuidanceLabel }}</span>
                         </div>
                     </div>
-                    <div class="mt-4 space-y-3">
-                        @forelse($guidanceLogs as $guidance)
-                            <div class="rounded-2xl border border-slate-200 p-4 text-sm">
-                                <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                                    <div class="min-w-0">
-                                        <p class="font-black text-slate-950">{{ $guidance->topic }}</p>
-                                        <p class="mt-1 text-xs text-slate-500">{{ $guidance->guidance_date->format('d M Y') }} | {{ $guidance->reviewerTypeLabel() }}</p>
-                                        @if($guidance->student_note)
-                                            <div class="mt-3 rounded-xl bg-slate-50 px-3 py-2">
-                                                <p class="text-[11px] font-black uppercase tracking-widest text-slate-400">Catatan Mahasiswa</p>
-                                                <p class="mt-1 text-sm leading-6 text-slate-600">{{ $guidance->student_note }}</p>
-                                            </div>
-                                        @endif
-                                        @if($guidance->validation_note)
-                                            <div class="mt-3 rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-2">
-                                                <p class="text-[11px] font-black uppercase tracking-widest text-cyan-600">Catatan Validasi Pembimbing</p>
-                                                <p class="mt-1 text-sm leading-6 text-slate-600">{{ $guidance->validation_note }}</p>
-                                            </div>
-                                        @endif
-                                    </div>
-                                    <span class="inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 {{ $guidance->statusBadgeClass() }}">{{ $guidance->statusLabel() }}</span>
-                                </div>
-                                @if($guidance->document_url)
-                                    <div class="mt-3 flex flex-wrap gap-2">
-                                        <a href="{{ $guidance->document_url }}" target="_blank" rel="noopener" class="rounded-lg border border-cyan-200 px-3 py-1.5 text-xs font-bold text-cyan-700">Preview Dokumen</a>
-                                        <a href="{{ $guidance->document_url }}" target="_blank" rel="noopener" class="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">{{ $guidance->document_label ?: 'Buka Link Bimbingan' }}</a>
-                                    </div>
-                                @endif
-                            </div>
-                        @empty
-                            <p class="rounded-xl bg-slate-50 px-4 py-4 text-sm text-slate-500">Belum ada log bimbingan laporan. Mulai dari form bimbingan di atas, lalu pilih pembimbing yang akan memvalidasi.</p>
-                        @endforelse
+                    <div class="mt-4">
+                        @include('shared.final-reports.guidance-table', [
+                            'guidanceLogs' => $guidanceLogs,
+                            'emptyText' => 'Belum ada log bimbingan laporan. Mulai dari form bimbingan di atas, lalu pilih pembimbing yang akan memvalidasi.',
+                            'showReviewer' => true,
+                        ])
                     </div>
                 </section>
 

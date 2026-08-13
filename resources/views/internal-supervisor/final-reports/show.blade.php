@@ -7,10 +7,10 @@
 @php
     $internalGuidanceLogs = $report->assignment->reportGuidanceLogs
         ->filter(fn ($guidance) => $guidance->isForInternalSupervisor())
-        ->sortByDesc('guidance_date');
+        ->sortBy('guidance_date');
     $fieldGuidanceLogs = $report->assignment->reportGuidanceLogs
         ->filter(fn ($guidance) => $guidance->isForFieldSupervisor())
-        ->sortByDesc('guidance_date');
+        ->sortBy('guidance_date');
     $guidanceLogs = $internalGuidanceLogs;
     $approvedGuidance = $guidanceLogs->where('status', 'disetujui')->count();
     $pendingGuidance = $guidanceLogs->where('status', 'menunggu_validasi')->count();
@@ -102,52 +102,14 @@
                     <div class="h-full rounded-full bg-gradient-to-r from-cyan-600 to-emerald-500" style="width: {{ $guidanceProgress }}%"></div>
                 </div>
             </div>
-            <div class="mt-4 space-y-3">
-                @forelse($guidanceLogs as $guidance)
-                    <div class="rounded-2xl border border-slate-200 p-4">
-                        <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                            <div>
-                                <p class="font-black text-slate-950">{{ $guidance->topic }}</p>
-                                <p class="text-xs text-slate-500">{{ $guidance->guidance_date->format('d M Y') }} | {{ $guidance->reviewerTypeLabel() }}</p>
-                                @if($guidance->student_note)
-                                    <div class="mt-3 rounded-xl bg-slate-50 px-3 py-2">
-                                        <p class="text-[11px] font-black uppercase tracking-widest text-slate-400">Catatan Mahasiswa</p>
-                                        <p class="mt-1 text-sm leading-6 text-slate-700">{{ $guidance->student_note }}</p>
-                                    </div>
-                                @endif
-                                @if($guidance->validation_note)
-                                    <div class="mt-3 rounded-xl bg-emerald-50 px-3 py-2">
-                                        <p class="text-[11px] font-black uppercase tracking-widest text-emerald-600">Catatan Validasi Pembimbing</p>
-                                        <p class="mt-1 text-sm leading-6 text-slate-700">{{ $guidance->validation_note }}</p>
-                                    </div>
-                                @endif
-                            </div>
-                            <span class="inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 {{ $guidance->statusBadgeClass() }}">{{ $guidance->statusLabel() }}</span>
-                        </div>
-                        @if($guidance->document_url)
-                            <div class="mt-3 flex flex-wrap gap-2">
-                                <a href="{{ $guidance->document_url }}" target="_blank" rel="noopener" class="rounded-lg border border-cyan-200 px-3 py-1.5 text-xs font-bold text-cyan-700">Preview Dokumen</a>
-                                <a href="{{ $guidance->document_url }}" target="_blank" rel="noopener" class="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">{{ $guidance->document_label ?: 'Buka Link Bimbingan' }}</a>
-                            </div>
-                        @endif
-                        @if($guidance->status !== 'disetujui')
-                            <div class="mt-3 grid gap-2 md:grid-cols-2">
-                                <form method="POST" action="{{ route('internal-supervisor.final-reports.guidance.approve', [$report, $guidance]) }}">
-                                    @csrf
-                                    <textarea name="review_note" rows="3" placeholder="Catatan validasi opsional, misalnya arahan yang sudah dipenuhi" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm leading-6"></textarea>
-                                    <button class="mt-2 w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white">Setujui Bimbingan</button>
-                                </form>
-                                <form method="POST" action="{{ route('internal-supervisor.final-reports.guidance.revision', [$report, $guidance]) }}">
-                                    @csrf
-                                    <textarea name="review_note" rows="3" required placeholder="Jelaskan revisi yang perlu dikerjakan mahasiswa" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm leading-6"></textarea>
-                                    <button class="mt-2 w-full rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-white">Minta Revisi</button>
-                                </form>
-                            </div>
-                        @endif
-                    </div>
-                @empty
-                    <p class="rounded-xl bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-500">Belum ada bimbingan laporan untuk pembimbing dalam. Minta mahasiswa membuat log bimbingan dan memilih Pembimbing Dalam saat mengirim log.</p>
-                @endforelse
+            <div class="mt-4">
+                @include('shared.final-reports.guidance-table', [
+                    'guidanceLogs' => $guidanceLogs,
+                    'emptyText' => 'Belum ada bimbingan laporan untuk pembimbing dalam. Minta mahasiswa membuat log bimbingan dan memilih Pembimbing Dalam saat mengirim log.',
+                    'actions' => 'internal',
+                    'report' => $report,
+                    'minimumSessions' => 8,
+                ])
             </div>
 
             <div class="mt-6 rounded-2xl border border-sky-100 bg-sky-50/40 p-4">
@@ -168,38 +130,11 @@
                         @endif
                     </div>
                 @endif
-                <div class="mt-4 space-y-3">
-                    @forelse($fieldGuidanceLogs as $guidance)
-                        <div class="rounded-2xl border border-sky-100 bg-white p-4">
-                            <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                                <div>
-                                    <p class="font-black text-slate-950">{{ $guidance->topic }}</p>
-                                    <p class="text-xs text-slate-500">{{ $guidance->guidance_date->format('d M Y') }} | {{ $guidance->reviewerTypeLabel() }}</p>
-                                    @if($guidance->student_note)
-                                        <div class="mt-3 rounded-xl bg-slate-50 px-3 py-2">
-                                            <p class="text-[11px] font-black uppercase tracking-widest text-slate-400">Catatan Mahasiswa</p>
-                                            <p class="mt-1 text-sm leading-6 text-slate-700">{{ $guidance->student_note }}</p>
-                                        </div>
-                                    @endif
-                                    @if($guidance->validation_note)
-                                        <div class="mt-3 rounded-xl bg-emerald-50 px-3 py-2">
-                                            <p class="text-[11px] font-black uppercase tracking-widest text-emerald-600">Catatan Validasi Pembimbing Lapangan</p>
-                                            <p class="mt-1 text-sm leading-6 text-slate-700">{{ $guidance->validation_note }}</p>
-                                        </div>
-                                    @endif
-                                </div>
-                                <span class="inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 {{ $guidance->statusBadgeClass() }}">{{ $guidance->statusLabel() }}</span>
-                            </div>
-                            @if($guidance->document_url)
-                                <div class="mt-3 flex flex-wrap gap-2">
-                                    <a href="{{ $guidance->document_url }}" target="_blank" rel="noopener" class="rounded-lg border border-cyan-200 px-3 py-1.5 text-xs font-bold text-cyan-700">Preview Dokumen</a>
-                                    <a href="{{ $guidance->document_url }}" target="_blank" rel="noopener" class="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">{{ $guidance->document_label ?: 'Buka Link Bimbingan' }}</a>
-                                </div>
-                            @endif
-                        </div>
-                    @empty
-                        <p class="rounded-xl bg-white px-4 py-4 text-sm leading-6 text-slate-500 ring-1 ring-sky-100">Belum ada log bimbingan lapangan.</p>
-                    @endforelse
+                <div class="mt-4">
+                    @include('shared.final-reports.guidance-table', [
+                        'guidanceLogs' => $fieldGuidanceLogs,
+                        'emptyText' => 'Belum ada log bimbingan lapangan.',
+                    ])
                 </div>
             </div>
         </section>

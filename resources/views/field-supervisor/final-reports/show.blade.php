@@ -9,7 +9,7 @@
     $openLogbooks = $report->assignment->logbooks()->whereIn('status', ['menunggu_validasi', 'revisi', 'ditolak'])->count();
     $guidanceLogs = $report->assignment->reportGuidanceLogs
         ->filter(fn ($guidance) => $guidance->isForFieldSupervisor())
-        ->sortByDesc('guidance_date');
+        ->sortBy('guidance_date');
     $approvedGuidance = $guidanceLogs->where('status', 'disetujui')->count();
     $pendingGuidance = $guidanceLogs->where('status', 'menunggu_validasi')->count();
     $openGuidance = $guidanceLogs->whereIn('status', ['menunggu_validasi', 'revisi', 'ditolak'])->count();
@@ -91,13 +91,22 @@
                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h3 class="font-black text-slate-950">Log Bimbingan Laporan</h3>
-                        <p class="mt-1 text-sm text-slate-500">Validasi setiap sesi bimbingan laporan lapangan. Setelah seluruh catatan selesai, tandai bimbingan lapangan selesai agar mahasiswa dapat lanjut ke validasi akhir sidang.</p>
+                        <p class="mt-1 text-sm text-slate-500">Validasi setiap sesi bimbingan laporan lapangan. Bimbingan lapangan tidak dibatasi 8 kali; setelah seluruh catatan selesai, tandai bimbingan lapangan selesai agar mahasiswa dapat lanjut ke validasi akhir sidang.</p>
                     </div>
                     <span class="inline-flex w-fit rounded-full bg-white px-3 py-1 text-xs font-black text-cyan-700 ring-1 ring-cyan-200">{{ $guidanceLabel }}</span>
                 </div>
                 <div class="mt-3 h-2.5 overflow-hidden rounded-full bg-white">
                     <div class="h-full rounded-full bg-gradient-to-r from-cyan-600 to-emerald-500" style="width: {{ $guidanceProgress }}%"></div>
                 </div>
+                <div class="mt-4">
+                    @include('shared.final-reports.guidance-table', [
+                        'guidanceLogs' => $guidanceLogs,
+                        'emptyText' => 'Belum ada bimbingan laporan untuk pembimbing lapangan. Minta mahasiswa membuat log bimbingan dan memilih Pembimbing Lapangan saat mengirim log.',
+                        'actions' => 'field',
+                        'report' => $report,
+                    ])
+                </div>
+
                 @if($fieldGuidanceCompleted)
                     <div class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-800">
                         Bimbingan laporan lapangan sudah ditandai selesai
@@ -118,53 +127,6 @@
                 @else
                     <p class="mt-4 rounded-xl bg-white px-4 py-3 text-xs font-semibold leading-5 text-slate-600 ring-1 ring-cyan-100">Tombol selesai muncul setelah minimal 1 sesi bimbingan lapangan disetujui dan tidak ada log bimbingan lapangan yang masih menunggu, revisi, atau ditolak.</p>
                 @endif
-            </div>
-            <div class="mt-4 space-y-3">
-                @forelse($guidanceLogs as $guidance)
-                    <div class="rounded-2xl border border-slate-200 p-4">
-                        <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                            <div>
-                                <p class="font-black text-slate-950">{{ $guidance->topic }}</p>
-                                <p class="text-xs text-slate-500">{{ $guidance->guidance_date->format('d M Y') }} | {{ $guidance->reviewerTypeLabel() }}</p>
-                                @if($guidance->student_note)
-                                    <div class="mt-3 rounded-xl bg-slate-50 px-3 py-2">
-                                        <p class="text-[11px] font-black uppercase tracking-widest text-slate-400">Catatan Mahasiswa</p>
-                                        <p class="mt-1 text-sm leading-6 text-slate-700">{{ $guidance->student_note }}</p>
-                                    </div>
-                                @endif
-                                @if($guidance->validation_note)
-                                    <div class="mt-3 rounded-xl bg-emerald-50 px-3 py-2">
-                                        <p class="text-[11px] font-black uppercase tracking-widest text-emerald-600">Catatan Validasi Anda</p>
-                                        <p class="mt-1 text-sm leading-6 text-slate-700">{{ $guidance->validation_note }}</p>
-                                    </div>
-                                @endif
-                            </div>
-                            <span class="inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 {{ $guidance->statusBadgeClass() }}">{{ $guidance->statusLabel() }}</span>
-                        </div>
-                        @if($guidance->document_url)
-                            <div class="mt-3 flex flex-wrap gap-2">
-                                <a href="{{ $guidance->document_url }}" target="_blank" rel="noopener" class="rounded-lg border border-cyan-200 px-3 py-1.5 text-xs font-bold text-cyan-700">Preview Dokumen</a>
-                                <a href="{{ $guidance->document_url }}" target="_blank" rel="noopener" class="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">{{ $guidance->document_label ?: 'Buka Link Bimbingan' }}</a>
-                            </div>
-                        @endif
-                        @if($guidance->status !== 'disetujui')
-                            <div class="mt-3 grid gap-2 md:grid-cols-2">
-                                <form method="POST" action="{{ route('field-supervisor.final-reports.guidance.approve', [$report, $guidance]) }}">
-                                    @csrf
-                                    <textarea name="review_note" rows="3" placeholder="Catatan validasi opsional, misalnya hasil bimbingan sudah sesuai" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm leading-6"></textarea>
-                                    <button class="mt-2 w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white">Setujui Bimbingan</button>
-                                </form>
-                                <form method="POST" action="{{ route('field-supervisor.final-reports.guidance.revision', [$report, $guidance]) }}">
-                                    @csrf
-                                    <textarea name="review_note" rows="3" required placeholder="Jelaskan revisi atau bukti tambahan yang perlu dikirim mahasiswa" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm leading-6"></textarea>
-                                    <button class="mt-2 w-full rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-white">Minta Revisi</button>
-                                </form>
-                            </div>
-                        @endif
-                    </div>
-                @empty
-                    <p class="rounded-xl bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-500">Belum ada bimbingan laporan untuk pembimbing lapangan. Minta mahasiswa membuat log bimbingan dan memilih Pembimbing Lapangan saat mengirim log.</p>
-                @endforelse
             </div>
         </section>
 
