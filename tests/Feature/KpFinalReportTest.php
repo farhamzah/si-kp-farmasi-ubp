@@ -241,6 +241,20 @@ class KpFinalReportTest extends TestCase
             'validated_by' => $this->fieldUser->id,
             'validated_at' => now(),
         ]);
+        KpLogbook::create([
+            'kp_assignment_id' => $this->assignment->id,
+            'activity_date' => now()->subDay()->toDateString(),
+            'activity_title' => 'Tanggal logbook salah',
+            'start_time' => '08:00',
+            'end_time' => '12:00',
+            'activity_description' => 'Logbook ditolak karena tanggal salah.',
+            'learning_outcome' => 'Tidak dihitung sebagai absen.',
+            'status' => 'ditolak',
+            'submitted_at' => now(),
+            'validated_by' => $this->fieldUser->id,
+            'validated_at' => now(),
+            'validation_note' => 'Tanggal kegiatan tidak sesuai periode KP.',
+        ]);
 
         $report = KpFinalReport::create([
             'kp_assignment_id' => $this->assignment->id,
@@ -324,6 +338,10 @@ class KpFinalReportTest extends TestCase
         ]);
 
         $this->assertTrue($this->assignment->fresh()->isEligibleForExamRequest());
+        $logbookItem = collect($this->assignment->fresh()->examEligibility()['items'])
+            ->firstWhere('key', 'field_logbook_validated');
+        $this->assertTrue($logbookItem['ready']);
+        $this->assertSame('1 disetujui, 1 direview tidak dihitung absen, 0 menunggu validasi', $logbookItem['description']);
     }
 
     public function test_report_and_guidance_links_must_be_safe_http_urls(): void

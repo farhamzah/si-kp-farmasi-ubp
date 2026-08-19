@@ -6,7 +6,8 @@
 @section('content')
 @php
     $approvedLogbooks = $report->assignment->logbooks()->where('status', 'disetujui')->count();
-    $openLogbooks = $report->assignment->logbooks()->whereIn('status', ['menunggu_validasi', 'revisi', 'ditolak'])->count();
+    $pendingLogbooks = $report->assignment->logbooks()->where('status', 'menunggu_validasi')->count();
+    $reviewedUnapprovedLogbooks = $report->assignment->logbooks()->whereIn('status', ['revisi', 'ditolak'])->count();
     $guidanceLogs = $report->assignment->reportGuidanceLogs
         ->filter(fn ($guidance) => $guidance->isForFieldSupervisor())
         ->sortBy('guidance_date');
@@ -40,7 +41,7 @@
                 <div class="rounded-2xl bg-slate-50 p-4">
                     <p class="text-xs font-black uppercase tracking-widest text-slate-500">Logbook KP</p>
                     <p class="mt-1 font-black text-slate-950">{{ $approvedLogbooks }} disetujui</p>
-                    <p class="mt-1 text-xs text-slate-500">{{ $openLogbooks }} perlu tindak lanjut</p>
+                    <p class="mt-1 text-xs text-slate-500">{{ $pendingLogbooks }} menunggu validasi, {{ $reviewedUnapprovedLogbooks }} direview tidak dihitung absen</p>
                 </div>
                 <div class="rounded-2xl bg-cyan-50/70 p-4">
                     <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Bimbingan Anda</p>

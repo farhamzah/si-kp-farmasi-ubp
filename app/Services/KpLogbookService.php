@@ -40,7 +40,7 @@ class KpLogbookService
         $this->ensureStudentOwnsLogbook($studentUser, $logbook);
 
         if (! $logbook->canBeEditedByStudent()) {
-            throw ValidationException::withMessages(['logbook' => 'Logbook yang sudah disetujui atau menunggu validasi tidak bisa diedit.']);
+            throw ValidationException::withMessages(['logbook' => 'Logbook yang sudah disetujui atau menunggu validasi tidak bisa diedit. Logbook revisi atau ditolak dapat diperbaiki dan dikirim ulang.']);
         }
 
         return DB::transaction(function () use ($studentUser, $logbook, $data) {

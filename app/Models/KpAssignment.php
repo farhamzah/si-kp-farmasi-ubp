@@ -137,8 +137,10 @@ class KpAssignment extends Model
     {
         $this->loadMissing('finalReport');
 
-        $approvedLogbooks = $this->logbooks()->where('status', 'disetujui')->count();
-        $openLogbooks = $this->logbooks()->whereIn('status', ['menunggu_validasi', 'revisi', 'ditolak'])->count();
+        $logbookCounts = $this->logbookValidationCounts();
+        $approvedLogbooks = $logbookCounts['approved'];
+        $pendingLogbooks = $logbookCounts['pending'];
+        $reviewedUnapprovedLogbooks = $logbookCounts['reviewed_unapproved'];
         [$reviewedInternalGuidance, $pendingInternalGuidance] = $this->reportGuidanceCounts(KpReportGuidanceLog::REVIEWER_INTERNAL);
         [$reviewedFieldGuidance, $pendingFieldGuidance] = $this->reportGuidanceCounts(KpReportGuidanceLog::REVIEWER_FIELD);
         $report = $this->finalReport;
@@ -161,8 +163,8 @@ class KpAssignment extends Model
             [
                 'key' => 'field_logbook_validated',
                 'label' => 'Logbook KP tervalidasi pembimbing lapangan',
-                'ready' => $approvedLogbooks > 0 && $openLogbooks === 0,
-                'description' => $approvedLogbooks.' disetujui, '.$openLogbooks.' perlu tindak lanjut',
+                'ready' => $approvedLogbooks > 0 && $pendingLogbooks === 0,
+                'description' => $approvedLogbooks.' disetujui, '.$reviewedUnapprovedLogbooks.' direview tidak dihitung absen, '.$pendingLogbooks.' menunggu validasi',
             ],
             [
                 'key' => 'field_report_guidance_completed',
@@ -284,9 +286,11 @@ class KpAssignment extends Model
 
     private function fieldSupervisorAssessmentItems(): array
     {
-        $totalLogbooks = $this->logbooks()->count();
-        $approvedLogbooks = $this->logbooks()->where('status', 'disetujui')->count();
-        $unfinishedLogbooks = $this->logbooks()->where('status', '!=', 'disetujui')->count();
+        $logbookCounts = $this->logbookValidationCounts();
+        $totalLogbooks = $logbookCounts['total'];
+        $approvedLogbooks = $logbookCounts['approved'];
+        $pendingLogbooks = $logbookCounts['pending'];
+        $reviewedUnapprovedLogbooks = $logbookCounts['reviewed_unapproved'];
         [$reviewedFieldGuidance, $pendingFieldGuidance] = $this->reportGuidanceCounts(KpReportGuidanceLog::REVIEWER_FIELD);
         $report = $this->finalReport;
         $fieldGuidanceCompleted = (bool) $report?->field_guidance_completed_at;
@@ -295,8 +299,8 @@ class KpAssignment extends Model
             [
                 'key' => 'field_logbook_all_validated',
                 'label' => 'Semua logbook KP sudah divalidasi',
-                'ready' => $totalLogbooks > 0 && $unfinishedLogbooks === 0,
-                'description' => $approvedLogbooks.'/'.$totalLogbooks.' logbook disetujui',
+                'ready' => $totalLogbooks > 0 && $pendingLogbooks === 0,
+                'description' => $approvedLogbooks.'/'.$totalLogbooks.' disetujui, '.$reviewedUnapprovedLogbooks.' direview tidak dihitung absen, '.$pendingLogbooks.' menunggu validasi',
             ],
             [
                 'key' => 'field_report_guidance_completed',
@@ -356,5 +360,20 @@ class KpAssignment extends Model
         $pending = (clone $query)->where('status', 'menunggu_validasi')->count();
 
         return [$reviewed, $pending];
+    }
+
+    private function logbookValidationCounts(): array
+    {
+        $total = $this->logbooks()->count();
+        $approved = $this->logbooks()->where('status', 'disetujui')->count();
+        $pending = $this->logbooks()->where('status', 'menunggu_validasi')->count();
+        $reviewedUnapproved = $this->logbooks()->whereIn('status', ['revisi', 'ditolak'])->count();
+
+        return [
+            'total' => $total,
+            'approved' => $approved,
+            'pending' => $pending,
+            'reviewed_unapproved' => $reviewedUnapproved,
+        ];
     }
 }

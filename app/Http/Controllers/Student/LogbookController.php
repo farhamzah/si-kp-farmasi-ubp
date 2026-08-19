@@ -137,7 +137,7 @@ class LogbookController extends Controller
         $service->deleteEvidence($logbook);
         $logbook->delete();
 
-        return redirect()->route('student.logbooks.index')->with('status', 'Logbook draft berhasil dihapus.');
+        return redirect()->route('student.logbooks.index')->with('status', 'Logbook berhasil dihapus.');
     }
 
     private function activeAssignment(): ?KpAssignment

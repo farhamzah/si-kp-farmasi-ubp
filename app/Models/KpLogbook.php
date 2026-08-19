@@ -82,12 +82,12 @@ class KpLogbook extends Model
 
     public function canBeEditedByStudent(): bool
     {
-        return in_array($this->status, ['draft', 'revisi'], true);
+        return in_array($this->status, ['draft', 'revisi', 'ditolak'], true);
     }
 
     public function canBeSubmitted(): bool
     {
-        return in_array($this->status, ['draft', 'revisi'], true);
+        return in_array($this->status, ['draft', 'revisi', 'ditolak'], true);
     }
 
     public function canBeReviewed(): bool

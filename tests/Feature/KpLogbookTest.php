@@ -219,6 +219,54 @@ class KpLogbookTest extends TestCase
             ->assertSessionHasErrors('evidence');
     }
 
+    public function test_student_can_fix_resubmit_or_delete_rejected_logbook(): void
+    {
+        $rejected = KpLogbook::create($this->logbookAttributes([
+            'activity_date' => now()->subDays(8)->toDateString(),
+            'status' => 'ditolak',
+            'validated_by' => $this->fieldUser->id,
+            'validated_at' => now(),
+            'validation_note' => 'Tanggal kegiatan di luar periode KP.',
+        ]));
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/logbook/'.$rejected->id)
+            ->assertOk()
+            ->assertSee('Edit')
+            ->assertSee('Submit')
+            ->assertSee('Hapus');
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/logbook/'.$rejected->id.'/edit')
+            ->assertOk();
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->put('/mahasiswa/logbook/'.$rejected->id, $this->logbookPayload([
+                'activity_date' => now()->subDays(7)->toDateString(),
+                'activity_title' => 'Pelayanan resep tanggal koreksi',
+                'action' => 'submit',
+            ]))
+            ->assertRedirect();
+
+        $rejected->refresh();
+        $this->assertSame('menunggu_validasi', $rejected->status);
+        $this->assertNull($rejected->validation_note);
+
+        $deleteTarget = KpLogbook::create($this->logbookAttributes([
+            'activity_date' => now()->subDays(9)->toDateString(),
+            'status' => 'ditolak',
+            'validated_by' => $this->fieldUser->id,
+            'validated_at' => now(),
+            'validation_note' => 'Duplikat absen.',
+        ]));
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->delete('/mahasiswa/logbook/'.$deleteTarget->id)
+            ->assertRedirect('/mahasiswa/logbook');
+
+        $this->assertDatabaseMissing('kp_logbooks', ['id' => $deleteTarget->id]);
+    }
+
     public function test_student_cannot_create_logbook_with_future_activity_date(): void
     {
         $futureDate = now()->addDay()->toDateString();
