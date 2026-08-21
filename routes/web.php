@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExamInvitationInboxController;
+use App\Http\Controllers\ExamInvitationLetterController;
 use App\Http\Controllers\Examiner\AssessmentController as ExaminerAssessmentController;
 use App\Http\Controllers\Examiner\ExamScheduleController as ExaminerExamScheduleController;
 use App\Http\Controllers\FieldSupervisor\AssessmentController as FieldAssessmentController;
@@ -69,6 +70,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login');
 
+Route::get('/undangan-sidang/verifikasi/{code}', [ExamInvitationLetterController::class, 'verify'])->name('exam-invitations.verify');
+Route::get('/undangan-sidang/qr/{invitation}', [ExamInvitationLetterController::class, 'qr'])->name('exam-invitations.qr');
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
     Route::post('/login', [LoginController::class, 'store'])->name('login.store');
@@ -94,6 +98,9 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/profile/sync-core', [ProfileController::class, 'syncCore'])->name('profile.sync-core');
         Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
         Route::get('/undangan-sidang', ExamInvitationInboxController::class)->name('exam-invitations.index');
+        Route::get('/undangan-sidang/surat/{invitation}', [ExamInvitationLetterController::class, 'preview'])->name('exam-invitations.letter.preview');
+        Route::get('/undangan-sidang/surat/{invitation}/pdf', [ExamInvitationLetterController::class, 'downloadPdf'])->name('exam-invitations.letter.pdf');
+        Route::get('/undangan-sidang/surat/{invitation}/word', [ExamInvitationLetterController::class, 'downloadWord'])->name('exam-invitations.letter.word');
 
         Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
             Route::post('users/sync-core', [UserManagementController::class, 'bulkSyncFromCore'])->name('users.sync-core');
@@ -173,6 +180,7 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::put('exams/{exam}', [ManagementExamScheduleController::class, 'update'])->name('exams.update');
             Route::post('exams/{exam}/cancel', [ManagementExamScheduleController::class, 'cancel'])->name('exams.cancel');
             Route::post('exams/{exam}/complete', [ManagementExamScheduleController::class, 'complete'])->name('exams.complete');
+            Route::post('exams/{exam}/invitation', [ExamInvitationLetterController::class, 'store'])->name('exams.invitation.store');
             Route::get('exam-logs', [ExamLogController::class, 'index'])->name('exam-logs.index');
             Route::resource('assessment-components', AssessmentComponentController::class)->except(['show'])->parameters(['assessment-components' => 'component']);
             Route::resource('competencies', KpCompetencyController::class)->except(['show', 'create', 'edit'])->parameters(['competencies' => 'competency']);

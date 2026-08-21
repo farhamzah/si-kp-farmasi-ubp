@@ -20,7 +20,7 @@ class ExamScheduleController extends Controller
     public function index(Request $request): View
     {
         $exams = KpExam::query()
-            ->with(['assignment.student.user', 'assignment.period', 'assignment.place', 'supervisor.user', 'examiner.user', 'examiners.user'])
+            ->with(['assignment.student.user', 'assignment.period', 'assignment.place', 'supervisor.user', 'examiner.user', 'examiners.user', 'invitation'])
             ->when($request->filled('period'), fn ($q) => $q->whereHas('assignment', fn ($a) => $a->where('kp_period_id', $request->period)))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
             ->latest('exam_date')

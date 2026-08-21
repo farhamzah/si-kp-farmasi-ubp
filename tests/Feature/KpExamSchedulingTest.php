@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\FieldSupervisor;
 use App\Models\KpAssignment;
 use App\Models\KpExam;
+use App\Models\KpExamInvitation;
 use App\Models\KpExamRequest;
 use App\Models\KpFinalReport;
 use App\Models\KpLogbook;
@@ -178,32 +179,32 @@ class KpExamSchedulingTest extends TestCase
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
             ->get('/undangan-sidang')
             ->assertOk()
-            ->assertSee('Undangan sidang terbaru')
+            ->assertSee('Undangan sidang')
             ->assertSee('Ruang Sidang 1')
             ->assertSee('Apotek Sehat');
 
         $this->actingAs($this->supervisorUser)->withSession(['active_role' => 'pembimbing_dalam'])
             ->get('/undangan-sidang')
             ->assertOk()
-            ->assertSee('Undangan sidang terbaru')
+            ->assertSee('Undangan sidang')
             ->assertSee('Ruang Sidang 1');
 
         $this->actingAs($this->fieldUser)->withSession(['active_role' => 'pembimbing_lapangan'])
             ->get('/undangan-sidang')
             ->assertOk()
-            ->assertSee('Undangan sidang terbaru')
+            ->assertSee('Undangan sidang')
             ->assertSee('Apotek Sehat');
 
         $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
             ->get('/undangan-sidang')
             ->assertOk()
-            ->assertSee('Undangan sidang terbaru')
+            ->assertSee('Undangan sidang')
             ->assertSee('Ruang Sidang 1');
 
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->get('/undangan-sidang')
             ->assertOk()
-            ->assertSee('Undangan sidang terbaru')
+            ->assertSee('Undangan sidang')
             ->assertSee('Ruang Sidang 1');
 
         $otherStudentUser = $this->makeUser('other-student-exam@test.local', ['mahasiswa']);
@@ -212,10 +213,53 @@ class KpExamSchedulingTest extends TestCase
         $this->actingAs($otherStudentUser)->withSession(['active_role' => 'mahasiswa'])
             ->get('/undangan-sidang')
             ->assertOk()
-            ->assertSee('Belum ada undangan sidang.')
+            ->assertSee('Belum ada data pada bagian ini.')
             ->assertDontSee('Ruang Sidang 1');
 
         $this->assertSame('dijadwalkan', $exam->fresh()->status);
+    }
+
+    public function test_koordinator_can_publish_official_exam_invitation_letter(): void
+    {
+        $exam = $this->scheduledExam();
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exams/'.$exam->id.'/invitation', [
+                'coordinator_name' => 'Farhamzah',
+                'coordinator_nuptk' => '123456',
+                'head_program_name' => 'Kaprodi Farmasi',
+                'head_program_nuptk' => '654321',
+                'dean_name' => 'Dekan Fakultas Farmasi',
+                'dean_nuptk' => '987654',
+            ])
+            ->assertRedirect();
+
+        $invitation = KpExamInvitation::firstOrFail();
+
+        $this->assertDatabaseHas('kp_exam_invitations', [
+            'kp_exam_id' => $exam->id,
+            'coordinator_name' => 'Farhamzah',
+            'head_program_name' => 'Kaprodi Farmasi',
+            'dean_name' => 'Dekan Fakultas Farmasi',
+        ]);
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/undangan-sidang/surat/'.$invitation->id)
+            ->assertOk()
+            ->assertSee('UNDANGAN SIDANG KERJA PRAKTIK')
+            ->assertSee($invitation->letter_number);
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/undangan-sidang/surat/'.$invitation->id.'/pdf')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+
+        $otherStudentUser = $this->makeUser('other-letter-exam@test.local', ['mahasiswa']);
+        $this->makeStudent($otherStudentUser, '2210631230888');
+
+        $this->actingAs($otherStudentUser)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/undangan-sidang/surat/'.$invitation->id)
+            ->assertForbidden();
     }
 
     public function test_schedule_validation_rejects_invalid_examiner_time_room_and_link(): void

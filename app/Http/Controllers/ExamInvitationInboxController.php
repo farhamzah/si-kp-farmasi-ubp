@@ -24,13 +24,15 @@ class ExamInvitationInboxController extends Controller
                 'examiner.user',
                 'examiners.user',
                 'scheduledBy',
+                'invitation',
             ])
-            ->whereIn('status', ['dijadwalkan', 'ditunda'])
+            ->whereIn('status', ['dijadwalkan', 'ditunda', 'selesai', 'dibatalkan'])
+            ->orderByRaw("CASE WHEN exam_date >= ? AND status IN ('dijadwalkan','ditunda') THEN 0 ELSE 1 END", [Carbon::today()->toDateString()])
             ->orderBy('exam_date')
             ->orderBy('start_time');
 
         $today = Carbon::today()->toDateString();
-        $summaryQuery = $this->scopedQuery($request, $role)->whereIn('status', ['dijadwalkan', 'ditunda']);
+        $summaryQuery = $this->scopedQuery($request, $role)->whereIn('status', ['dijadwalkan', 'ditunda', 'selesai', 'dibatalkan']);
 
         return view('exam-invitations.index', [
             'activeRole' => $role,
@@ -39,6 +41,10 @@ class ExamInvitationInboxController extends Controller
                 'total' => (clone $summaryQuery)->count(),
                 'today' => (clone $summaryQuery)->whereDate('exam_date', $today)->count(),
                 'upcoming' => (clone $summaryQuery)->whereDate('exam_date', '>=', $today)->where('status', 'dijadwalkan')->count(),
+                'history' => (clone $summaryQuery)->where(function ($query) use ($today): void {
+                    $query->whereDate('exam_date', '<', $today)
+                        ->orWhereIn('status', ['selesai', 'dibatalkan']);
+                })->count(),
             ],
         ]);
     }

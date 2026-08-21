@@ -5,7 +5,7 @@
 
 @section('content')
 <div class="space-y-5">
-    <section class="grid gap-3 sm:grid-cols-3">
+    <section class="grid gap-3 sm:grid-cols-4">
         <x-ui.card>
             <p class="text-xs font-black uppercase tracking-widest text-slate-500">Total undangan</p>
             <p class="mt-2 text-3xl font-black text-slate-950">{{ $summary['total'] }}</p>
@@ -18,20 +18,39 @@
             <p class="text-xs font-black uppercase tracking-widest text-slate-500">Akan datang</p>
             <p class="mt-2 text-3xl font-black text-emerald-700">{{ $summary['upcoming'] }}</p>
         </x-ui.card>
+        <x-ui.card>
+            <p class="text-xs font-black uppercase tracking-widest text-slate-500">Riwayat</p>
+            <p class="mt-2 text-3xl font-black text-slate-700">{{ $summary['history'] }}</p>
+        </x-ui.card>
     </section>
 
     <section class="rounded-3xl border border-cyan-100 bg-white p-5 shadow-sm">
         <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
                 <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Inbox Jadwal Sidang</p>
-                <h2 class="mt-1 text-2xl font-black text-slate-950">Undangan sidang terbaru</h2>
-                <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-600">Daftar ini dibaca langsung dari jadwal sidang KP. Tidak ada duplikasi dokumen, sehingga perubahan jadwal dari koordinator otomatis tampil di inbox ini.</p>
+                <h2 class="mt-1 text-2xl font-black text-slate-950">Undangan sidang</h2>
+                <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-600">Daftar ini dibaca dari jadwal sidang KP. Surat resmi muncul jika koordinator sudah menerbitkan undangan, lengkap dengan preview, PDF, dan QR verifikasi.</p>
             </div>
             <span class="w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-200">Read-only</span>
         </div>
 
-        <div class="mt-5 space-y-3">
-            @forelse($exams as $exam)
+        @php
+            $upcomingExams = $exams->getCollection()->filter(fn ($exam) => $exam->exam_date && $exam->exam_date->toDateString() >= now()->toDateString() && in_array($exam->status, ['dijadwalkan', 'ditunda'], true));
+            $historyExams = $exams->getCollection()->reject(fn ($exam) => $upcomingExams->contains('id', $exam->id));
+        @endphp
+
+        <div class="mt-5 space-y-6">
+            @foreach([
+                'Akan Dilaksanakan' => $upcomingExams,
+                'Riwayat / Sudah Lewat' => $historyExams,
+            ] as $groupTitle => $groupExams)
+                <div>
+                    <div class="mb-3 flex items-center justify-between gap-3">
+                        <h3 class="text-sm font-black uppercase tracking-widest text-slate-600">{{ $groupTitle }}</h3>
+                        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">{{ $groupExams->count() }} undangan</span>
+                    </div>
+
+            @forelse($groupExams as $exam)
                 @php
                     $assignment = $exam->assignment;
                     $student = $assignment?->student;
@@ -71,6 +90,12 @@
 
                         <div class="flex flex-col gap-2 lg:min-w-52">
                             <a href="{{ $detailUrl }}" class="rounded-xl bg-cyan-700 px-4 py-3 text-center text-sm font-black text-white shadow-sm shadow-cyan-700/20 hover:bg-cyan-800">Buka Detail</a>
+                            @if($exam->invitation)
+                                <a href="{{ route('exam-invitations.letter.preview', $exam->invitation) }}" class="rounded-xl border border-cyan-200 bg-white px-4 py-2 text-center text-xs font-black text-cyan-700">Preview Surat</a>
+                                <a href="{{ route('exam-invitations.letter.pdf', $exam->invitation) }}" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-center text-xs font-black text-slate-700">Download PDF</a>
+                            @else
+                                <span class="rounded-xl bg-amber-50 px-3 py-2 text-center text-xs font-bold text-amber-700 ring-1 ring-amber-100">Surat belum diterbitkan koordinator</span>
+                            @endif
                             <div class="rounded-xl bg-white px-3 py-2 text-xs leading-5 text-slate-600 ring-1 ring-slate-200">
                                 <div><span class="font-black text-slate-700">Pembimbing:</span> {{ $exam->supervisor ? lecturer_display_name($exam->supervisor) : '-' }}</div>
                                 <div><span class="font-black text-slate-700">Penguji:</span> {{ $exam->examinerNamesLabel() }}</div>
@@ -80,8 +105,10 @@
                     </div>
                 </article>
             @empty
-                <x-ui.empty-state title="Belum ada undangan sidang." description="Undangan akan muncul setelah koordinator menjadwalkan sidang KP." />
+                <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">Belum ada data pada bagian ini.</div>
             @endforelse
+                </div>
+            @endforeach
         </div>
 
         <div class="mt-5 border-t border-slate-100 pt-4">{{ $exams->links() }}</div>
