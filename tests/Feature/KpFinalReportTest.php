@@ -193,9 +193,17 @@ class KpFinalReportTest extends TestCase
                 'guidance_date' => now()->addDay()->toDateString(),
                 'topic' => 'Review lapangan sebelum bimbingan dalam diputuskan',
                 'student_note' => 'Saya mencoba mengirim ke pembimbing lain saat masih ada sesi pending.',
+            ])->assertRedirect();
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/laporan-akhir/bimbingan', [
+                'reviewer_type' => KpReportGuidanceLog::REVIEWER_FIELD,
+                'guidance_date' => now()->addDays(2)->toDateString(),
+                'topic' => 'Review lapangan kedua sebelum sesi lapangan diputuskan',
+                'student_note' => 'Saya mencoba mengirim sesi lapangan kedua sebelum sesi lapangan sebelumnya divalidasi.',
             ])->assertSessionHasErrors('guidance');
 
-        $this->assertSame(1, $this->assignment->reportGuidanceLogs()->count());
+        $this->assertSame(2, $this->assignment->reportGuidanceLogs()->count());
 
         $this->actingAs($this->lecturerUser)->withSession(['active_role' => 'pembimbing_dalam'])
             ->get('/pembimbing-dalam/laporan-akhir/'.$report->id)
@@ -207,7 +215,7 @@ class KpFinalReportTest extends TestCase
             ->get('/pembimbing-lapangan/laporan-akhir/'.$report->id)
             ->assertOk()
             ->assertDontSee('Draft Bab Hasil')
-            ->assertSee('Review minimal 1 sesi bimbingan laporan lapangan.');
+            ->assertSee('Review lapangan sebelum bimbingan dalam diputuskan');
 
         $this->actingAs($this->lecturerUser)->withSession(['active_role' => 'pembimbing_dalam'])
             ->post('/pembimbing-dalam/laporan-akhir/'.$report->id.'/bimbingan/'.$guidance->id.'/approve', ['review_note' => 'OK.'])
@@ -223,16 +231,16 @@ class KpFinalReportTest extends TestCase
                 'student_note' => 'Sesi sebelumnya sudah diputuskan, jadi saya bisa mengajukan lagi.',
             ])->assertRedirect();
 
-        $this->assertSame(2, $this->assignment->reportGuidanceLogs()->count());
+        $this->assertSame(3, $this->assignment->reportGuidanceLogs()->count());
 
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
             ->get('/mahasiswa/laporan-akhir')
             ->assertOk()
             ->assertSee('Riwayat Bimbingan Pembimbing Dalam')
             ->assertSee('Riwayat Bimbingan Pembimbing Lapangan')
-            ->assertSee('Belum ada log bimbingan Pembimbing Lapangan')
             ->assertSee('Yang diajukan mahasiswa')
             ->assertSee('Sudah revisi pembahasan.')
+            ->assertSee('Review lapangan sebelum bimbingan dalam diputuskan')
             ->assertSee('Catatan Pembimbing Dalam')
             ->assertSee('OK.');
     }

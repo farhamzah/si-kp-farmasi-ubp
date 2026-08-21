@@ -19,11 +19,19 @@
             $internalGuidanceLogs = $guidanceLogs->filter(fn ($guidance) => $guidance->isForInternalSupervisor())->values();
             $fieldGuidanceLogs = $guidanceLogs->filter(fn ($guidance) => $guidance->isForFieldSupervisor())->values();
             $pendingGuidanceLogs = $guidanceLogs->where('status', 'menunggu_validasi')->values();
-            $guidanceSubmissionLocked = $pendingGuidanceLogs->isNotEmpty();
             $reviewedInternalGuidance = $internalGuidanceLogs->whereIn('status', ['disetujui', 'revisi'])->count();
             $reviewedFieldGuidance = $fieldGuidanceLogs->whereIn('status', ['disetujui', 'revisi'])->count();
             $pendingInternalGuidance = $internalGuidanceLogs->where('status', 'menunggu_validasi')->count();
             $pendingFieldGuidance = $fieldGuidanceLogs->where('status', 'menunggu_validasi')->count();
+            $internalGuidanceLocked = $pendingInternalGuidance > 0;
+            $fieldGuidanceLocked = $pendingFieldGuidance > 0;
+            $guidanceSubmissionLocked = $internalGuidanceLocked && $fieldGuidanceLocked;
+            $defaultReviewerType = old('reviewer_type') ?: ($internalGuidanceLocked && ! $fieldGuidanceLocked ? 'field' : 'internal');
+            if ($defaultReviewerType === 'internal' && $internalGuidanceLocked && ! $fieldGuidanceLocked) {
+                $defaultReviewerType = 'field';
+            } elseif ($defaultReviewerType === 'field' && $fieldGuidanceLocked && ! $internalGuidanceLocked) {
+                $defaultReviewerType = 'internal';
+            }
             $internalGuidanceCompleted = $report?->isInternalGuidanceCompleted() ?? false;
             $fieldGuidanceCompleted = $report?->isFieldGuidanceCompleted() ?? false;
             $internalGuidanceLabel = $internalGuidanceCompleted ? 'Selesai' : $reviewedInternalGuidance.'/8 sesi direview';
@@ -122,7 +130,7 @@
                         <div>
                             <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Bimbingan laporan</p>
                             <h3 class="mt-1 text-xl font-black text-slate-950">Catat hasil bimbingan laporan</h3>
-                            <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Setiap catatan menjadi record resmi proses bimbingan. Mahasiswa hanya dapat mengirim satu sesi yang menunggu validasi; setelah pembimbing menyetujui atau meminta revisi, form akan terbuka lagi.</p>
+                            <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Setiap catatan menjadi record resmi proses bimbingan. Tiap jalur pembimbing berjalan sendiri: jalur yang masih menunggu validasi terkunci, jalur lain tetap bisa diajukan.</p>
                         </div>
                         <span class="inline-flex w-fit rounded-full bg-cyan-50 px-3 py-1 text-xs font-black text-cyan-700">Dalam {{ $internalGuidanceLabel }} | Lapangan {{ $fieldGuidanceLabel }}</span>
                     </div>
@@ -130,7 +138,7 @@
                     @if($pendingGuidanceLogs->isNotEmpty())
                         <div class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-800">
                             <p class="font-black">Masih ada {{ $pendingGuidanceLogs->count() }} sesi menunggu keputusan pembimbing</p>
-                            <p class="mt-1">Mahasiswa belum bisa mengajukan bimbingan baru sampai sesi yang menunggu validasi diputuskan sebagai disetujui atau revisi.</p>
+                            <p class="mt-1">Jalur pembimbing yang tercantum di bawah terkunci sampai sesi diputuskan sebagai disetujui atau revisi. Jalur pembimbing lain tetap dapat digunakan jika tidak memiliki sesi pending.</p>
                             <div class="mt-3 grid gap-2 md:grid-cols-2">
                                 @foreach($pendingGuidanceLogs->take(4) as $pendingItem)
                                     @php
@@ -152,8 +160,8 @@
                             <label class="block">
                                 <span class="text-xs font-black uppercase tracking-widest text-slate-500">Divalidasi oleh</span>
                                 <select name="reviewer_type" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm font-semibold shadow-sm" @disabled($guidanceSubmissionLocked)>
-                                    <option value="internal" @selected(old('reviewer_type') === 'internal')>Pembimbing Dalam</option>
-                                    <option value="field" @selected(old('reviewer_type') === 'field')>Pembimbing Lapangan</option>
+                                    <option value="internal" @selected($defaultReviewerType === 'internal') @disabled($internalGuidanceLocked)>Pembimbing Dalam{{ $internalGuidanceLocked ? ' - menunggu validasi' : '' }}</option>
+                                    <option value="field" @selected($defaultReviewerType === 'field') @disabled($fieldGuidanceLocked)>Pembimbing Lapangan{{ $fieldGuidanceLocked ? ' - menunggu validasi' : '' }}</option>
                                 </select>
                             </label>
                             <label class="block">
@@ -175,13 +183,17 @@
                                 <input name="document_label" value="{{ old('document_label') }}" placeholder="Draft Bab 3" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm shadow-sm" @disabled($guidanceSubmissionLocked)>
                             </label>
                         </div>
+                        <div class="grid gap-2 md:grid-cols-2">
+                            <p class="rounded-xl px-4 py-3 text-xs font-semibold leading-5 {{ $internalGuidanceLocked ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-100' : 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-100' }}">Pembimbing Dalam: {{ $internalGuidanceLocked ? 'terkunci karena masih ada sesi menunggu validasi.' : 'bisa diajukan.' }}</p>
+                            <p class="rounded-xl px-4 py-3 text-xs font-semibold leading-5 {{ $fieldGuidanceLocked ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-100' : 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-100' }}">Pembimbing Lapangan: {{ $fieldGuidanceLocked ? 'terkunci karena masih ada sesi menunggu validasi.' : 'bisa diajukan.' }}</p>
+                        </div>
                         <p class="rounded-xl bg-cyan-50 px-4 py-3 text-xs font-semibold leading-5 text-cyan-800">Bagikan akses Google Docs/Drive ke pembimbing sebelum submit log. Pembimbing akan melihat tombol preview dan memvalidasi sesi ini dari akun mereka.</p>
                         <label class="block">
                             <span class="text-xs font-black uppercase tracking-widest text-slate-500">Catatan hasil bimbingan dari mahasiswa <span class="text-rose-600">*</span></span>
                             <textarea name="student_note" rows="6" required placeholder="Tuliskan ringkasan diskusi, arahan pembimbing, bagian yang direvisi, dan tindak lanjut yang akan Anda kerjakan." class="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm leading-6 shadow-sm focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-100" @disabled($guidanceSubmissionLocked)>{{ old('student_note') }}</textarea>
                             <span class="mt-2 block text-xs leading-5 text-slate-500">Catatan ini wajib diisi agar riwayat bimbingan berisi konteks mahasiswa dan mudah divalidasi pembimbing.</span>
                         </label>
-                        <button @disabled($guidanceSubmissionLocked) class="w-full rounded-xl px-4 py-3 text-sm font-black text-white shadow-lg {{ $guidanceSubmissionLocked ? 'cursor-not-allowed bg-slate-400 shadow-slate-400/10' : 'bg-cyan-700 shadow-cyan-700/15' }}">{{ $guidanceSubmissionLocked ? 'Menunggu Keputusan Pembimbing' : 'Kirim Log Bimbingan' }}</button>
+                        <button @disabled($guidanceSubmissionLocked) class="w-full rounded-xl px-4 py-3 text-sm font-black text-white shadow-lg {{ $guidanceSubmissionLocked ? 'cursor-not-allowed bg-slate-400 shadow-slate-400/10' : 'bg-cyan-700 shadow-cyan-700/15' }}">{{ $guidanceSubmissionLocked ? 'Dua Jalur Menunggu Validasi' : 'Kirim Log Bimbingan' }}</button>
                     </form>
                 </section>
 

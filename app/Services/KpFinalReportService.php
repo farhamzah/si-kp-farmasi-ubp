@@ -196,12 +196,13 @@ class KpFinalReportService
         $this->ensureAssignmentAcceptsReport($assignment);
 
         return DB::transaction(function () use ($assignment, $data) {
+            $reviewerType = $data['reviewer_type'] ?? KpReportGuidanceLog::REVIEWER_INTERNAL;
             $lockedAssignment = KpAssignment::query()
                 ->whereKey($assignment->id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            $pendingGuidance = $lockedAssignment->reportGuidanceLogs()
+            $pendingGuidance = $this->guidanceQuery($lockedAssignment, $reviewerType)
                 ->where('status', 'menunggu_validasi')
                 ->oldest('guidance_date')
                 ->oldest('id')
@@ -209,12 +210,12 @@ class KpFinalReportService
 
             if ($pendingGuidance) {
                 throw ValidationException::withMessages([
-                    'guidance' => 'Masih ada '.$pendingGuidance->reviewerTypeLabel().' sesi '.str_pad((string) $this->guidanceSequenceNumber($pendingGuidance), 2, '0', STR_PAD_LEFT).' yang menunggu validasi. Tunggu pembimbing menyetujui atau meminta revisi sebelum mengajukan bimbingan berikutnya.',
+                    'guidance' => 'Masih ada '.$pendingGuidance->reviewerTypeLabel().' sesi '.str_pad((string) $this->guidanceSequenceNumber($pendingGuidance), 2, '0', STR_PAD_LEFT).' yang menunggu validasi. Jalur '.$pendingGuidance->reviewerTypeLabel().' terkunci sampai pembimbing menyetujui atau meminta revisi.',
                 ]);
             }
 
             return $lockedAssignment->reportGuidanceLogs()->create([
-                'reviewer_type' => $data['reviewer_type'] ?? KpReportGuidanceLog::REVIEWER_INTERNAL,
+                'reviewer_type' => $reviewerType,
                 'guidance_date' => $data['guidance_date'],
                 'topic' => $data['topic'],
                 'student_note' => $data['student_note'] ?? null,
