@@ -13,11 +13,13 @@
         <x-ui.empty-state title="Anda belum memiliki penempatan KP aktif." description="Laporan akhir dapat diupload setelah penempatan KP aktif atau berjalan." />
     @else
         @php
-            $guidanceLogs = $assignment->reportGuidanceLogs->sortBy('guidance_date');
-            $internalGuidanceLogs = $assignment->reportGuidanceLogs->filter(fn ($guidance) => $guidance->isForInternalSupervisor());
-            $fieldGuidanceLogs = $assignment->reportGuidanceLogs->filter(fn ($guidance) => $guidance->isForFieldSupervisor());
-            $pendingGuidance = $guidanceLogs->where('status', 'menunggu_validasi')->sortByDesc('guidance_date')->first();
-            $guidanceSubmissionLocked = (bool) $pendingGuidance;
+            $guidanceLogs = $assignment->reportGuidanceLogs
+                ->sortBy(fn ($guidance) => (optional($guidance->guidance_date)->format('Y-m-d') ?: '9999-12-31').'-'.str_pad((string) $guidance->id, 10, '0', STR_PAD_LEFT))
+                ->values();
+            $internalGuidanceLogs = $guidanceLogs->filter(fn ($guidance) => $guidance->isForInternalSupervisor())->values();
+            $fieldGuidanceLogs = $guidanceLogs->filter(fn ($guidance) => $guidance->isForFieldSupervisor())->values();
+            $pendingGuidanceLogs = $guidanceLogs->where('status', 'menunggu_validasi')->values();
+            $guidanceSubmissionLocked = $pendingGuidanceLogs->isNotEmpty();
             $reviewedInternalGuidance = $internalGuidanceLogs->whereIn('status', ['disetujui', 'revisi'])->count();
             $reviewedFieldGuidance = $fieldGuidanceLogs->whereIn('status', ['disetujui', 'revisi'])->count();
             $pendingInternalGuidance = $internalGuidanceLogs->where('status', 'menunggu_validasi')->count();
@@ -120,15 +122,27 @@
                         <div>
                             <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Bimbingan laporan</p>
                             <h3 class="mt-1 text-xl font-black text-slate-950">Catat hasil bimbingan laporan</h3>
-                        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Setiap catatan menjadi record resmi proses bimbingan. Mahasiswa hanya dapat mengirim satu sesi yang menunggu validasi; setelah pembimbing menyetujui atau meminta revisi, form akan terbuka lagi.</p>
+                            <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Setiap catatan menjadi record resmi proses bimbingan. Mahasiswa hanya dapat mengirim satu sesi yang menunggu validasi; setelah pembimbing menyetujui atau meminta revisi, form akan terbuka lagi.</p>
                         </div>
                         <span class="inline-flex w-fit rounded-full bg-cyan-50 px-3 py-1 text-xs font-black text-cyan-700">Dalam {{ $internalGuidanceLabel }} | Lapangan {{ $fieldGuidanceLabel }}</span>
                     </div>
 
-                    @if($pendingGuidance)
+                    @if($pendingGuidanceLogs->isNotEmpty())
                         <div class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-800">
-                            <p class="font-black">Menunggu keputusan {{ $pendingGuidance->reviewerTypeLabel() }}</p>
-                            <p class="mt-1">Selesaikan dulu sesi {{ str_pad((string) ($guidanceLogs->values()->search(fn ($item) => $item->id === $pendingGuidance->id) + 1), 2, '0', STR_PAD_LEFT) }}: {{ $pendingGuidance->topic }}. Setelah pembimbing menyetujui atau meminta revisi, Anda bisa mengajukan bimbingan berikutnya.</p>
+                            <p class="font-black">Masih ada {{ $pendingGuidanceLogs->count() }} sesi menunggu keputusan pembimbing</p>
+                            <p class="mt-1">Mahasiswa belum bisa mengajukan bimbingan baru sampai sesi yang menunggu validasi diputuskan sebagai disetujui atau revisi.</p>
+                            <div class="mt-3 grid gap-2 md:grid-cols-2">
+                                @foreach($pendingGuidanceLogs->take(4) as $pendingItem)
+                                    @php
+                                        $sectionLogs = $pendingItem->isForFieldSupervisor() ? $fieldGuidanceLogs : $internalGuidanceLogs;
+                                        $sectionIndex = $sectionLogs->search(fn ($item) => $item->id === $pendingItem->id);
+                                    @endphp
+                                    <div class="rounded-xl bg-white/70 px-3 py-2 ring-1 ring-amber-100">
+                                        <p class="text-xs font-black uppercase tracking-widest text-amber-700">{{ $pendingItem->reviewerTypeLabel() }} sesi {{ str_pad((string) ($sectionIndex + 1), 2, '0', STR_PAD_LEFT) }}</p>
+                                        <p class="mt-1 line-clamp-2 font-semibold text-amber-900">{{ $pendingItem->topic }}</p>
+                                    </div>
+                                @endforeach
+                            </div>
                         </div>
                     @endif
 
@@ -175,18 +189,58 @@
                     <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div>
                             <h3 class="text-lg font-black text-slate-950">Riwayat Bimbingan Laporan</h3>
-                            <p class="mt-1 text-sm text-slate-500">Pantau catatan mahasiswa, catatan pembimbing, status persetujuan, dan sesi yang masih perlu tindak lanjut.</p>
+                            <p class="mt-1 text-sm text-slate-500">Riwayat dipisahkan supaya catatan Pembimbing Dalam dan Pembimbing Lapangan tidak bercampur.</p>
                         </div>
                         <div class="flex flex-wrap gap-2">
                             <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">Dalam {{ $internalGuidanceLabel }}</span>
                             <span class="rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-sky-700">Lapangan {{ $fieldGuidanceLabel }}</span>
                         </div>
                     </div>
+
+                    <div class="mt-5 grid gap-3 md:grid-cols-2">
+                        <div class="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
+                            <p class="text-xs font-black uppercase tracking-widest text-emerald-700">1. Pembimbing Dalam</p>
+                            <p class="mt-1 text-sm font-semibold leading-6 text-slate-600">Minimal 8 sesi direview. Sesi disetujui maupun revisi tetap dihitung sebagai bimbingan.</p>
+                        </div>
+                        <div class="rounded-2xl border border-sky-100 bg-sky-50/50 p-4">
+                            <p class="text-xs font-black uppercase tracking-widest text-sky-700">2. Pembimbing Lapangan</p>
+                            <p class="mt-1 text-sm font-semibold leading-6 text-slate-600">Minimal 1 sesi direview, lalu Pembimbing Lapangan menandai bimbingan selesai.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-emerald-100 md:p-6">
+                    <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                        <div>
+                            <p class="text-xs font-black uppercase tracking-widest text-emerald-700">1. Pembimbing Dalam</p>
+                            <h3 class="mt-1 text-lg font-black text-slate-950">Riwayat Bimbingan Pembimbing Dalam</h3>
+                            <p class="mt-1 text-sm text-slate-500">Nomor sesi di bagian ini hanya menghitung bimbingan dengan Pembimbing Dalam.</p>
+                        </div>
+                        <span class="inline-flex w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">{{ $reviewedInternalGuidance }} direview, {{ $pendingInternalGuidance }} menunggu</span>
+                    </div>
                     <div class="mt-4">
                         @include('shared.final-reports.guidance-table', [
-                            'guidanceLogs' => $guidanceLogs,
-                            'emptyText' => 'Belum ada log bimbingan laporan. Mulai dari form bimbingan di atas, lalu pilih pembimbing yang akan memvalidasi.',
-                            'showReviewer' => true,
+                            'guidanceLogs' => $internalGuidanceLogs,
+                            'emptyText' => 'Belum ada log bimbingan Pembimbing Dalam. Pilih Pembimbing Dalam pada form bimbingan saat ingin mengajukan sesi internal.',
+                            'showReviewer' => false,
+                        ])
+                    </div>
+                </section>
+
+                <section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-sky-100 md:p-6">
+                    <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                        <div>
+                            <p class="text-xs font-black uppercase tracking-widest text-sky-700">2. Pembimbing Lapangan</p>
+                            <h3 class="mt-1 text-lg font-black text-slate-950">Riwayat Bimbingan Pembimbing Lapangan</h3>
+                            <p class="mt-1 text-sm text-slate-500">Nomor sesi di bagian ini hanya menghitung bimbingan dengan Pembimbing Lapangan.</p>
+                        </div>
+                        <span class="inline-flex w-fit rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-sky-700">{{ $reviewedFieldGuidance }} direview, {{ $pendingFieldGuidance }} menunggu</span>
+                    </div>
+                    <div class="mt-4">
+                        @include('shared.final-reports.guidance-table', [
+                            'guidanceLogs' => $fieldGuidanceLogs,
+                            'emptyText' => 'Belum ada log bimbingan Pembimbing Lapangan. Pilih Pembimbing Lapangan pada form bimbingan saat ingin mengajukan sesi lapangan.',
+                            'showReviewer' => false,
                         ])
                     </div>
                 </section>

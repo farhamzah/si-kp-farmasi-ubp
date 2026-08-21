@@ -187,6 +187,14 @@ class KpFinalReportTest extends TestCase
                 'student_note' => 'Saya mencoba mengirim sesi berikutnya sebelum sesi sebelumnya divalidasi.',
             ])->assertSessionHasErrors('guidance');
 
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/laporan-akhir/bimbingan', [
+                'reviewer_type' => KpReportGuidanceLog::REVIEWER_FIELD,
+                'guidance_date' => now()->addDay()->toDateString(),
+                'topic' => 'Review lapangan sebelum bimbingan dalam diputuskan',
+                'student_note' => 'Saya mencoba mengirim ke pembimbing lain saat masih ada sesi pending.',
+            ])->assertSessionHasErrors('guidance');
+
         $this->assertSame(1, $this->assignment->reportGuidanceLogs()->count());
 
         $this->actingAs($this->lecturerUser)->withSession(['active_role' => 'pembimbing_dalam'])
@@ -220,6 +228,9 @@ class KpFinalReportTest extends TestCase
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
             ->get('/mahasiswa/laporan-akhir')
             ->assertOk()
+            ->assertSee('Riwayat Bimbingan Pembimbing Dalam')
+            ->assertSee('Riwayat Bimbingan Pembimbing Lapangan')
+            ->assertSee('Belum ada log bimbingan Pembimbing Lapangan')
             ->assertSee('Yang diajukan mahasiswa')
             ->assertSee('Sudah revisi pembahasan.')
             ->assertSee('Catatan Pembimbing Dalam')
@@ -320,6 +331,15 @@ class KpFinalReportTest extends TestCase
         $this->actingAs($this->fieldUser)->withSession(['active_role' => 'pembimbing_lapangan'])
             ->post('/pembimbing-lapangan/laporan-akhir/'.$report->id.'/bimbingan/'.$fieldGuidance->id.'/revision', ['review_note' => 'Tambahkan satu contoh kasus pelayanan resep.'])
             ->assertRedirect();
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/laporan-akhir')
+            ->assertOk()
+            ->assertSee('Riwayat Bimbingan Pembimbing Dalam')
+            ->assertSee('Riwayat Bimbingan Pembimbing Lapangan')
+            ->assertSee('Bimbingan dalam 1')
+            ->assertSee('Review laporan lapangan')
+            ->assertSee('Tambahkan satu contoh kasus pelayanan resep.');
 
         $this->assertFalse($this->assignment->fresh()->isEligibleForExamRequest());
 

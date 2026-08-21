@@ -195,34 +195,51 @@ class KpFinalReportService
         $this->ensureStudentOwnsAssignment($studentUser, $assignment);
         $this->ensureAssignmentAcceptsReport($assignment);
 
-        $pendingGuidance = $assignment->reportGuidanceLogs()
-            ->where('status', 'menunggu_validasi')
-            ->latest('guidance_date')
-            ->latest('id')
-            ->first();
+        return DB::transaction(function () use ($assignment, $data) {
+            $lockedAssignment = KpAssignment::query()
+                ->whereKey($assignment->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if ($pendingGuidance) {
-            throw ValidationException::withMessages([
-                'guidance' => 'Masih ada '.$pendingGuidance->reviewerTypeLabel().' sesi '.str_pad((string) $this->guidanceSequenceNumber($pendingGuidance), 2, '0', STR_PAD_LEFT).' yang menunggu validasi. Tunggu pembimbing menyetujui atau meminta revisi sebelum mengajukan bimbingan berikutnya.',
+            $pendingGuidance = $lockedAssignment->reportGuidanceLogs()
+                ->where('status', 'menunggu_validasi')
+                ->oldest('guidance_date')
+                ->oldest('id')
+                ->first();
+
+            if ($pendingGuidance) {
+                throw ValidationException::withMessages([
+                    'guidance' => 'Masih ada '.$pendingGuidance->reviewerTypeLabel().' sesi '.str_pad((string) $this->guidanceSequenceNumber($pendingGuidance), 2, '0', STR_PAD_LEFT).' yang menunggu validasi. Tunggu pembimbing menyetujui atau meminta revisi sebelum mengajukan bimbingan berikutnya.',
+                ]);
+            }
+
+            return $lockedAssignment->reportGuidanceLogs()->create([
+                'reviewer_type' => $data['reviewer_type'] ?? KpReportGuidanceLog::REVIEWER_INTERNAL,
+                'guidance_date' => $data['guidance_date'],
+                'topic' => $data['topic'],
+                'student_note' => $data['student_note'] ?? null,
+                'document_url' => $data['document_url'] ?? null,
+                'document_label' => $data['document_label'] ?? null,
+                'status' => 'menunggu_validasi',
+                'submitted_at' => now(),
             ]);
-        }
-
-        return $assignment->reportGuidanceLogs()->create([
-            'reviewer_type' => $data['reviewer_type'] ?? KpReportGuidanceLog::REVIEWER_INTERNAL,
-            'guidance_date' => $data['guidance_date'],
-            'topic' => $data['topic'],
-            'student_note' => $data['student_note'] ?? null,
-            'document_url' => $data['document_url'] ?? null,
-            'document_label' => $data['document_label'] ?? null,
-            'status' => 'menunggu_validasi',
-            'submitted_at' => now(),
-        ]);
+        });
     }
 
     private function guidanceSequenceNumber(KpReportGuidanceLog $guidance): int
     {
-        return $guidance->assignment
-            ->reportGuidanceLogs()
+        $query = $guidance->assignment->reportGuidanceLogs();
+
+        if ($guidance->isForFieldSupervisor()) {
+            $query->where('reviewer_type', KpReportGuidanceLog::REVIEWER_FIELD);
+        } else {
+            $query->where(function ($query): void {
+                $query->where('reviewer_type', KpReportGuidanceLog::REVIEWER_INTERNAL)
+                    ->orWhereNull('reviewer_type');
+            });
+        }
+
+        return $query
             ->where(function ($query) use ($guidance): void {
                 $query->where('guidance_date', '<', $guidance->guidance_date)
                     ->orWhere(function ($query) use ($guidance): void {
