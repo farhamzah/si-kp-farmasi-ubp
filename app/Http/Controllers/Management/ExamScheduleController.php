@@ -7,6 +7,7 @@ use App\Http\Requests\Management\CancelExamRequest;
 use App\Http\Requests\Management\ScheduleExamRequest;
 use App\Http\Requests\Management\UpdateExamScheduleRequest;
 use App\Models\KpExam;
+use App\Models\KpExamInvitationSignatory;
 use App\Models\KpExamRequest;
 use App\Models\KpPeriod;
 use App\Models\Lecturer;
@@ -27,7 +28,12 @@ class ExamScheduleController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        return view('management.exams.index', ['exams' => $exams, 'periods' => KpPeriod::latest()->get(), 'filters' => $request->only(['period', 'status'])]);
+        return view('management.exams.index', [
+            'exams' => $exams,
+            'periods' => KpPeriod::latest()->get(),
+            'filters' => $request->only(['period', 'status']),
+            'signatory' => KpExamInvitationSignatory::active(),
+        ]);
     }
 
     public function show(KpExam $exam): View

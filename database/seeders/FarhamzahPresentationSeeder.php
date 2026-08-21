@@ -8,6 +8,7 @@ use App\Models\KpAssignment;
 use App\Models\KpDocument;
 use App\Models\KpDocumentRequirement;
 use App\Models\KpExam;
+use App\Models\KpExamInvitationSignatory;
 use App\Models\KpExaminer;
 use App\Models\KpExamLog;
 use App\Models\KpExamRequest;
@@ -34,6 +35,7 @@ use App\Models\Role;
 use App\Models\Student;
 use App\Models\User;
 use App\Support\KpScoreCalculator;
+use App\Services\KpExamInvitationService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
@@ -49,6 +51,7 @@ class FarhamzahPresentationSeeder extends Seeder
         $farhamzah = $this->farhamzahUser();
         $lecturer = $this->lecturer($farhamzah);
         $fieldSupervisor = $this->fieldSupervisor($farhamzah);
+        $signatory = $this->invitationSignatory($farhamzah);
         $period = $this->period($farhamzah);
         $place = $this->place($period, $farhamzah, $fieldSupervisor);
         $requirements = $this->requirements($period, $farhamzah);
@@ -67,6 +70,7 @@ class FarhamzahPresentationSeeder extends Seeder
             $this->guidanceLogs($assignment, $farhamzah, $index);
             $report = $this->finalReport($assignment, $farhamzah, $index);
             $exam = $this->exam($assignment, $report, $farhamzah, $lecturer, $index);
+            app(KpExamInvitationService::class)->createOrUpdate($exam, $farhamzah, $signatory);
             $this->scores($assignment, $exam, $components, $farhamzah, $index);
             $this->studentQuestionnaireResponse($studentQuestionnaire, $assignment, $studentUser, $index);
         }
@@ -131,6 +135,25 @@ class FarhamzahPresentationSeeder extends Seeder
                 'profile_completed_at' => now(),
             ],
         );
+    }
+
+    private function invitationSignatory(User $actor): KpExamInvitationSignatory
+    {
+        KpExamInvitationSignatory::query()
+            ->where('is_active', true)
+            ->update(['is_active' => false, 'effective_end_date' => now()->subDay()->toDateString()]);
+
+        return KpExamInvitationSignatory::create([
+            'coordinator_name' => 'Farhamzah',
+            'coordinator_nuptk' => '-',
+            'head_program_name' => 'Nama Kaprodi Farmasi',
+            'head_program_nuptk' => '-',
+            'dean_name' => 'Nama Dekan Fakultas Farmasi',
+            'dean_nuptk' => '-',
+            'effective_start_date' => now()->subYear()->toDateString(),
+            'is_active' => true,
+            'updated_by' => $actor->id,
+        ]);
     }
 
     private function period(User $actor): KpPeriod

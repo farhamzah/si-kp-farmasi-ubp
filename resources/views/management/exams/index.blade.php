@@ -35,9 +35,82 @@
             <div>
                 <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Surat undangan sidang</p>
                 <h2 class="mt-1 text-xl font-black text-slate-950">Kelola jadwal dan surat resmi</h2>
-                <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-600">Pejabat penandatangan bisa diisi ulang saat berganti. Data mahasiswa, pembimbing, penguji, jadwal, nomor surat, dan QR verifikasi diambil dari sistem.</p>
+                <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-600">Pejabat penandatangan diatur sekali dan berlaku untuk semua surat selama masa jabatan. Dari daftar jadwal ini koordinator dapat menerbitkan undangan satu per satu atau sekaligus.</p>
             </div>
         </div>
+
+        <div class="mt-5 rounded-2xl border border-cyan-100 bg-cyan-50/40 p-4">
+            <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                <div>
+                    <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Pejabat penandatangan aktif</p>
+                    <p class="mt-1 text-sm text-slate-600">Digunakan otomatis saat undangan sidang diterbitkan. Surat yang sudah terbit menyimpan salinan pejabat pada saat surat dibuat.</p>
+                </div>
+                @if($signatory)
+                    <span class="w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-200">Sudah diatur</span>
+                @else
+                    <span class="w-fit rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-700 ring-1 ring-amber-200">Belum diatur</span>
+                @endif
+            </div>
+
+            <details class="mt-4 rounded-2xl border border-white/80 bg-white p-4" @if(! $signatory || $errors->has('signatory')) open @endif>
+                <summary class="cursor-pointer text-sm font-black text-cyan-700">{{ $signatory ? 'Ubah pejabat aktif' : 'Isi pejabat penandatangan' }}</summary>
+                <form method="POST" action="{{ route('management.exams.invitations.signatory.update') }}" class="mt-4 grid gap-3 lg:grid-cols-3">
+                    @csrf
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-widest text-slate-500">Koordinator Sidang</span>
+                        <input name="coordinator_name" value="{{ old('coordinator_name', $signatory?->coordinator_name ?? auth()->user()->name) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" required>
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-widest text-slate-500">NUPTK Koordinator</span>
+                        <input name="coordinator_nuptk" value="{{ old('coordinator_nuptk', $signatory?->coordinator_nuptk) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-widest text-slate-500">Mulai Berlaku</span>
+                        <input type="date" name="effective_start_date" value="{{ old('effective_start_date', $signatory?->effective_start_date?->toDateString() ?? now()->toDateString()) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                    </label>
+
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-widest text-slate-500">Kaprodi</span>
+                        <input name="head_program_name" value="{{ old('head_program_name', $signatory?->head_program_name) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" required>
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-widest text-slate-500">NUPTK Kaprodi</span>
+                        <input name="head_program_nuptk" value="{{ old('head_program_nuptk', $signatory?->head_program_nuptk) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                    </label>
+                    <div class="hidden lg:block"></div>
+
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-widest text-slate-500">Dekan</span>
+                        <input name="dean_name" value="{{ old('dean_name', $signatory?->dean_name) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" required>
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-black uppercase tracking-widest text-slate-500">NUPTK Dekan</span>
+                        <input name="dean_nuptk" value="{{ old('dean_nuptk', $signatory?->dean_nuptk) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                    </label>
+                    <div class="flex items-end">
+                        <button class="w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">Simpan Pejabat Aktif</button>
+                    </div>
+                </form>
+            </details>
+        </div>
+
+        @php
+            $unpublishedExamIds = $exams->getCollection()->filter(fn ($exam) => ! $exam->invitation)->pluck('id');
+        @endphp
+
+        @if($unpublishedExamIds->isNotEmpty())
+            <form method="POST" action="{{ route('management.exams.invitations.bulk-store') }}" class="mt-4 flex flex-col gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4 md:flex-row md:items-center md:justify-between">
+                @csrf
+                @foreach($unpublishedExamIds as $examId)
+                    <input type="hidden" name="exam_ids[]" value="{{ $examId }}">
+                @endforeach
+                <div>
+                    <p class="text-sm font-black text-emerald-800">Kirim semua undangan yang belum terbit di daftar ini</p>
+                    <p class="mt-1 text-xs leading-5 text-emerald-700">{{ $unpublishedExamIds->count() }} jadwal sidang akan dibuatkan surat memakai pejabat aktif.</p>
+                </div>
+                <button class="rounded-xl bg-emerald-700 px-4 py-3 text-sm font-black text-white shadow-sm shadow-emerald-700/20" @disabled(! $signatory)>Kirim Semua</button>
+            </form>
+        @endif
 
         <div class="mt-5 space-y-3">
             @forelse($exams as $exam)
@@ -81,47 +154,17 @@
                                 <a href="{{ route('exam-invitations.letter.preview', $invitation) }}" class="rounded-xl border border-cyan-200 bg-white px-4 py-2 text-center text-xs font-black text-cyan-700">Preview Surat</a>
                                 <a href="{{ route('exam-invitations.letter.pdf', $invitation) }}" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-center text-xs font-black text-slate-700">PDF</a>
                                 <a href="{{ route('exam-invitations.letter.word', $invitation) }}" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-center text-xs font-black text-slate-700">Word</a>
+                            @else
+                                <form method="POST" action="{{ route('management.exams.invitation.store', $exam) }}">
+                                    @csrf
+                                    <button class="w-full rounded-xl border border-emerald-200 bg-emerald-600 px-4 py-2 text-center text-xs font-black text-white" @disabled(! $signatory)>Kirim Undangan</button>
+                                </form>
+                                @unless($signatory)
+                                    <span class="rounded-xl bg-amber-50 px-3 py-2 text-center text-xs font-bold text-amber-700 ring-1 ring-amber-100">Isi pejabat aktif dulu</span>
+                                @endunless
                             @endif
                         </div>
                     </div>
-
-                    <details class="mt-4 rounded-2xl border border-cyan-100 bg-white p-4">
-                        <summary class="cursor-pointer text-sm font-black text-cyan-700">{{ $invitation ? 'Ubah pejabat penandatangan' : 'Terbitkan surat undangan' }}</summary>
-                        <form method="POST" action="{{ route('management.exams.invitation.store', $exam) }}" class="mt-4 grid gap-3 lg:grid-cols-3">
-                            @csrf
-                            <label class="block">
-                                <span class="text-xs font-black uppercase tracking-widest text-slate-500">Koordinator Sidang</span>
-                                <input name="coordinator_name" value="{{ old('coordinator_name', $invitation?->coordinator_name ?? auth()->user()->name) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" required>
-                            </label>
-                            <label class="block">
-                                <span class="text-xs font-black uppercase tracking-widest text-slate-500">NUPTK Koordinator</span>
-                                <input name="coordinator_nuptk" value="{{ old('coordinator_nuptk', $invitation?->coordinator_nuptk) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                            </label>
-                            <div class="hidden lg:block"></div>
-
-                            <label class="block">
-                                <span class="text-xs font-black uppercase tracking-widest text-slate-500">Kaprodi</span>
-                                <input name="head_program_name" value="{{ old('head_program_name', $invitation?->head_program_name) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" required>
-                            </label>
-                            <label class="block">
-                                <span class="text-xs font-black uppercase tracking-widest text-slate-500">NUPTK Kaprodi</span>
-                                <input name="head_program_nuptk" value="{{ old('head_program_nuptk', $invitation?->head_program_nuptk) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                            </label>
-                            <div class="hidden lg:block"></div>
-
-                            <label class="block">
-                                <span class="text-xs font-black uppercase tracking-widest text-slate-500">Dekan</span>
-                                <input name="dean_name" value="{{ old('dean_name', $invitation?->dean_name) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" required>
-                            </label>
-                            <label class="block">
-                                <span class="text-xs font-black uppercase tracking-widest text-slate-500">NUPTK Dekan</span>
-                                <input name="dean_nuptk" value="{{ old('dean_nuptk', $invitation?->dean_nuptk) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                            </label>
-                            <div class="flex items-end">
-                                <button class="w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">{{ $invitation ? 'Simpan Perubahan Surat' : 'Terbitkan Surat' }}</button>
-                            </div>
-                        </form>
-                    </details>
                 </article>
             @empty
                 <x-ui.empty-state title="Belum ada jadwal sidang." description="Jadwal sidang akan muncul setelah pengajuan sidang disetujui dan dijadwalkan." />

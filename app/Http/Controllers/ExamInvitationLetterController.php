@@ -17,6 +17,48 @@ class ExamInvitationLetterController extends Controller
     {
         abort_unless(in_array($request->session()->get('active_role'), ['admin', 'koordinator_kp'], true), 403);
 
+        try {
+            $service->createOrUpdate($exam, $request->user());
+        } catch (\RuntimeException $exception) {
+            return back()->withErrors(['signatory' => $exception->getMessage()]);
+        }
+
+        return back()->with('status', 'Undangan sidang berhasil diterbitkan.');
+    }
+
+    public function bulkStore(Request $request, KpExamInvitationService $service): RedirectResponse
+    {
+        abort_unless(in_array($request->session()->get('active_role'), ['admin', 'koordinator_kp'], true), 403);
+
+        $data = $request->validate([
+            'exam_ids' => ['required', 'array', 'min:1'],
+            'exam_ids.*' => ['integer', 'exists:kp_exams,id'],
+        ]);
+
+        try {
+            $signatory = $service->activeSignatory();
+        } catch (\RuntimeException $exception) {
+            return back()->withErrors(['signatory' => $exception->getMessage()]);
+        }
+
+        $count = 0;
+        KpExam::query()
+            ->whereIn('id', $data['exam_ids'])
+            ->doesntHave('invitation')
+            ->with(['assignment.student.user', 'assignment.period', 'assignment.place', 'supervisor.user', 'examiner.user', 'examiners.user'])
+            ->get()
+            ->each(function (KpExam $exam) use ($request, $service, $signatory, &$count): void {
+                $service->createOrUpdate($exam, $request->user(), $signatory);
+                $count++;
+            });
+
+        return back()->with('status', $count.' undangan sidang berhasil diterbitkan.');
+    }
+
+    public function updateSignatory(Request $request, KpExamInvitationService $service): RedirectResponse
+    {
+        abort_unless(in_array($request->session()->get('active_role'), ['admin', 'koordinator_kp'], true), 403);
+
         $data = $request->validate([
             'coordinator_name' => ['required', 'string', 'max:120'],
             'coordinator_nuptk' => ['nullable', 'string', 'max:80'],
@@ -24,11 +66,12 @@ class ExamInvitationLetterController extends Controller
             'head_program_nuptk' => ['nullable', 'string', 'max:80'],
             'dean_name' => ['required', 'string', 'max:120'],
             'dean_nuptk' => ['nullable', 'string', 'max:80'],
+            'effective_start_date' => ['nullable', 'date'],
         ]);
 
-        $service->createOrUpdate($exam, $data, $request->user());
+        $service->saveActiveSignatory($data, $request->user());
 
-        return back()->with('status', 'Surat undangan sidang berhasil diterbitkan.');
+        return back()->with('status', 'Pejabat penandatangan undangan sidang berhasil disimpan.');
     }
 
     public function preview(Request $request, KpExamInvitation $invitation, KpExamInvitationService $service): View

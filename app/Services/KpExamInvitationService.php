@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\KpExam;
 use App\Models\KpExamInvitation;
+use App\Models\KpExamInvitationSignatory;
 use App\Models\User;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\URL;
@@ -11,8 +12,9 @@ use Illuminate\Support\Str;
 
 class KpExamInvitationService
 {
-    public function createOrUpdate(KpExam $exam, array $data, User $actor): KpExamInvitation
+    public function createOrUpdate(KpExam $exam, User $actor, ?KpExamInvitationSignatory $signatory = null): KpExamInvitation
     {
+        $signatory ??= $this->activeSignatory();
         $invitation = KpExamInvitation::firstOrNew(['kp_exam_id' => $exam->id]);
 
         if (! $invitation->exists) {
@@ -21,18 +23,49 @@ class KpExamInvitationService
         }
 
         $invitation->fill([
-            'coordinator_name' => $data['coordinator_name'],
-            'coordinator_nuptk' => $data['coordinator_nuptk'] ?? null,
-            'head_program_name' => $data['head_program_name'],
-            'head_program_nuptk' => $data['head_program_nuptk'] ?? null,
-            'dean_name' => $data['dean_name'],
-            'dean_nuptk' => $data['dean_nuptk'] ?? null,
+            'coordinator_name' => $signatory->coordinator_name,
+            'coordinator_nuptk' => $signatory->coordinator_nuptk,
+            'head_program_name' => $signatory->head_program_name,
+            'head_program_nuptk' => $signatory->head_program_nuptk,
+            'dean_name' => $signatory->dean_name,
+            'dean_nuptk' => $signatory->dean_nuptk,
             'status' => 'published',
             'generated_by' => $actor->id,
             'generated_at' => now(),
         ])->save();
 
         return $invitation->fresh(['exam.assignment.student.user', 'exam.assignment.period', 'exam.assignment.place', 'exam.supervisor.user', 'exam.examiners.user', 'exam.examiner.user']);
+    }
+
+    public function activeSignatory(): KpExamInvitationSignatory
+    {
+        $signatory = KpExamInvitationSignatory::active();
+
+        if (! $signatory) {
+            throw new \RuntimeException('Pejabat penandatangan undangan sidang belum diatur.');
+        }
+
+        return $signatory;
+    }
+
+    public function saveActiveSignatory(array $data, User $actor): KpExamInvitationSignatory
+    {
+        KpExamInvitationSignatory::query()->where('is_active', true)->update([
+            'is_active' => false,
+            'effective_end_date' => now()->toDateString(),
+        ]);
+
+        return KpExamInvitationSignatory::create([
+            'coordinator_name' => $data['coordinator_name'],
+            'coordinator_nuptk' => $data['coordinator_nuptk'] ?? null,
+            'head_program_name' => $data['head_program_name'],
+            'head_program_nuptk' => $data['head_program_nuptk'] ?? null,
+            'dean_name' => $data['dean_name'],
+            'dean_nuptk' => $data['dean_nuptk'] ?? null,
+            'effective_start_date' => $data['effective_start_date'] ?? now()->toDateString(),
+            'is_active' => true,
+            'updated_by' => $actor->id,
+        ]);
     }
 
     public function nextLetterNumber(KpExam $exam): string

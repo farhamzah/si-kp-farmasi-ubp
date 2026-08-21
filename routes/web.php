@@ -180,6 +180,8 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::put('exams/{exam}', [ManagementExamScheduleController::class, 'update'])->name('exams.update');
             Route::post('exams/{exam}/cancel', [ManagementExamScheduleController::class, 'cancel'])->name('exams.cancel');
             Route::post('exams/{exam}/complete', [ManagementExamScheduleController::class, 'complete'])->name('exams.complete');
+            Route::post('exams/invitations/signatory', [ExamInvitationLetterController::class, 'updateSignatory'])->name('exams.invitations.signatory.update');
+            Route::post('exams/invitations/bulk', [ExamInvitationLetterController::class, 'bulkStore'])->name('exams.invitations.bulk-store');
             Route::post('exams/{exam}/invitation', [ExamInvitationLetterController::class, 'store'])->name('exams.invitation.store');
             Route::get('exam-logs', [ExamLogController::class, 'index'])->name('exam-logs.index');
             Route::resource('assessment-components', AssessmentComponentController::class)->except(['show'])->parameters(['assessment-components' => 'component']);

@@ -6,6 +6,7 @@ use App\Models\FieldSupervisor;
 use App\Models\KpAssignment;
 use App\Models\KpExam;
 use App\Models\KpExamInvitation;
+use App\Models\KpExamInvitationSignatory;
 use App\Models\KpExamRequest;
 use App\Models\KpFinalReport;
 use App\Models\KpLogbook;
@@ -224,14 +225,26 @@ class KpExamSchedulingTest extends TestCase
         $exam = $this->scheduledExam();
 
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
-            ->post('/management/exams/'.$exam->id.'/invitation', [
+            ->post('/management/exams/invitations/signatory', [
                 'coordinator_name' => 'Farhamzah',
                 'coordinator_nuptk' => '123456',
                 'head_program_name' => 'Kaprodi Farmasi',
                 'head_program_nuptk' => '654321',
                 'dean_name' => 'Dekan Fakultas Farmasi',
                 'dean_nuptk' => '987654',
+                'effective_start_date' => now()->toDateString(),
             ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('kp_exam_invitation_signatories', [
+            'coordinator_name' => 'Farhamzah',
+            'head_program_name' => 'Kaprodi Farmasi',
+            'dean_name' => 'Dekan Fakultas Farmasi',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exams/'.$exam->id.'/invitation')
             ->assertRedirect();
 
         $invitation = KpExamInvitation::firstOrFail();
@@ -260,6 +273,55 @@ class KpExamSchedulingTest extends TestCase
         $this->actingAs($otherStudentUser)->withSession(['active_role' => 'mahasiswa'])
             ->get('/undangan-sidang/surat/'.$invitation->id)
             ->assertForbidden();
+    }
+
+    public function test_koordinator_can_publish_exam_invitations_in_bulk_with_active_signatory(): void
+    {
+        $firstExam = $this->scheduledExam();
+        $secondStudentUser = $this->makeUser('bulk-student-exam@test.local', ['mahasiswa']);
+        $secondStudent = $this->makeStudent($secondStudentUser, '2210631230777');
+        $field = FieldSupervisor::where('user_id', $this->fieldUser->id)->firstOrFail();
+        $secondAssignment = $this->makeAssignment($secondStudent, $this->supervisor, $field);
+
+        $secondRequest = KpExamRequest::create([
+            'kp_assignment_id' => $secondAssignment->id,
+            'requested_by' => $secondStudentUser->id,
+            'status' => 'dijadwalkan',
+            'submitted_at' => now(),
+        ]);
+
+        $secondExam = KpExam::create([
+            'kp_exam_request_id' => $secondRequest->id,
+            'kp_assignment_id' => $secondAssignment->id,
+            'supervisor_id' => $this->supervisor->id,
+            'examiner_id' => $this->examiner->id,
+            'exam_date' => now()->addDays(8)->toDateString(),
+            'start_time' => '11:00',
+            'end_time' => '12:00',
+            'mode' => 'offline',
+            'room' => 'Ruang Sidang 2',
+            'status' => 'dijadwalkan',
+            'scheduled_by' => $this->admin->id,
+            'scheduled_at' => now(),
+        ]);
+
+        KpExamInvitationSignatory::create([
+            'coordinator_name' => 'Koordinator Aktif',
+            'head_program_name' => 'Kaprodi Aktif',
+            'dean_name' => 'Dekan Aktif',
+            'is_active' => true,
+            'updated_by' => $this->koordinator->id,
+        ]);
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exams/invitations/bulk', [
+                'exam_ids' => [$firstExam->id, $secondExam->id],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseCount('kp_exam_invitations', 2);
+        $this->assertDatabaseHas('kp_exam_invitations', ['kp_exam_id' => $firstExam->id, 'coordinator_name' => 'Koordinator Aktif']);
+        $this->assertDatabaseHas('kp_exam_invitations', ['kp_exam_id' => $secondExam->id, 'coordinator_name' => 'Koordinator Aktif']);
     }
 
     public function test_schedule_validation_rejects_invalid_examiner_time_room_and_link(): void
