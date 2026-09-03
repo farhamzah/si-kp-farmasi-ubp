@@ -56,8 +56,15 @@
             @php
                 $assignment = $examRequest->assignment;
                 $eligibility = $assignment->examEligibility();
-                $readyCount = collect($eligibility['items'])->where('ready', true)->count();
-                $totalCount = count($eligibility['items']);
+                $paymentProofItem = [
+                    'label' => 'Bukti pembayaran KP',
+                    'ready' => $examRequest->hasPaymentProof(),
+                    'description' => $examRequest->hasPaymentProof() ? $examRequest->paymentProofLabel() : 'Belum dilampirkan mahasiswa',
+                ];
+                $checklistItems = collect($eligibility['items'])->push($paymentProofItem);
+                $readyCount = $checklistItems->where('ready', true)->count();
+                $totalCount = $checklistItems->count();
+                $allReady = $eligibility['ready'] && $examRequest->hasPaymentProof();
                 $report = $assignment->finalReport;
             @endphp
             <article class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
@@ -67,7 +74,7 @@
                             <div>
                                 <div class="flex flex-wrap items-center gap-2">
                                     <span class="rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $examRequest->statusBadgeClass() }}">{{ $examRequest->statusLabel() }}</span>
-                                    @if($eligibility['ready'])
+                                    @if($allReady)
                                         <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">Syarat lengkap</span>
                                     @else
                                         <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 ring-1 ring-amber-200">{{ $readyCount }}/{{ $totalCount }} syarat</span>
@@ -78,7 +85,7 @@
                             </div>
                             <div class="flex flex-wrap gap-2">
                                 <a href="{{ route('management.exam-requests.show', $examRequest) }}" class="rounded-xl border border-cyan-200 px-4 py-2 text-sm font-bold text-cyan-700">Validasi</a>
-                                @if($examRequest->status === 'disetujui' && ! $examRequest->exam)
+                                @if($examRequest->status === 'disetujui' && $allReady && ! $examRequest->exam)
                                     <a href="{{ route('management.exam-requests.schedule', $examRequest) }}" class="rounded-xl bg-cyan-700 px-4 py-2 text-sm font-bold text-white">Jadwalkan</a>
                                 @elseif($examRequest->exam)
                                     <a href="{{ route('management.exams.show', $examRequest->exam) }}" class="rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white">Lihat Jadwal</a>
@@ -105,7 +112,7 @@
                     <aside class="border-t border-slate-100 bg-slate-50/70 p-5 xl:border-l xl:border-t-0">
                         <p class="text-xs font-black uppercase tracking-widest text-slate-500">Checklist eligible</p>
                         <div class="mt-3 space-y-2">
-                            @foreach($eligibility['items'] as $item)
+                            @foreach($checklistItems as $item)
                                 <div class="flex items-start gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-slate-200">
                                     <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-black {{ $item['ready'] ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }}">{{ $item['ready'] ? 'OK' : '!' }}</span>
                                     <div>

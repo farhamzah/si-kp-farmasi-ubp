@@ -9,8 +9,10 @@ use App\Models\KpPeriod;
 use App\Services\KpExamService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ExamRequestController extends Controller
 {
@@ -75,5 +77,27 @@ class ExamRequestController extends Controller
         }
         $service->rejectRequest($request->user(), $examRequest, $request->review_note);
         return back()->with('status', 'Pengajuan sidang berhasil ditolak.');
+    }
+
+    public function previewPaymentProof(KpExamRequest $examRequest): StreamedResponse
+    {
+        abort_unless($examRequest->payment_proof_path, 404);
+
+        return Storage::disk($examRequest->payment_proof_disk ?: 'local')->response(
+            $examRequest->payment_proof_path,
+            $examRequest->paymentProofLabel(),
+            array_filter(['Content-Type' => $examRequest->payment_proof_mime]),
+            'inline'
+        );
+    }
+
+    public function downloadPaymentProof(KpExamRequest $examRequest): StreamedResponse
+    {
+        abort_unless($examRequest->payment_proof_path, 404);
+
+        return Storage::disk($examRequest->payment_proof_disk ?: 'local')->download(
+            $examRequest->payment_proof_path,
+            $examRequest->paymentProofLabel()
+        );
     }
 }

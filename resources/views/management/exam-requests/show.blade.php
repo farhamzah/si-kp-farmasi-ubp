@@ -5,14 +5,22 @@
 @php
     $assignment = $examRequest->assignment;
     $eligibility = $assignment->examEligibility();
+    $paymentProofItem = [
+        'key' => 'payment_proof',
+        'label' => 'Bukti pembayaran KP',
+        'ready' => $examRequest->hasPaymentProof(),
+        'description' => $examRequest->hasPaymentProof() ? $examRequest->paymentProofLabel() : 'Belum dilampirkan mahasiswa',
+    ];
+    $checklistItems = collect($eligibility['items'])->push($paymentProofItem);
     $report = $assignment->finalReport;
     $canReview = in_array($examRequest->status, ['diajukan', 'revisi'], true);
-    $canApprove = $canReview && $eligibility['ready'];
+    $canApprove = $canReview && $eligibility['ready'] && $examRequest->hasPaymentProof();
+    $allRequirementsReady = $eligibility['ready'] && $examRequest->hasPaymentProof();
 @endphp
 <div class="space-y-5">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <a href="{{ route('management.exam-requests.index') }}" class="inline-flex rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">Kembali ke Antrian</a>
-        @if($examRequest->canBeScheduled() && $eligibility['ready'] && ! $examRequest->exam)
+        @if($examRequest->canBeScheduled() && $eligibility['ready'] && $examRequest->hasPaymentProof() && ! $examRequest->exam)
             <a href="{{ route('management.exam-requests.schedule', $examRequest) }}" class="inline-flex rounded-xl bg-cyan-700 px-4 py-2 text-sm font-bold text-white shadow-sm">Lanjut Jadwalkan Sidang</a>
         @endif
     </div>
@@ -24,7 +32,7 @@
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
                             <span class="rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $examRequest->statusBadgeClass() }}">{{ $examRequest->statusLabel() }}</span>
-                            <span class="rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $eligibility['ready'] ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-amber-50 text-amber-700 ring-amber-200' }}">{{ $eligibility['ready'] ? 'Syarat lengkap' : 'Ada syarat tertahan' }}</span>
+                            <span class="rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $allRequirementsReady ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-amber-50 text-amber-700 ring-amber-200' }}">{{ $allRequirementsReady ? 'Syarat lengkap' : 'Ada syarat tertahan' }}</span>
                         </div>
                         <h2 class="mt-4 text-3xl font-black text-slate-950">{{ $assignment->student->user->name }}</h2>
                         <p class="mt-1 text-sm text-slate-500">{{ $assignment->student->nim ?: '-' }} · {{ $assignment->period->name }}</p>
@@ -57,10 +65,10 @@
                         <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Syarat masuk jadwal sidang</p>
                         <h3 class="mt-1 text-xl font-black text-slate-950">Checklist kesiapan mahasiswa</h3>
                     </div>
-                    <span class="w-fit rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $eligibility['ready'] ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-amber-50 text-amber-700 ring-amber-200' }}">{{ collect($eligibility['items'])->where('ready', true)->count() }}/{{ count($eligibility['items']) }} lengkap</span>
+                    <span class="w-fit rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $allRequirementsReady ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-amber-50 text-amber-700 ring-amber-200' }}">{{ $checklistItems->where('ready', true)->count() }}/{{ $checklistItems->count() }} lengkap</span>
                 </div>
                 <div class="mt-5 grid gap-3 md:grid-cols-2">
-                    @foreach($eligibility['items'] as $item)
+                    @foreach($checklistItems as $item)
                         <div class="rounded-2xl border p-4 {{ $item['ready'] ? 'border-emerald-200 bg-emerald-50/50' : 'border-amber-200 bg-amber-50/60' }}">
                             <div class="flex items-start gap-3">
                                 <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-black {{ $item['ready'] ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white' }}">{{ $item['ready'] ? 'OK' : '!' }}</span>
@@ -71,6 +79,25 @@
                             </div>
                         </div>
                     @endforeach
+                </div>
+            </x-ui.card>
+
+            <x-ui.card>
+                <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Bukti pembayaran KP</p>
+                        <h3 class="mt-1 text-xl font-black text-slate-950">{{ $examRequest->paymentProofLabel() }}</h3>
+                        <p class="mt-1 text-sm text-slate-500">{{ $examRequest->hasPaymentProof() ? 'Dilampirkan saat mahasiswa mengajukan sidang.' : 'Belum ada bukti pembayaran pada pengajuan ini.' }}</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        @if($examRequest->payment_proof_path)
+                            <a href="{{ route('management.exam-requests.payment-proof.preview', $examRequest) }}" target="_blank" rel="noopener" class="rounded-xl border border-cyan-200 px-4 py-2 text-sm font-bold text-cyan-700">Preview File</a>
+                            <a href="{{ route('management.exam-requests.payment-proof.download', $examRequest) }}" class="rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white">Download</a>
+                        @endif
+                        @if($examRequest->payment_proof_url)
+                            <a href="{{ $examRequest->payment_proof_url }}" target="_blank" rel="noopener" class="rounded-xl border border-emerald-200 px-4 py-2 text-sm font-bold text-emerald-700">Buka Link Drive</a>
+                        @endif
+                    </div>
                 </div>
             </x-ui.card>
 
@@ -123,7 +150,7 @@
 
                 @if($examRequest->exam)
                     <a href="{{ route('management.exams.show', $examRequest->exam) }}" class="mt-4 block rounded-xl bg-cyan-700 px-4 py-3 text-center text-sm font-bold text-white shadow-sm">Lihat Jadwal Sidang</a>
-                @elseif($examRequest->canBeScheduled() && $eligibility['ready'])
+                @elseif($examRequest->canBeScheduled() && $eligibility['ready'] && $examRequest->hasPaymentProof())
                     <a href="{{ route('management.exam-requests.schedule', $examRequest) }}" class="mt-4 block rounded-xl border border-cyan-200 px-4 py-3 text-center text-sm font-bold text-cyan-700 shadow-sm">Buka Form Jadwal</a>
                 @endif
             </x-ui.card>

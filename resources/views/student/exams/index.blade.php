@@ -46,11 +46,39 @@
                 @endforeach
             </div>
 
+            @if($examRequest?->hasPaymentProof())
+                <div class="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
+                    <p class="text-xs font-black uppercase tracking-widest text-emerald-700">Bukti pembayaran KP</p>
+                    <p class="mt-1 text-sm font-bold text-slate-950">{{ $examRequest->paymentProofLabel() }}</p>
+                    @if($examRequest->payment_proof_url)
+                        <a href="{{ $examRequest->payment_proof_url }}" target="_blank" rel="noopener" class="mt-3 inline-flex rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm font-bold text-emerald-700">Buka Link Drive</a>
+                    @endif
+                </div>
+            @endif
+
             @if(! $isReady)
-                <div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">Pengajuan sidang dibuka setelah tidak ada logbook KP yang masih menunggu validasi pembimbing lapangan, minimal 8 bimbingan laporan direview pembimbing dalam dan ditandai selesai, bimbingan laporan pembimbing lapangan ditandai selesai, dan laporan final disetujui kedua pembimbing. Logbook yang ditolak atau direvisi sudah dianggap direview, tetapi tidak menambah hitungan absen disetujui.</div>
+                <div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">Pengajuan sidang dibuka setelah tidak ada logbook KP yang masih menunggu validasi pembimbing lapangan, minimal 8 bimbingan laporan direview pembimbing dalam dan ditandai selesai, bimbingan laporan pembimbing lapangan ditandai selesai, laporan final disetujui kedua pembimbing, dan bukti pembayaran KP siap dilampirkan saat pengajuan. Logbook yang ditolak atau direvisi sudah dianggap direview, tetapi tidak menambah hitungan absen disetujui.</div>
             @elseif(! $examRequest)
-                <form method="POST" action="{{ route('student.exams.submit') }}" class="mt-5 space-y-3">
+                <form method="POST" action="{{ route('student.exams.submit') }}" enctype="multipart/form-data" class="mt-5 space-y-3">
                     @csrf
+                    <div class="rounded-2xl border border-cyan-100 bg-cyan-50/40 p-4">
+                        <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Bukti pembayaran KP</p>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">Upload PDF/JPG/PNG maksimal 5MB, atau tempel link file Google Drive jika bukti sudah disimpan di Drive resmi.</p>
+                        <div class="mt-3 grid gap-3 md:grid-cols-2">
+                            <label class="block">
+                                <span class="text-xs font-black uppercase tracking-widest text-slate-500">Upload file</span>
+                                <input type="file" name="payment_proof" accept=".pdf,.jpg,.jpeg,.png" class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+                            </label>
+                            <label class="block">
+                                <span class="text-xs font-black uppercase tracking-widest text-slate-500">Link Drive</span>
+                                <input name="payment_proof_url" value="{{ old('payment_proof_url') }}" placeholder="https://drive.google.com/file/d/..." class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+                            </label>
+                        </div>
+                        <label class="mt-3 block">
+                            <span class="text-xs font-black uppercase tracking-widest text-slate-500">Label bukti</span>
+                            <input name="payment_proof_label" value="{{ old('payment_proof_label') }}" placeholder="Contoh: Bukti pembayaran KP semester ini" class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+                        </label>
+                    </div>
                     <textarea name="request_note" rows="3" placeholder="Catatan pengajuan opsional" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"></textarea>
                     <button class="rounded-lg bg-cyan-700 px-4 py-2 text-sm font-bold text-white">Ajukan Sidang</button>
                 </form>

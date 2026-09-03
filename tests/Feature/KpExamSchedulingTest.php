@@ -21,6 +21,8 @@ use App\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class KpExamSchedulingTest extends TestCase
@@ -79,7 +81,10 @@ class KpExamSchedulingTest extends TestCase
     public function test_student_can_only_submit_exam_request_after_final_report_is_approved_and_cannot_duplicate(): void
     {
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
-            ->post('/mahasiswa/sidang/ajukan', ['request_note' => 'Mohon dijadwalkan.'])
+            ->post('/mahasiswa/sidang/ajukan', [
+                'request_note' => 'Mohon dijadwalkan.',
+                'payment_proof_url' => 'https://drive.google.com/file/d/payment-proof/view',
+            ])
             ->assertSessionHasErrors('exam');
 
         $this->approvedFinalReport();
@@ -90,15 +95,62 @@ class KpExamSchedulingTest extends TestCase
             ->assertSee('Ajukan Sidang');
 
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
-            ->post('/mahasiswa/sidang/ajukan', ['request_note' => 'Siap sidang.'])
+            ->post('/mahasiswa/sidang/ajukan', [
+                'request_note' => 'Siap sidang.',
+                'payment_proof_url' => 'https://drive.google.com/file/d/payment-proof/view',
+            ])
             ->assertRedirect();
 
-        $this->assertDatabaseHas('kp_exam_requests', ['kp_assignment_id' => $this->assignment->id, 'status' => 'diajukan']);
+        $this->assertDatabaseHas('kp_exam_requests', [
+            'kp_assignment_id' => $this->assignment->id,
+            'status' => 'diajukan',
+            'payment_proof_url' => 'https://drive.google.com/file/d/payment-proof/view',
+        ]);
         $this->assertDatabaseHas('kp_exam_logs', ['action' => 'request_submitted']);
 
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
-            ->post('/mahasiswa/sidang/ajukan')
+            ->post('/mahasiswa/sidang/ajukan', [
+                'payment_proof_url' => 'https://drive.google.com/file/d/payment-proof/view',
+            ])
             ->assertSessionHasErrors('exam');
+    }
+
+    public function test_student_must_attach_payment_proof_for_exam_request(): void
+    {
+        $this->approvedFinalReport();
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/sidang/ajukan', ['request_note' => 'Siap sidang.'])
+            ->assertSessionHasErrors('payment_proof');
+    }
+
+    public function test_student_can_upload_exam_payment_proof_and_management_can_preview_it(): void
+    {
+        Storage::fake('local');
+        $this->approvedFinalReport();
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/sidang/ajukan', [
+                'request_note' => 'Siap sidang.',
+                'payment_proof' => UploadedFile::fake()->create('bukti-pembayaran-kp.pdf', 128, 'application/pdf'),
+                'payment_proof_label' => 'Bukti pembayaran KP',
+            ])
+            ->assertRedirect();
+
+        $request = KpExamRequest::firstOrFail();
+        Storage::disk('local')->assertExists($request->payment_proof_path);
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/exam-requests/'.$request->id)
+            ->assertOk()
+            ->assertSee('Bukti pembayaran KP')
+            ->assertSee('Preview File')
+            ->assertSee('Download');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/exam-requests/'.$request->id.'/payment-proof/preview')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
     }
 
     public function test_admin_and_koordinator_can_monitor_exam_requests_but_field_supervisor_cannot(): void
@@ -422,7 +474,13 @@ class KpExamSchedulingTest extends TestCase
 
         return KpExamRequest::firstOrCreate(
             ['kp_assignment_id' => $this->assignment->id],
-            ['requested_by' => $this->mahasiswa->id, 'status' => 'diajukan', 'submitted_at' => now()]
+            [
+                'requested_by' => $this->mahasiswa->id,
+                'status' => 'diajukan',
+                'payment_proof_url' => 'https://drive.google.com/file/d/payment-proof/view',
+                'payment_proof_label' => 'Bukti pembayaran KP',
+                'submitted_at' => now(),
+            ]
         );
     }
 

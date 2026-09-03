@@ -544,6 +544,8 @@ class FarhamzahPresentationSeeder extends Seeder
                 'requested_by' => $assignment->student?->user_id,
                 'status' => 'dijadwalkan',
                 'request_note' => 'Pengajuan sidang dummy setelah laporan final lengkap.',
+                'payment_proof_url' => 'https://drive.google.com/file/d/payment-proof-presentasi-'.$assignment->id.'/view',
+                'payment_proof_label' => 'Bukti pembayaran KP presentasi '.$assignment->student?->nim,
                 'submitted_at' => now()->subDays(7 - $index),
                 'reviewed_by' => $actor->id,
                 'reviewed_at' => now()->subDays(7 - $index),

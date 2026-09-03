@@ -25,7 +25,11 @@ class ExamRequestController extends Controller
 
     public function submit(SubmitExamRequestRequest $request, KpExamService $service): RedirectResponse
     {
-        $service->submitRequest($request->user(), $this->activeAssignmentOrFail(), $request->request_note);
+        $service->submitRequest($request->user(), $this->activeAssignmentOrFail(), $request->request_note, [
+            'file' => $request->file('payment_proof'),
+            'url' => $request->input('payment_proof_url'),
+            'label' => $request->input('payment_proof_label'),
+        ]);
 
         return back()->with('status', 'Pengajuan sidang berhasil dikirim.');
     }

@@ -169,6 +169,8 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('final-report-logs', [FinalReportLogController::class, 'index'])->name('final-report-logs.index');
             Route::get('exam-requests', [ManagementExamRequestController::class, 'index'])->name('exam-requests.index');
             Route::get('exam-requests/{examRequest}', [ManagementExamRequestController::class, 'show'])->name('exam-requests.show');
+            Route::get('exam-requests/{examRequest}/payment-proof/preview', [ManagementExamRequestController::class, 'previewPaymentProof'])->name('exam-requests.payment-proof.preview');
+            Route::get('exam-requests/{examRequest}/payment-proof/download', [ManagementExamRequestController::class, 'downloadPaymentProof'])->name('exam-requests.payment-proof.download');
             Route::post('exam-requests/{examRequest}/approve', [ManagementExamRequestController::class, 'approve'])->name('exam-requests.approve');
             Route::post('exam-requests/{examRequest}/revision', [ManagementExamRequestController::class, 'revision'])->name('exam-requests.revision');
             Route::post('exam-requests/{examRequest}/reject', [ManagementExamRequestController::class, 'reject'])->name('exam-requests.reject');

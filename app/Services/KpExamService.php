@@ -9,12 +9,13 @@ use App\Models\Lecturer;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Http\UploadedFile;
 
 class KpExamService
 {
     public function __construct(private readonly KpIntegrationOutboxService $outbox) {}
 
-    public function submitRequest(User $studentUser, KpAssignment $assignment, ?string $note = null): KpExamRequest
+    public function submitRequest(User $studentUser, KpAssignment $assignment, ?string $note = null, array $paymentProof = []): KpExamRequest
     {
         $this->ensureStudentOwnsAssignment($studentUser, $assignment);
         $assignment->loadMissing('finalReport');
@@ -28,13 +29,17 @@ class KpExamService
         if ($assignment->examRequest()->whereNotIn('status', ['ditolak', 'dibatalkan'])->exists()) {
             throw ValidationException::withMessages(['exam' => 'Pengajuan sidang untuk penempatan ini sudah ada.']);
         }
+        if (! $this->paymentProofAvailable($paymentProof)) {
+            throw ValidationException::withMessages(['payment_proof' => 'Bukti pembayaran KP wajib diunggah atau dilampirkan melalui link Drive.']);
+        }
 
-        return DB::transaction(function () use ($studentUser, $assignment, $note) {
+        return DB::transaction(function () use ($studentUser, $assignment, $note, $paymentProof) {
             $request = KpExamRequest::create([
                 'kp_assignment_id' => $assignment->id,
                 'requested_by' => $studentUser->id,
                 'status' => 'diajukan',
                 'request_note' => $note,
+                ...$this->paymentProofPayload($paymentProof),
                 'submitted_at' => now(),
             ]);
 
@@ -212,6 +217,39 @@ class KpExamService
                 'request' => 'Validasi akhir belum bisa dilakukan. Lengkapi: '.($pending['label'] ?? 'syarat sidang').'.',
             ]);
         }
+
+        if (! $request->hasPaymentProof()) {
+            throw ValidationException::withMessages([
+                'request' => 'Validasi akhir belum bisa dilakukan. Lengkapi: Bukti pembayaran KP.',
+            ]);
+        }
+    }
+
+    private function paymentProofAvailable(array $paymentProof): bool
+    {
+        return ($paymentProof['file'] ?? null) instanceof UploadedFile || filled($paymentProof['url'] ?? null);
+    }
+
+    private function paymentProofPayload(array $paymentProof): array
+    {
+        $payload = [
+            'payment_proof_url' => $paymentProof['url'] ?? null,
+            'payment_proof_label' => $paymentProof['label'] ?? null,
+        ];
+
+        $file = $paymentProof['file'] ?? null;
+        if ($file instanceof UploadedFile) {
+            $path = $file->store('kp-exam-payment-proofs', 'local');
+            $payload += [
+                'payment_proof_original_filename' => $file->getClientOriginalName(),
+                'payment_proof_path' => $path,
+                'payment_proof_disk' => 'local',
+                'payment_proof_mime' => $file->getClientMimeType(),
+                'payment_proof_size' => $file->getSize(),
+            ];
+        }
+
+        return $payload;
     }
 
     private function ensureExaminers(array $examinerIds): void

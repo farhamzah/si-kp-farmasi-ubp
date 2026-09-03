@@ -448,6 +448,8 @@ class DemoEndToEndSeeder extends Seeder
                 'requested_by' => $studentUser->id,
                 'status' => 'dijadwalkan',
                 'request_note' => 'Pengajuan sidang demo.',
+                'payment_proof_url' => 'https://drive.google.com/file/d/demo-payment-proof/view',
+                'payment_proof_label' => 'Bukti pembayaran KP demo',
                 'submitted_at' => now()->subDay(),
                 'reviewed_by' => $coordinator->id,
                 'reviewed_at' => now()->subDay(),

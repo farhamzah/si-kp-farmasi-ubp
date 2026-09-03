@@ -6,7 +6,23 @@ use Illuminate\Database\Eloquent\Model;
 
 class KpExamRequest extends Model
 {
-    protected $fillable = ['kp_assignment_id', 'requested_by', 'status', 'request_note', 'submitted_at', 'reviewed_by', 'reviewed_at', 'review_note'];
+    protected $fillable = [
+        'kp_assignment_id',
+        'requested_by',
+        'status',
+        'request_note',
+        'payment_proof_url',
+        'payment_proof_label',
+        'payment_proof_original_filename',
+        'payment_proof_path',
+        'payment_proof_disk',
+        'payment_proof_mime',
+        'payment_proof_size',
+        'submitted_at',
+        'reviewed_by',
+        'reviewed_at',
+        'review_note',
+    ];
 
     protected function casts(): array
     {
@@ -51,5 +67,15 @@ class KpExamRequest extends Model
     public function isActive(): bool
     {
         return ! in_array($this->status, ['ditolak', 'dibatalkan'], true);
+    }
+
+    public function hasPaymentProof(): bool
+    {
+        return filled($this->payment_proof_url) || filled($this->payment_proof_path);
+    }
+
+    public function paymentProofLabel(): string
+    {
+        return $this->payment_proof_original_filename ?: ($this->payment_proof_label ?: ($this->payment_proof_url ? 'Link bukti pembayaran KP' : 'Belum tersedia'));
     }
 }

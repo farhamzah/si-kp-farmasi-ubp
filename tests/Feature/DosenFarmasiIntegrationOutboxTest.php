@@ -324,7 +324,14 @@ class DosenFarmasiIntegrationOutboxTest extends TestCase
             'field_guidance_completion_note' => 'Bimbingan lapangan selesai untuk integrasi sidang.',
         ]);
 
-        return KpExamRequest::query()->create(['kp_assignment_id' => $assignment->id, 'requested_by' => $studentUser->id, 'status' => 'disetujui', 'submitted_at' => now()]);
+        return KpExamRequest::query()->create([
+            'kp_assignment_id' => $assignment->id,
+            'requested_by' => $studentUser->id,
+            'status' => 'disetujui',
+            'payment_proof_url' => 'https://drive.google.com/file/d/payment-proof-integration/view',
+            'payment_proof_label' => 'Bukti pembayaran KP',
+            'submitted_at' => now(),
+        ]);
     }
 
     private function lecturer(string $email, array $roles, string $coreLecturerId): Lecturer
