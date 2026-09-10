@@ -8,19 +8,20 @@
     $paymentProofItem = [
         'key' => 'payment_proof',
         'label' => 'Bukti pembayaran KP',
-        'ready' => $examRequest->hasPaymentProof(),
-        'description' => $examRequest->hasPaymentProof() ? $examRequest->paymentProofLabel() : 'Belum dilampirkan mahasiswa',
+        'ready' => $examRequest->paymentProofApproved(),
+        'description' => $examRequest->hasPaymentProof() ? $examRequest->paymentProofStatusLabel().' - '.$examRequest->paymentProofLabel() : 'Belum dilampirkan mahasiswa',
     ];
     $checklistItems = collect($eligibility['items'])->push($paymentProofItem);
     $report = $assignment->finalReport;
     $canReview = in_array($examRequest->status, ['diajukan', 'revisi'], true);
-    $canApprove = $canReview && $eligibility['ready'] && $examRequest->hasPaymentProof();
-    $allRequirementsReady = $eligibility['ready'] && $examRequest->hasPaymentProof();
+    $canApprove = $canReview && $eligibility['ready'] && $examRequest->paymentProofApproved();
+    $canReviewPaymentProof = $canReview && $examRequest->hasPaymentProof();
+    $allRequirementsReady = $eligibility['ready'] && $examRequest->paymentProofApproved();
 @endphp
 <div class="space-y-5">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <a href="{{ route('management.exam-requests.index') }}" class="inline-flex rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">Kembali ke Antrian</a>
-        @if($examRequest->canBeScheduled() && $eligibility['ready'] && $examRequest->hasPaymentProof() && ! $examRequest->exam)
+        @if($examRequest->canBeScheduled() && $eligibility['ready'] && $examRequest->paymentProofApproved() && ! $examRequest->exam)
             <a href="{{ route('management.exam-requests.schedule', $examRequest) }}" class="inline-flex rounded-xl bg-cyan-700 px-4 py-2 text-sm font-bold text-white shadow-sm">Lanjut Jadwalkan Sidang</a>
         @endif
     </div>
@@ -88,6 +89,7 @@
                         <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Bukti pembayaran KP</p>
                         <h3 class="mt-1 text-xl font-black text-slate-950">{{ $examRequest->paymentProofLabel() }}</h3>
                         <p class="mt-1 text-sm text-slate-500">{{ $examRequest->hasPaymentProof() ? 'Dilampirkan saat mahasiswa mengajukan sidang.' : 'Belum ada bukti pembayaran pada pengajuan ini.' }}</p>
+                        <span class="mt-3 inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $examRequest->paymentProofBadgeClass() }}">{{ $examRequest->paymentProofStatusLabel() }}</span>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         @if($examRequest->payment_proof_path)
@@ -99,6 +101,25 @@
                         @endif
                     </div>
                 </div>
+                @if($examRequest->payment_proof_review_note)
+                    <div class="mt-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">{{ $examRequest->payment_proof_review_note }}</div>
+                @endif
+                @if($canReviewPaymentProof)
+                    <div class="mt-5 grid gap-4 lg:grid-cols-2">
+                        <form method="POST" action="{{ route('management.exam-requests.payment-proof.approve', $examRequest) }}" class="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4">
+                            @csrf
+                            <p class="text-sm font-black text-emerald-800">Validasi bukti pembayaran</p>
+                            <textarea name="payment_proof_review_note" rows="2" placeholder="Catatan opsional" class="mt-3 w-full rounded-xl border border-emerald-200 px-3 py-2 text-sm shadow-sm"></textarea>
+                            <button @disabled($examRequest->paymentProofApproved()) class="mt-3 w-full rounded-xl px-4 py-3 text-sm font-bold text-white shadow-sm {{ $examRequest->paymentProofApproved() ? 'cursor-not-allowed bg-slate-300' : 'bg-emerald-600' }}">Setujui Bukti Pembayaran</button>
+                        </form>
+                        <form method="POST" action="{{ route('management.exam-requests.payment-proof.revision', $examRequest) }}" class="rounded-2xl border border-blue-200 bg-blue-50/60 p-4">
+                            @csrf
+                            <p class="text-sm font-black text-blue-800">Balikkan jika tidak sesuai</p>
+                            <textarea name="payment_proof_review_note" rows="2" required placeholder="Contoh: Bukti yang diunggah bukan pembayaran KP, mohon ganti dengan bukti yang benar." class="mt-3 w-full rounded-xl border border-blue-200 px-3 py-2 text-sm shadow-sm"></textarea>
+                            <button class="mt-3 w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-sm">Minta Ganti Bukti</button>
+                        </form>
+                    </div>
+                @endif
             </x-ui.card>
 
             <x-ui.card>
@@ -131,7 +152,7 @@
                         <textarea name="review_note" rows="2" placeholder="Catatan opsional untuk persetujuan" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm shadow-sm"></textarea>
                         <button @disabled(! $canApprove) class="mt-3 w-full rounded-xl px-4 py-3 text-sm font-bold text-white shadow-sm {{ $canApprove ? 'bg-emerald-600' : 'cursor-not-allowed bg-slate-300' }}">Setujui Masuk Jadwal</button>
                         @unless($canApprove)
-                            <p class="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">Validasi akhir terkunci sampai semua checklist kesiapan sidang berstatus OK.</p>
+                            <p class="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">Validasi akhir terkunci sampai semua checklist kesiapan sidang berstatus OK, termasuk bukti pembayaran yang disetujui koordinator.</p>
                         @endunless
                     </form>
                     <form method="POST" action="{{ route('management.exam-requests.revision', $examRequest) }}" class="mt-4">
@@ -150,7 +171,7 @@
 
                 @if($examRequest->exam)
                     <a href="{{ route('management.exams.show', $examRequest->exam) }}" class="mt-4 block rounded-xl bg-cyan-700 px-4 py-3 text-center text-sm font-bold text-white shadow-sm">Lihat Jadwal Sidang</a>
-                @elseif($examRequest->canBeScheduled() && $eligibility['ready'] && $examRequest->hasPaymentProof())
+                @elseif($examRequest->canBeScheduled() && $eligibility['ready'] && $examRequest->paymentProofApproved())
                     <a href="{{ route('management.exam-requests.schedule', $examRequest) }}" class="mt-4 block rounded-xl border border-cyan-200 px-4 py-3 text-center text-sm font-bold text-cyan-700 shadow-sm">Buka Form Jadwal</a>
                 @endif
             </x-ui.card>

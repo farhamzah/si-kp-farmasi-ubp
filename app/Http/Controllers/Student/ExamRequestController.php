@@ -7,7 +7,9 @@ use App\Http\Requests\Student\SubmitExamRequestRequest;
 use App\Models\KpAssignment;
 use App\Services\KpExamService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ExamRequestController extends Controller
 {
@@ -42,6 +44,44 @@ class ExamRequestController extends Controller
         app(KpExamService::class)->cancelRequest(request()->user(), $examRequest, 'Dibatalkan oleh mahasiswa.');
 
         return back()->with('status', 'Pengajuan sidang berhasil dibatalkan.');
+    }
+
+    public function updatePaymentProof(SubmitExamRequestRequest $request, KpExamService $service): RedirectResponse
+    {
+        $assignment = $this->activeAssignmentOrFail();
+        abort_unless($assignment->examRequest, 404);
+
+        $service->replacePaymentProof($request->user(), $assignment->examRequest, [
+            'file' => $request->file('payment_proof'),
+            'url' => $request->input('payment_proof_url'),
+            'label' => $request->input('payment_proof_label'),
+        ]);
+
+        return back()->with('status', 'Bukti pembayaran berhasil diganti dan menunggu validasi koordinator.');
+    }
+
+    public function previewPaymentProof(): StreamedResponse
+    {
+        $examRequest = $this->activeAssignmentOrFail()->examRequest;
+        abort_unless($examRequest?->payment_proof_path, 404);
+
+        return Storage::disk($examRequest->payment_proof_disk ?: 'local')->response(
+            $examRequest->payment_proof_path,
+            $examRequest->paymentProofLabel(),
+            array_filter(['Content-Type' => $examRequest->payment_proof_mime]),
+            'inline'
+        );
+    }
+
+    public function downloadPaymentProof(): StreamedResponse
+    {
+        $examRequest = $this->activeAssignmentOrFail()->examRequest;
+        abort_unless($examRequest?->payment_proof_path, 404);
+
+        return Storage::disk($examRequest->payment_proof_disk ?: 'local')->download(
+            $examRequest->payment_proof_path,
+            $examRequest->paymentProofLabel()
+        );
     }
 
     private function activeAssignment(): ?KpAssignment

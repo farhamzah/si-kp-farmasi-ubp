@@ -58,13 +58,13 @@
                 $eligibility = $assignment->examEligibility();
                 $paymentProofItem = [
                     'label' => 'Bukti pembayaran KP',
-                    'ready' => $examRequest->hasPaymentProof(),
-                    'description' => $examRequest->hasPaymentProof() ? $examRequest->paymentProofLabel() : 'Belum dilampirkan mahasiswa',
+                    'ready' => $examRequest->paymentProofApproved(),
+                    'description' => $examRequest->hasPaymentProof() ? $examRequest->paymentProofStatusLabel().' - '.$examRequest->paymentProofLabel() : 'Belum dilampirkan mahasiswa',
                 ];
                 $checklistItems = collect($eligibility['items'])->push($paymentProofItem);
                 $readyCount = $checklistItems->where('ready', true)->count();
                 $totalCount = $checklistItems->count();
-                $allReady = $eligibility['ready'] && $examRequest->hasPaymentProof();
+                $allReady = $eligibility['ready'] && $examRequest->paymentProofApproved();
                 $report = $assignment->finalReport;
             @endphp
             <article class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">

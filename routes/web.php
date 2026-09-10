@@ -171,6 +171,8 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('exam-requests/{examRequest}', [ManagementExamRequestController::class, 'show'])->name('exam-requests.show');
             Route::get('exam-requests/{examRequest}/payment-proof/preview', [ManagementExamRequestController::class, 'previewPaymentProof'])->name('exam-requests.payment-proof.preview');
             Route::get('exam-requests/{examRequest}/payment-proof/download', [ManagementExamRequestController::class, 'downloadPaymentProof'])->name('exam-requests.payment-proof.download');
+            Route::post('exam-requests/{examRequest}/payment-proof/approve', [ManagementExamRequestController::class, 'approvePaymentProof'])->name('exam-requests.payment-proof.approve');
+            Route::post('exam-requests/{examRequest}/payment-proof/revision', [ManagementExamRequestController::class, 'revisionPaymentProof'])->name('exam-requests.payment-proof.revision');
             Route::post('exam-requests/{examRequest}/approve', [ManagementExamRequestController::class, 'approve'])->name('exam-requests.approve');
             Route::post('exam-requests/{examRequest}/revision', [ManagementExamRequestController::class, 'revision'])->name('exam-requests.revision');
             Route::post('exam-requests/{examRequest}/reject', [ManagementExamRequestController::class, 'reject'])->name('exam-requests.reject');
@@ -263,6 +265,9 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('laporan-akhir/files/{file}/download', [FinalReportController::class, 'download'])->name('final-reports.files.download');
             Route::get('sidang', [StudentExamRequestController::class, 'index'])->name('exams.index');
             Route::post('sidang/ajukan', [StudentExamRequestController::class, 'submit'])->name('exams.submit');
+            Route::post('sidang/bukti-pembayaran', [StudentExamRequestController::class, 'updatePaymentProof'])->name('exams.payment-proof.update');
+            Route::get('sidang/bukti-pembayaran/preview', [StudentExamRequestController::class, 'previewPaymentProof'])->name('exams.payment-proof.preview');
+            Route::get('sidang/bukti-pembayaran/download', [StudentExamRequestController::class, 'downloadPaymentProof'])->name('exams.payment-proof.download');
             Route::post('sidang/batalkan-pengajuan', [StudentExamRequestController::class, 'cancel'])->name('exams.cancel');
             Route::get('pre-post-test', [OrientationTestController::class, 'index'])->name('orientation-tests.index');
             Route::get('pre-post-test/hasil/{attempt}', [OrientationTestController::class, 'result'])->name('orientation-tests.result');

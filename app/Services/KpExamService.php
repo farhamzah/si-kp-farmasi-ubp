@@ -8,6 +8,7 @@ use App\Models\KpExamRequest;
 use App\Models\Lecturer;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\UploadedFile;
 
@@ -58,6 +59,101 @@ class KpExamService
         $this->logActivity($actor, $request->fresh(), null, 'request_approved', $old, 'disetujui', $note);
 
         return $request->fresh();
+    }
+
+    public function approvePaymentProof(User $actor, KpExamRequest $request, ?string $note = null): KpExamRequest
+    {
+        if (! $request->hasPaymentProof()) {
+            throw ValidationException::withMessages(['payment_proof' => 'Bukti pembayaran belum dilampirkan mahasiswa.']);
+        }
+        if (! in_array($request->status, ['diajukan', 'revisi'], true)) {
+            throw ValidationException::withMessages(['payment_proof' => 'Bukti pembayaran pada status pengajuan ini tidak bisa divalidasi.']);
+        }
+
+        $old = $request->paymentProofStatus();
+        $request->update([
+            'payment_proof_status' => KpExamRequest::PAYMENT_PROOF_APPROVED,
+            'payment_proof_review_note' => $note,
+            'payment_proof_reviewed_by' => $actor->id,
+            'payment_proof_reviewed_at' => now(),
+        ]);
+        $this->logActivity($actor, $request->fresh(), null, 'payment_proof_approved', $old, KpExamRequest::PAYMENT_PROOF_APPROVED, $note);
+
+        return $request->fresh();
+    }
+
+    public function requestPaymentProofRevision(User $actor, KpExamRequest $request, string $note): KpExamRequest
+    {
+        if (! $request->hasPaymentProof()) {
+            throw ValidationException::withMessages(['payment_proof' => 'Bukti pembayaran belum dilampirkan mahasiswa.']);
+        }
+        if (! in_array($request->status, ['diajukan', 'revisi'], true)) {
+            throw ValidationException::withMessages(['payment_proof' => 'Bukti pembayaran pada status pengajuan ini tidak bisa dikembalikan.']);
+        }
+
+        return DB::transaction(function () use ($actor, $request, $note) {
+            $oldProofStatus = $request->paymentProofStatus();
+            $oldRequestStatus = $request->status;
+            $request->update([
+                'status' => 'revisi',
+                'payment_proof_status' => KpExamRequest::PAYMENT_PROOF_REVISION,
+                'payment_proof_review_note' => $note,
+                'payment_proof_reviewed_by' => $actor->id,
+                'payment_proof_reviewed_at' => now(),
+                'reviewed_by' => $actor->id,
+                'reviewed_at' => now(),
+                'review_note' => $note,
+            ]);
+            $fresh = $request->fresh();
+            $this->logActivity($actor, $fresh, null, 'payment_proof_revision_requested', $oldProofStatus, KpExamRequest::PAYMENT_PROOF_REVISION, $note, ['old_request_status' => $oldRequestStatus]);
+
+            return $fresh;
+        });
+    }
+
+    public function replacePaymentProof(User $studentUser, KpExamRequest $request, array $paymentProof): KpExamRequest
+    {
+        $request->loadMissing('assignment');
+        $this->ensureStudentOwnsAssignment($studentUser, $request->assignment);
+
+        if (! $request->canReplacePaymentProof()) {
+            throw ValidationException::withMessages(['payment_proof' => 'Bukti pembayaran hanya bisa diganti sebelum pengajuan disetujui atau dijadwalkan.']);
+        }
+        if (! $this->paymentProofAvailable($paymentProof)) {
+            throw ValidationException::withMessages(['payment_proof' => 'Upload bukti pembayaran KP atau tempel link Drive bukti pembayaran pengganti.']);
+        }
+
+        return DB::transaction(function () use ($studentUser, $request, $paymentProof) {
+            $oldPath = $request->payment_proof_path;
+            $oldDisk = $request->payment_proof_disk ?: 'local';
+            $oldStatus = $request->paymentProofStatus();
+
+            $request->update([
+                'status' => 'diajukan',
+                'payment_proof_url' => null,
+                'payment_proof_label' => null,
+                'payment_proof_original_filename' => null,
+                'payment_proof_path' => null,
+                'payment_proof_disk' => null,
+                'payment_proof_mime' => null,
+                'payment_proof_size' => null,
+                'payment_proof_status' => KpExamRequest::PAYMENT_PROOF_PENDING,
+                'payment_proof_review_note' => null,
+                'payment_proof_reviewed_by' => null,
+                'payment_proof_reviewed_at' => null,
+                'review_note' => null,
+                ...$this->paymentProofPayload($paymentProof),
+            ]);
+
+            if ($oldPath) {
+                Storage::disk($oldDisk)->delete($oldPath);
+            }
+
+            $fresh = $request->fresh();
+            $this->logActivity($studentUser, $fresh, null, 'payment_proof_replaced', $oldStatus, KpExamRequest::PAYMENT_PROOF_PENDING, $paymentProof['label'] ?? null);
+
+            return $fresh;
+        });
     }
 
     public function requestRevision(User $actor, KpExamRequest $request, string $note): KpExamRequest
@@ -218,9 +314,9 @@ class KpExamService
             ]);
         }
 
-        if (! $request->hasPaymentProof()) {
+        if (! $request->paymentProofApproved()) {
             throw ValidationException::withMessages([
-                'request' => 'Validasi akhir belum bisa dilakukan. Lengkapi: Bukti pembayaran KP.',
+                'request' => 'Validasi akhir belum bisa dilakukan. Bukti pembayaran KP harus disetujui koordinator terlebih dahulu.',
             ]);
         }
     }
@@ -235,6 +331,10 @@ class KpExamService
         $payload = [
             'payment_proof_url' => $paymentProof['url'] ?? null,
             'payment_proof_label' => $paymentProof['label'] ?? null,
+            'payment_proof_status' => KpExamRequest::PAYMENT_PROOF_PENDING,
+            'payment_proof_review_note' => null,
+            'payment_proof_reviewed_by' => null,
+            'payment_proof_reviewed_at' => null,
         ];
 
         $file = $paymentProof['file'] ?? null;

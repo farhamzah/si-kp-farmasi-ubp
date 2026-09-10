@@ -48,10 +48,24 @@
 
             @if($examRequest?->hasPaymentProof())
                 <div class="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
-                    <p class="text-xs font-black uppercase tracking-widest text-emerald-700">Bukti pembayaran KP</p>
-                    <p class="mt-1 text-sm font-bold text-slate-950">{{ $examRequest->paymentProofLabel() }}</p>
-                    @if($examRequest->payment_proof_url)
-                        <a href="{{ $examRequest->payment_proof_url }}" target="_blank" rel="noopener" class="mt-3 inline-flex rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm font-bold text-emerald-700">Buka Link Drive</a>
+                    <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                        <div>
+                            <p class="text-xs font-black uppercase tracking-widest text-emerald-700">Bukti pembayaran KP</p>
+                            <p class="mt-1 text-sm font-bold text-slate-950">{{ $examRequest->paymentProofLabel() }}</p>
+                            <span class="mt-3 inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $examRequest->paymentProofBadgeClass() }}">{{ $examRequest->paymentProofStatusLabel() }}</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            @if($examRequest->payment_proof_path)
+                                <a href="{{ route('student.exams.payment-proof.preview') }}" target="_blank" rel="noopener" class="rounded-xl border border-cyan-200 bg-white px-4 py-2 text-sm font-bold text-cyan-700">Preview File</a>
+                                <a href="{{ route('student.exams.payment-proof.download') }}" class="rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white">Download</a>
+                            @endif
+                            @if($examRequest->payment_proof_url)
+                                <a href="{{ $examRequest->payment_proof_url }}" target="_blank" rel="noopener" class="rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm font-bold text-emerald-700">Buka Link Drive</a>
+                            @endif
+                        </div>
+                    </div>
+                    @if($examRequest->payment_proof_review_note)
+                        <div class="mt-4 rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm text-blue-800">{{ $examRequest->payment_proof_review_note }}</div>
                     @endif
                 </div>
             @endif
@@ -82,6 +96,31 @@
                     <textarea name="request_note" rows="3" placeholder="Catatan pengajuan opsional" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"></textarea>
                     <button class="rounded-lg bg-cyan-700 px-4 py-2 text-sm font-bold text-white">Ajukan Sidang</button>
                 </form>
+            @elseif($examRequest->canReplacePaymentProof())
+                <form method="POST" action="{{ route('student.exams.payment-proof.update') }}" enctype="multipart/form-data" class="mt-5 space-y-3">
+                    @csrf
+                    <div class="rounded-2xl border border-cyan-100 bg-cyan-50/40 p-4">
+                        <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Ganti bukti pembayaran KP</p>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">Jika file atau link yang dikirim salah, ganti dari sini. Setelah diganti, bukti pembayaran kembali menunggu validasi koordinator.</p>
+                        <div class="mt-3 grid gap-3 md:grid-cols-2">
+                            <label class="block">
+                                <span class="text-xs font-black uppercase tracking-widest text-slate-500">Upload file pengganti</span>
+                                <input type="file" name="payment_proof" accept=".pdf,.jpg,.jpeg,.png" class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+                            </label>
+                            <label class="block">
+                                <span class="text-xs font-black uppercase tracking-widest text-slate-500">Link Drive pengganti</span>
+                                <input name="payment_proof_url" value="{{ old('payment_proof_url') }}" placeholder="https://drive.google.com/file/d/..." class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+                            </label>
+                        </div>
+                        <label class="mt-3 block">
+                            <span class="text-xs font-black uppercase tracking-widest text-slate-500">Label bukti</span>
+                            <input name="payment_proof_label" value="{{ old('payment_proof_label') }}" placeholder="Contoh: Bukti pembayaran KP yang benar" class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+                        </label>
+                    </div>
+                    <button class="rounded-lg bg-cyan-700 px-4 py-2 text-sm font-bold text-white">Ganti Bukti Pembayaran</button>
+                </form>
+            @elseif($examRequest?->hasPaymentProof())
+                <div class="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">Bukti pembayaran sudah terkunci karena pengajuan telah disetujui atau dijadwalkan.</div>
             @endif
 
             @if($examRequest?->review_note)

@@ -330,6 +330,7 @@ class DosenFarmasiIntegrationOutboxTest extends TestCase
             'status' => 'disetujui',
             'payment_proof_url' => 'https://drive.google.com/file/d/payment-proof-integration/view',
             'payment_proof_label' => 'Bukti pembayaran KP',
+            'payment_proof_status' => KpExamRequest::PAYMENT_PROOF_APPROVED,
             'submitted_at' => now(),
         ]);
     }

@@ -105,6 +105,7 @@ class KpExamSchedulingTest extends TestCase
             'kp_assignment_id' => $this->assignment->id,
             'status' => 'diajukan',
             'payment_proof_url' => 'https://drive.google.com/file/d/payment-proof/view',
+            'payment_proof_status' => KpExamRequest::PAYMENT_PROOF_PENDING,
         ]);
         $this->assertDatabaseHas('kp_exam_logs', ['action' => 'request_submitted']);
 
@@ -139,11 +140,13 @@ class KpExamSchedulingTest extends TestCase
 
         $request = KpExamRequest::firstOrFail();
         Storage::disk('local')->assertExists($request->payment_proof_path);
+        $this->assertSame(KpExamRequest::PAYMENT_PROOF_PENDING, $request->payment_proof_status);
 
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->get('/management/exam-requests/'.$request->id)
             ->assertOk()
             ->assertSee('Bukti pembayaran KP')
+            ->assertSee('Menunggu validasi')
             ->assertSee('Preview File')
             ->assertSee('Download');
 
@@ -151,6 +154,128 @@ class KpExamSchedulingTest extends TestCase
             ->get('/management/exam-requests/'.$request->id.'/payment-proof/preview')
             ->assertOk()
             ->assertHeader('Content-Type', 'application/pdf');
+    }
+
+    public function test_student_can_preview_and_replace_payment_proof_before_request_is_approved(): void
+    {
+        Storage::fake('local');
+        $this->approvedFinalReport();
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/sidang/ajukan', [
+                'payment_proof' => UploadedFile::fake()->create('bukti-salah.pdf', 128, 'application/pdf'),
+                'payment_proof_label' => 'Bukti salah',
+            ])
+            ->assertRedirect();
+
+        $request = KpExamRequest::firstOrFail();
+        $oldPath = $request->payment_proof_path;
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/sidang')
+            ->assertOk()
+            ->assertSee('Ganti bukti pembayaran KP')
+            ->assertSee('Preview File');
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/sidang/bukti-pembayaran/preview')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/sidang/bukti-pembayaran', [
+                'payment_proof' => UploadedFile::fake()->create('bukti-benar.pdf', 128, 'application/pdf'),
+                'payment_proof_label' => 'Bukti benar',
+            ])
+            ->assertRedirect();
+
+        $request->refresh();
+        Storage::disk('local')->assertMissing($oldPath);
+        Storage::disk('local')->assertExists($request->payment_proof_path);
+        $this->assertSame('bukti-benar.pdf', $request->payment_proof_original_filename);
+        $this->assertSame(KpExamRequest::PAYMENT_PROOF_PENDING, $request->payment_proof_status);
+        $this->assertSame('diajukan', $request->status);
+    }
+
+    public function test_coordinator_can_return_payment_proof_and_student_can_replace_it_again(): void
+    {
+        $this->approvedFinalReport();
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/sidang/ajukan', [
+                'payment_proof_url' => 'https://drive.google.com/file/d/wrong-payment-proof/view',
+                'payment_proof_label' => 'Bukti yang salah',
+            ])
+            ->assertRedirect();
+
+        $request = KpExamRequest::firstOrFail();
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-requests/'.$request->id.'/payment-proof/revision', [
+                'payment_proof_review_note' => 'Bukti pembayaran bukan untuk KP.',
+            ])
+            ->assertRedirect();
+
+        $request->refresh();
+        $this->assertSame('revisi', $request->status);
+        $this->assertSame(KpExamRequest::PAYMENT_PROOF_REVISION, $request->payment_proof_status);
+        $this->assertSame('Bukti pembayaran bukan untuk KP.', $request->payment_proof_review_note);
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/sidang')
+            ->assertOk()
+            ->assertSee('Perlu diganti')
+            ->assertSee('Bukti pembayaran bukan untuk KP.');
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/sidang/bukti-pembayaran', [
+                'payment_proof_url' => 'https://drive.google.com/file/d/correct-payment-proof/view',
+                'payment_proof_label' => 'Bukti pembayaran benar',
+            ])
+            ->assertRedirect();
+
+        $request->refresh();
+        $this->assertSame('diajukan', $request->status);
+        $this->assertSame(KpExamRequest::PAYMENT_PROOF_PENDING, $request->payment_proof_status);
+        $this->assertSame('https://drive.google.com/file/d/correct-payment-proof/view', $request->payment_proof_url);
+        $this->assertNull($request->payment_proof_review_note);
+    }
+
+    public function test_coordinator_must_approve_payment_proof_before_approving_exam_request(): void
+    {
+        $this->approvedFinalReport();
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/sidang/ajukan', [
+                'payment_proof_url' => 'https://drive.google.com/file/d/payment-proof/view',
+                'payment_proof_label' => 'Bukti pembayaran KP',
+            ])
+            ->assertRedirect();
+
+        $request = KpExamRequest::firstOrFail();
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-requests/'.$request->id.'/approve', [
+                'review_note' => 'Syarat lengkap.',
+            ])
+            ->assertSessionHasErrors('request');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-requests/'.$request->id.'/payment-proof/approve', [
+                'payment_proof_review_note' => 'Bukti pembayaran sesuai.',
+            ])
+            ->assertRedirect();
+
+        $request->refresh();
+        $this->assertSame(KpExamRequest::PAYMENT_PROOF_APPROVED, $request->payment_proof_status);
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-requests/'.$request->id.'/approve', [
+                'review_note' => 'Syarat lengkap.',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame('disetujui', $request->fresh()->status);
     }
 
     public function test_admin_and_koordinator_can_monitor_exam_requests_but_field_supervisor_cannot(): void
@@ -479,6 +604,9 @@ class KpExamSchedulingTest extends TestCase
                 'status' => 'diajukan',
                 'payment_proof_url' => 'https://drive.google.com/file/d/payment-proof/view',
                 'payment_proof_label' => 'Bukti pembayaran KP',
+                'payment_proof_status' => KpExamRequest::PAYMENT_PROOF_APPROVED,
+                'payment_proof_reviewed_by' => $this->koordinator->id,
+                'payment_proof_reviewed_at' => now(),
                 'submitted_at' => now(),
             ]
         );

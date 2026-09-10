@@ -79,6 +79,27 @@ class ExamRequestController extends Controller
         return back()->with('status', 'Pengajuan sidang berhasil ditolak.');
     }
 
+    public function approvePaymentProof(Request $request, KpExamRequest $examRequest, KpExamService $service): RedirectResponse
+    {
+        $request->validate(['payment_proof_review_note' => ['nullable', 'string', 'max:1000']]);
+        $service->approvePaymentProof($request->user(), $examRequest, $request->input('payment_proof_review_note'));
+
+        return back()->with('status', 'Bukti pembayaran berhasil disetujui.');
+    }
+
+    public function revisionPaymentProof(Request $request, KpExamRequest $examRequest, KpExamService $service): RedirectResponse
+    {
+        $validated = $request->validate([
+            'payment_proof_review_note' => ['required', 'string', 'max:1000'],
+        ], [
+            'payment_proof_review_note.required' => 'Catatan pengembalian bukti pembayaran wajib diisi.',
+        ]);
+
+        $service->requestPaymentProofRevision($request->user(), $examRequest, $validated['payment_proof_review_note']);
+
+        return back()->with('status', 'Bukti pembayaran dikembalikan ke mahasiswa untuk diganti.');
+    }
+
     public function previewPaymentProof(KpExamRequest $examRequest): StreamedResponse
     {
         abort_unless($examRequest->payment_proof_path, 404);
