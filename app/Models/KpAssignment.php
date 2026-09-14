@@ -146,12 +146,16 @@ class KpAssignment extends Model
         $report = $this->finalReport;
         $internalGuidanceCompleted = (bool) $report?->internal_guidance_completed_at;
         $fieldGuidanceCompleted = (bool) $report?->field_guidance_completed_at;
-        $internalGuidanceDescription = $internalGuidanceCompleted
-            ? $reviewedInternalGuidance.'/8 sesi direview, bimbingan dalam selesai'
-            : $reviewedInternalGuidance.'/8 sesi direview, '.$pendingInternalGuidance.' menunggu validasi';
-        $fieldGuidanceDescription = $fieldGuidanceCompleted
-            ? $reviewedFieldGuidance.' sesi direview, bimbingan lapangan selesai'
-            : $reviewedFieldGuidance.' sesi direview, '.$pendingFieldGuidance.' menunggu validasi';
+        $internalGuidanceDescription = match (true) {
+            $internalGuidanceCompleted => $reviewedInternalGuidance.'/8 sesi direview, bimbingan dalam selesai',
+            $reviewedInternalGuidance >= 8 && $pendingInternalGuidance === 0 => $reviewedInternalGuidance.'/8 sesi direview, menunggu pembimbing dalam klik Tandai Bimbingan Dalam Selesai',
+            default => $reviewedInternalGuidance.'/8 sesi direview, '.$pendingInternalGuidance.' menunggu validasi',
+        };
+        $fieldGuidanceDescription = match (true) {
+            $fieldGuidanceCompleted => $reviewedFieldGuidance.' sesi direview, bimbingan lapangan selesai',
+            $reviewedFieldGuidance > 0 && $pendingFieldGuidance === 0 => $reviewedFieldGuidance.' sesi direview, menunggu pembimbing lapangan klik Tandai Bimbingan Lapangan Selesai',
+            default => $reviewedFieldGuidance.' sesi direview, '.$pendingFieldGuidance.' menunggu validasi',
+        };
 
         $items = [
             [
@@ -330,9 +334,11 @@ class KpAssignment extends Model
                 'key' => 'internal_report_guidance_completed',
                 'label' => 'Bimbingan laporan pembimbing dalam minimal 8 kali dan selesai',
                 'ready' => $internalGuidanceCompleted && $reviewedInternalGuidance >= 8 && $pendingInternalGuidance === 0,
-                'description' => $internalGuidanceCompleted
-                    ? $reviewedInternalGuidance.'/8 sesi direview, selesai'
-                    : $reviewedInternalGuidance.'/8 sesi direview, '.$pendingInternalGuidance.' menunggu validasi',
+                'description' => match (true) {
+                    $internalGuidanceCompleted => $reviewedInternalGuidance.'/8 sesi direview, selesai',
+                    $reviewedInternalGuidance >= 8 && $pendingInternalGuidance === 0 => $reviewedInternalGuidance.'/8 sesi direview, menunggu pembimbing dalam klik Tandai Bimbingan Dalam Selesai',
+                    default => $reviewedInternalGuidance.'/8 sesi direview, '.$pendingInternalGuidance.' menunggu validasi',
+                },
             ],
             [
                 'key' => 'internal_report_approved',

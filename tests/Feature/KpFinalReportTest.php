@@ -304,6 +304,10 @@ class KpFinalReportTest extends TestCase
         }
 
         $this->assertFalse($this->assignment->fresh()->isEligibleForExamRequest());
+        $internalGuidanceItem = collect($this->assignment->fresh()->examEligibility()['items'])
+            ->firstWhere('key', 'internal_report_guidance_completed');
+        $this->assertFalse($internalGuidanceItem['ready']);
+        $this->assertSame('8/8 sesi direview, menunggu pembimbing dalam klik Tandai Bimbingan Dalam Selesai', $internalGuidanceItem['description']);
 
         $this->actingAs($this->lecturerUser)->withSession(['active_role' => 'pembimbing_dalam'])
             ->post('/pembimbing-dalam/laporan-akhir/'.$report->id.'/bimbingan-selesai', [
