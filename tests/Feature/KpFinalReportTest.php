@@ -429,6 +429,41 @@ class KpFinalReportTest extends TestCase
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])->get('/management/final-reports')->assertForbidden();
     }
 
+    public function test_management_monitor_shows_and_filters_each_supervisor_completion_separately(): void
+    {
+        $report = $this->submittedReport();
+        $report->update([
+            'internal_guidance_completed_at' => now(),
+            'internal_review_status' => 'disetujui',
+            'field_review_status' => 'pending',
+        ]);
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/final-reports')
+            ->assertOk()
+            ->assertSee('Pembimbing Dalam Lengkap')
+            ->assertSee('Pembimbing Lapangan')
+            ->assertSee('Bimbingan: Selesai')
+            ->assertSee('Laporan: Disetujui')
+            ->assertSee('Bimbingan: Belum')
+            ->assertSee('Laporan: Belum Review');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/final-reports?internal_status=completed')
+            ->assertOk()
+            ->assertSee('2210631230201');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/final-reports?field_status=completed')
+            ->assertOk()
+            ->assertDontSee('2210631230201');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/final-reports?sort=student')
+            ->assertOk()
+            ->assertSee('2210631230201');
+    }
+
     public function test_download_file_is_protected_by_ownership(): void
     {
         $report = $this->submittedReport();
