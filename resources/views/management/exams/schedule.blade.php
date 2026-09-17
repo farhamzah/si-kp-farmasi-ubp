@@ -144,6 +144,21 @@
                         </div>
                     </div>
                     <div class="mt-4">
+                        <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                            <label class="flex cursor-pointer items-start gap-3">
+                                <input type="checkbox" name="allow_backdate" value="1" @checked(old('allow_backdate', (bool) $exam?->backdate_reason)) class="mt-1 rounded border-amber-300 text-amber-600 focus:ring-amber-500">
+                                <span>
+                                    <span class="block text-sm font-black text-amber-900">Izinkan tanggal sidang sebelumnya</span>
+                                    <span class="mt-1 block text-xs leading-5 text-amber-800">Khusus sidang yang sudah dilaksanakan lebih awal atas kondisi tempat KP. Pilihan ini hanya mengubah tanggal jadwal dan tidak melewati alur atau syarat sidang.</span>
+                                </span>
+                            </label>
+                            @error('allow_backdate')<p class="mt-2 text-xs font-semibold text-red-600">{{ $message }}</p>@enderror
+                            <label class="mt-3 block text-sm font-bold text-amber-900">Alasan tanggal sebelumnya</label>
+                            <textarea name="backdate_reason" rows="2" placeholder="Contoh: Tempat KP meminta sidang dilaksanakan lebih awal karena jadwal pembimbing lapangan." class="mt-1 w-full rounded-xl border border-amber-300 bg-white px-3 py-3 text-sm shadow-sm">{{ old('backdate_reason', $exam?->backdate_reason) }}</textarea>
+                            @error('backdate_reason')<p class="mt-1 text-xs font-semibold text-red-600">{{ $message }}</p>@enderror
+                        </div>
+                    </div>
+                    <div class="mt-4">
                         <label class="text-sm font-bold text-slate-800">Catatan Jadwal</label>
                         <textarea name="note" rows="3" placeholder="Catatan untuk peserta sidang, penguji, atau admin." class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm shadow-sm">{{ old('note', $exam?->note) }}</textarea>
                         @error('note')<p class="mt-1 text-xs font-semibold text-red-600">{{ $message }}</p>@enderror

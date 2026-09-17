@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class KpExam extends Model
 {
-    protected $fillable = ['kp_exam_request_id', 'kp_assignment_id', 'supervisor_id', 'examiner_id', 'chair_lecturer_id', 'minutes_sequence', 'minutes_number', 'exam_date', 'start_time', 'end_time', 'mode', 'room', 'meeting_link', 'status', 'scheduled_by', 'scheduled_at', 'note', 'integration_revision'];
+    protected $fillable = ['kp_exam_request_id', 'kp_assignment_id', 'supervisor_id', 'examiner_id', 'chair_lecturer_id', 'minutes_sequence', 'minutes_number', 'exam_date', 'start_time', 'end_time', 'mode', 'room', 'meeting_link', 'status', 'scheduled_by', 'scheduled_at', 'note', 'backdate_reason', 'integration_revision'];
 
     protected function casts(): array
     {

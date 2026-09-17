@@ -7,10 +7,11 @@ use App\Models\KpExam;
 use App\Models\KpExamRequest;
 use App\Models\Lecturer;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Http\UploadedFile;
 
 class KpExamService
 {
@@ -206,7 +207,7 @@ class KpExamService
             $exam->update(['integration_revision' => 1]);
             $oldRequestStatus = $request->status;
             $request->update(['status' => 'dijadwalkan', 'reviewed_by' => $actor->id, 'reviewed_at' => now()]);
-            $this->logActivity($actor, $request, $exam, 'exam_scheduled', $oldRequestStatus, 'dijadwalkan', $data['note'] ?? null, ['exam_date' => $data['exam_date'], 'examiner_ids' => $examinerIds]);
+            $this->logActivity($actor, $request, $exam, 'exam_scheduled', $oldRequestStatus, 'dijadwalkan', $data['note'] ?? null, ['exam_date' => $data['exam_date'], 'examiner_ids' => $examinerIds, 'backdate_reason' => $exam->backdate_reason]);
             $this->outbox->enqueueExamScheduled($exam->fresh(['assignment.student.user', 'assignment.period', 'supervisor', 'examiner', 'examiners']));
 
             return $exam;
@@ -236,10 +237,11 @@ class KpExamService
                 'meeting_link' => $data['meeting_link'] ?? null,
                 'status' => 'dijadwalkan',
                 'note' => $data['note'] ?? null,
+                'backdate_reason' => $this->backdateReason($data),
                 'integration_revision' => ((int) $exam->integration_revision) + 1,
             ]);
             $this->syncExaminers($exam, $examinerIds);
-            $this->logActivity($actor, $exam->request, $exam->fresh(), 'exam_rescheduled', $oldStatus, 'dijadwalkan', $data['note'] ?? null, ['examiner_ids' => $examinerIds]);
+            $this->logActivity($actor, $exam->request, $exam->fresh(), 'exam_rescheduled', $oldStatus, 'dijadwalkan', $data['note'] ?? null, ['examiner_ids' => $examinerIds, 'backdate_reason' => $this->backdateReason($data)]);
             $this->outbox->enqueueExamRescheduled($exam->fresh(['assignment.student.user', 'assignment.period', 'supervisor', 'examiner', 'examiners']), $oldExaminerIds, $data['note'] ?? null);
 
             return $exam->fresh(['examiners']);
@@ -379,7 +381,17 @@ class KpExamService
             'scheduled_by' => $actor->id,
             'scheduled_at' => now(),
             'note' => $data['note'] ?? null,
+            'backdate_reason' => $this->backdateReason($data),
         ];
+    }
+
+    private function backdateReason(array $data): ?string
+    {
+        if (! Carbon::parse($data['exam_date'])->startOfDay()->lt(today())) {
+            return null;
+        }
+
+        return trim((string) ($data['backdate_reason'] ?? '')) ?: null;
     }
 
     private function examinerIdsFrom(array $data): array

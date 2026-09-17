@@ -575,6 +575,69 @@ class KpExamSchedulingTest extends TestCase
             ->assertSessionHasErrors('meeting_link');
     }
 
+    public function test_backdated_schedule_requires_confirmation_and_reason(): void
+    {
+        $request = $this->approvedExamRequest();
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-requests/'.$request->id.'/schedule', $this->validSchedulePayload([
+                'exam_date' => now()->subWeek()->toDateString(),
+            ]))
+            ->assertSessionHasErrors(['allow_backdate', 'backdate_reason']);
+
+        $this->assertDatabaseCount('kp_exams', 0);
+    }
+
+    public function test_coordinator_can_record_exceptional_backdated_schedule_without_bypassing_flow(): void
+    {
+        $request = $this->approvedExamRequest();
+        $reason = 'Tempat KP meminta sidang dilaksanakan lebih awal.';
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-requests/'.$request->id.'/schedule', $this->validSchedulePayload([
+                'exam_date' => now()->subWeek()->toDateString(),
+                'allow_backdate' => '1',
+                'backdate_reason' => $reason,
+            ]))
+            ->assertRedirect();
+
+        $exam = KpExam::firstOrFail();
+        $this->assertSame($reason, $exam->backdate_reason);
+        $this->assertSame('dijadwalkan', $request->fresh()->status);
+        $this->assertDatabaseHas('kp_exam_logs', [
+            'kp_exam_id' => $exam->id,
+            'action' => 'exam_scheduled',
+        ]);
+    }
+
+    public function test_coordinator_can_preview_print_and_download_filtered_exam_schedule(): void
+    {
+        $exam = $this->scheduledExam();
+        $query = ['status' => 'dijadwalkan', 'date_from' => now()->toDateString()];
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/exams/report/preview?'.http_build_query($query))
+            ->assertOk()
+            ->assertSee('DAFTAR JADWAL SIDANG KERJA PRAKTIK')
+            ->assertSee($this->mahasiswa->name)
+            ->assertSee('Download PDF')
+            ->assertSee('Print');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/exams/report/preview?'.http_build_query($query + ['print' => 1]))
+            ->assertOk()
+            ->assertSee('onload="window.print()"', false);
+
+        $pdfResponse = $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/exams/report/pdf?'.http_build_query($query))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf')
+            ->assertDownload('jadwal-sidang-kp.pdf');
+
+        $this->assertStringStartsWith('%PDF-', $pdfResponse->getContent());
+        $this->assertDatabaseHas('kp_exams', ['id' => $exam->id]);
+    }
+
     public function test_supervisor_and_examiner_can_only_open_their_own_exam_schedule(): void
     {
         $exam = $this->scheduledExam();

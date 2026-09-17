@@ -13,7 +13,7 @@
     @endif
 
     <x-ui.card>
-        <form method="GET" class="grid gap-3 md:grid-cols-[220px_220px_auto]">
+        <form method="GET" class="grid gap-3 md:grid-cols-2 xl:grid-cols-[190px_180px_170px_170px_auto]">
             <select name="period" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
                 <option value="">Semua Periode</option>
                 @foreach($periods as $period)
@@ -26,6 +26,8 @@
                     <option value="{{ $value }}" @selected(($filters['status'] ?? '') === $value)>{{ $label }}</option>
                 @endforeach
             </select>
+            <input type="date" name="date_from" value="{{ $filters['date_from'] ?? '' }}" title="Tanggal mulai" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+            <input type="date" name="date_to" value="{{ $filters['date_to'] ?? '' }}" title="Tanggal akhir" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
             <button class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Filter</button>
         </form>
     </x-ui.card>
@@ -36,6 +38,11 @@
                 <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Surat undangan sidang</p>
                 <h2 class="mt-1 text-xl font-black text-slate-950">Kelola jadwal dan surat resmi</h2>
                 <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-600">Pejabat penandatangan diatur sekali dan berlaku untuk semua surat selama masa jabatan. Dari daftar jadwal ini koordinator dapat menerbitkan undangan satu per satu atau sekaligus.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('management.exams.report.preview', $filters) }}" target="_blank" class="rounded-xl border border-cyan-200 bg-white px-4 py-2 text-sm font-black text-cyan-700">Preview Jadwal</a>
+                <a href="{{ route('management.exams.report.pdf', $filters) }}" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700">Download PDF</a>
+                <a href="{{ route('management.exams.report.preview', array_merge($filters, ['print' => 1])) }}" target="_blank" class="rounded-xl bg-slate-950 px-4 py-2 text-sm font-black text-white">Print</a>
             </div>
         </div>
 
@@ -132,10 +139,16 @@
                                 @if($exam->minutes)
                                     <span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-black text-cyan-700 ring-1 ring-cyan-200">BA: {{ $exam->minutes->statusLabel() }}</span>
                                 @endif
+                                @if($exam->backdate_reason)
+                                    <span class="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-black text-amber-700 ring-1 ring-amber-200">Kasus backdate</span>
+                                @endif
                             </div>
                             <h3 class="mt-3 text-lg font-black text-slate-950">{{ $exam->assignment->student->user->name }}</h3>
                             <p class="mt-1 text-sm text-slate-500">{{ $exam->assignment->student->nim ?: '-' }} · {{ $exam->assignment->period?->name ?? '-' }}</p>
                             <p class="mt-2 text-sm font-semibold text-slate-700">{{ $exam->assignment->place?->name ?? '-' }}</p>
+                            @if($exam->backdate_reason)
+                                <p class="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800 ring-1 ring-amber-100"><strong>Alasan tanggal sebelumnya:</strong> {{ $exam->backdate_reason }}</p>
+                            @endif
                         </div>
 
                         <div class="grid gap-2 text-sm text-slate-700">

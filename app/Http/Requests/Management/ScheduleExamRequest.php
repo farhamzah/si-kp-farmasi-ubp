@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Management;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 
 class ScheduleExamRequest extends FormRequest
@@ -42,6 +43,8 @@ class ScheduleExamRequest extends FormRequest
             'room' => ['required_if:mode,offline,hybrid', 'nullable', 'string', 'max:255'],
             'meeting_link' => ['required_if:mode,online,hybrid', 'nullable', 'url', 'max:255'],
             'note' => ['nullable', 'string', 'max:2000'],
+            'allow_backdate' => ['nullable', 'boolean'],
+            'backdate_reason' => ['nullable', 'string', 'max:1000'],
         ];
     }
 
@@ -58,6 +61,18 @@ class ScheduleExamRequest extends FormRequest
 
             if ($chairId && $chairId !== $internalSupervisorId && ! in_array($chairId, $examinerIds, true)) {
                 $validator->errors()->add('chair_lecturer_id', 'Ketua sidang pengganti harus dipilih dari daftar penguji sidang.');
+            }
+
+            if (! $validator->errors()->has('exam_date') && $this->filled('exam_date')) {
+                $isBackdated = Carbon::parse($this->input('exam_date'))->startOfDay()->lt(today());
+
+                if ($isBackdated && ! $this->boolean('allow_backdate')) {
+                    $validator->errors()->add('allow_backdate', 'Konfirmasi penjadwalan tanggal sebelumnya wajib dicentang.');
+                }
+
+                if ($isBackdated && mb_strlen(trim((string) $this->input('backdate_reason'))) < 10) {
+                    $validator->errors()->add('backdate_reason', 'Jelaskan alasan penjadwalan tanggal sebelumnya minimal 10 karakter.');
+                }
             }
         }];
     }

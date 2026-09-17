@@ -184,6 +184,8 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('exam-requests/{examRequest}/schedule', [ManagementExamScheduleController::class, 'create'])->name('exam-requests.schedule');
             Route::post('exam-requests/{examRequest}/schedule', [ManagementExamScheduleController::class, 'store'])->name('exam-requests.schedule.store');
             Route::get('exams', [ManagementExamScheduleController::class, 'index'])->name('exams.index');
+            Route::get('exams/report/preview', [ManagementExamScheduleController::class, 'reportPreview'])->name('exams.report.preview');
+            Route::get('exams/report/pdf', [ManagementExamScheduleController::class, 'reportPdf'])->name('exams.report.pdf');
             Route::post('exam-minutes/{minute}/publish', [ExamMinuteController::class, 'publish'])->name('exam-minutes.publish');
             Route::get('exams/{exam}', [ManagementExamScheduleController::class, 'show'])->name('exams.show');
             Route::get('exams/{exam}/edit', [ManagementExamScheduleController::class, 'edit'])->name('exams.edit');
