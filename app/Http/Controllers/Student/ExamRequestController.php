@@ -57,7 +57,7 @@ class ExamRequestController extends Controller
             'label' => $request->input('payment_proof_label'),
         ]);
 
-        return back()->with('status', 'Bukti pembayaran berhasil diganti dan menunggu validasi koordinator.');
+        return back()->with('status', 'Bukti pembayaran berhasil disimpan dan menunggu validasi koordinator.');
     }
 
     public function previewPaymentProof(): StreamedResponse
@@ -86,7 +86,7 @@ class ExamRequestController extends Controller
 
     private function activeAssignment(): ?KpAssignment
     {
-        return request()->user()->student?->assignments()->whereIn('status', ['aktif', 'berjalan'])->latest()->first();
+        return request()->user()->student?->assignments()->whereIn('status', ['aktif', 'berjalan', 'selesai'])->latest()->first();
     }
 
     private function activeAssignmentOrFail(): KpAssignment

@@ -130,6 +130,6 @@ class KpExamRequest extends Model
 
     public function canReplacePaymentProof(): bool
     {
-        return $this->isActive() && in_array($this->status, ['diajukan', 'revisi'], true);
+        return $this->isActive();
     }
 }

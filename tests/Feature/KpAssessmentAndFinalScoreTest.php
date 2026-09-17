@@ -58,7 +58,16 @@ class KpAssessmentAndFinalScoreTest extends TestCase
         $this->examinerUser = $this->makeUser('examiner-score@test.local', ['penguji']);
         $this->examiner = Lecturer::create(['user_id' => $this->examinerUser->id, 'nidn_nip' => '881102', 'status' => 'active']);
         $this->assignment = $this->makeAssignment($student);
-        $request = KpExamRequest::create(['kp_assignment_id' => $this->assignment->id, 'requested_by' => $this->mahasiswa->id, 'status' => 'dijadwalkan', 'submitted_at' => now()]);
+        $request = KpExamRequest::create([
+            'kp_assignment_id' => $this->assignment->id,
+            'requested_by' => $this->mahasiswa->id,
+            'status' => 'dijadwalkan',
+            'submitted_at' => now(),
+            'payment_proof_url' => 'https://drive.google.com/example-payment-proof',
+            'payment_proof_status' => KpExamRequest::PAYMENT_PROOF_APPROVED,
+            'payment_proof_reviewed_by' => $this->koordinator->id,
+            'payment_proof_reviewed_at' => now(),
+        ]);
         $this->exam = KpExam::create(['kp_exam_request_id' => $request->id, 'kp_assignment_id' => $this->assignment->id, 'supervisor_id' => $this->supervisor->id, 'examiner_id' => $this->examiner->id, 'exam_date' => now()->toDateString(), 'start_time' => '09:00', 'end_time' => '10:00', 'mode' => 'offline', 'room' => 'R1', 'status' => 'dijadwalkan']);
     }
 

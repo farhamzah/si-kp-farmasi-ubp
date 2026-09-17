@@ -11,7 +11,7 @@ class StudentScoreVisibility
 {
     public function resolve(KpAssignment $assignment): array
     {
-        $assignment->loadMissing(['period', 'student.user', 'finalScore', 'finalReport']);
+        $assignment->loadMissing(['period', 'student.user', 'finalScore', 'finalReport', 'examRequest']);
 
         $override = KpScoreVisibilityOverride::query()
             ->where('kp_period_id', $assignment->kp_period_id)
@@ -45,12 +45,13 @@ class StudentScoreVisibility
 
     public function requirements(KpAssignment $assignment): array
     {
-        $assignment->loadMissing(['finalReport', 'student.user']);
+        $assignment->loadMissing(['finalReport', 'student.user', 'examRequest']);
 
         $report = $assignment->finalReport;
         $hasFinalDocument = $report ? ($report->files()->exists() || filled($report->final_document_url)) : false;
         $reportApproved = (bool) ($report?->isApproved() && $hasFinalDocument);
         $studentQuestionnaireSubmitted = $this->studentQuestionnaireSubmitted($assignment);
+        $paymentProofApproved = (bool) $assignment->examRequest?->paymentProofApproved();
 
         return [
             [
@@ -68,6 +69,14 @@ class StudentScoreVisibility
                 'description' => $studentQuestionnaireSubmitted
                     ? 'Kuisioner mahasiswa sudah masuk.'
                     : 'Mahasiswa perlu mengisi kuisioner KP terlebih dahulu.',
+            ],
+            [
+                'key' => 'payment_proof_approved',
+                'label' => 'Bukti pembayaran KP disetujui koordinator',
+                'ready' => $paymentProofApproved,
+                'description' => $paymentProofApproved
+                    ? 'Bukti pembayaran sudah divalidasi koordinator.'
+                    : 'Upload bukti pembayaran dari menu Sidang KP dan tunggu validasi koordinator.',
             ],
         ];
     }

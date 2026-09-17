@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\KpAssignment;
+use App\Models\KpExamRequest;
 use App\Models\KpFinalReport;
 use App\Models\KpFinalScore;
 use App\Models\KpPeriod;
@@ -88,6 +89,17 @@ class StudentScoreVisibilityTest extends TestCase
             'submitted_at' => now(),
             'approved_at' => now(),
         ]);
+
+        KpExamRequest::create([
+            'kp_assignment_id' => $this->assignment->id,
+            'requested_by' => $this->mahasiswa->id,
+            'status' => 'dijadwalkan',
+            'submitted_at' => now(),
+            'payment_proof_url' => 'https://drive.google.com/example-payment-proof',
+            'payment_proof_status' => KpExamRequest::PAYMENT_PROOF_APPROVED,
+            'payment_proof_reviewed_by' => $this->koordinator->id,
+            'payment_proof_reviewed_at' => now(),
+        ]);
     }
 
     public function test_student_score_is_hidden_until_period_visibility_is_opened(): void
@@ -163,6 +175,37 @@ class StudentScoreVisibilityTest extends TestCase
             'respondent_role' => 'mahasiswa',
             'status' => 'submitted',
             'submitted_at' => now(),
+        ]);
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/nilai')
+            ->assertOk()
+            ->assertSee('Nilai Akhir KP');
+    }
+
+    public function test_approved_payment_proof_is_required_to_view_score(): void
+    {
+        $this->period->update(['score_visible_to_students' => true]);
+        $request = $this->assignment->examRequest;
+        $request->update([
+            'payment_proof_url' => null,
+            'payment_proof_status' => null,
+            'payment_proof_reviewed_by' => null,
+            'payment_proof_reviewed_at' => null,
+        ]);
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/nilai')
+            ->assertOk()
+            ->assertSee('Bukti pembayaran KP disetujui koordinator')
+            ->assertSee('Upload bukti pembayaran dari menu Sidang KP')
+            ->assertDontSee('Nilai Akhir KP');
+
+        $request->update([
+            'payment_proof_url' => 'https://drive.google.com/example-correct-payment-proof',
+            'payment_proof_status' => KpExamRequest::PAYMENT_PROOF_APPROVED,
+            'payment_proof_reviewed_by' => $this->koordinator->id,
+            'payment_proof_reviewed_at' => now(),
         ]);
 
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])

@@ -56,15 +56,10 @@
             @php
                 $assignment = $examRequest->assignment;
                 $eligibility = $assignment->examEligibility();
-                $paymentProofItem = [
-                    'label' => 'Bukti pembayaran KP',
-                    'ready' => $examRequest->paymentProofApproved(),
-                    'description' => $examRequest->hasPaymentProof() ? $examRequest->paymentProofStatusLabel().' - '.$examRequest->paymentProofLabel() : 'Belum dilampirkan mahasiswa',
-                ];
-                $checklistItems = collect($eligibility['items'])->push($paymentProofItem);
+                $checklistItems = collect($eligibility['items']);
                 $readyCount = $checklistItems->where('ready', true)->count();
                 $totalCount = $checklistItems->count();
-                $allReady = $eligibility['ready'] && $examRequest->paymentProofApproved();
+                $allReady = $eligibility['ready'];
                 $report = $assignment->finalReport;
             @endphp
             <article class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
@@ -110,7 +105,7 @@
                     </div>
 
                     <aside class="border-t border-slate-100 bg-slate-50/70 p-5 xl:border-l xl:border-t-0">
-                        <p class="text-xs font-black uppercase tracking-widest text-slate-500">Checklist eligible</p>
+                        <p class="text-xs font-black uppercase tracking-widest text-slate-500">Checklist sidang</p>
                         <div class="mt-3 space-y-2">
                             @foreach($checklistItems as $item)
                                 <div class="flex items-start gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-slate-200">
@@ -121,6 +116,11 @@
                                     </div>
                                 </div>
                             @endforeach
+                        </div>
+                        <div class="mt-3 rounded-xl bg-blue-50 px-3 py-3 ring-1 ring-blue-200">
+                            <p class="text-[11px] font-black uppercase tracking-wider text-blue-700">Administrasi nilai</p>
+                            <p class="mt-1 text-xs font-bold text-slate-950">Bukti pembayaran KP: {{ $examRequest->paymentProofStatusLabel() }}</p>
+                            <p class="mt-1 text-[11px] leading-4 text-slate-600">Tidak menghambat pengajuan atau jadwal sidang.</p>
                         </div>
                     </aside>
                 </div>

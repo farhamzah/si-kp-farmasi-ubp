@@ -46,12 +46,16 @@
                 @endforeach
             </div>
 
-            @if($examRequest?->hasPaymentProof())
-                <div class="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
+            @if($examRequest)
+                <div class="mt-5 rounded-2xl border {{ $examRequest->paymentProofApproved() ? 'border-emerald-200 bg-emerald-50/60' : 'border-blue-200 bg-blue-50/50' }} p-4">
                     <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div>
-                            <p class="text-xs font-black uppercase tracking-widest text-emerald-700">Bukti pembayaran KP</p>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <p class="text-xs font-black uppercase tracking-widest text-blue-700">Bukti pembayaran KP</p>
+                                <span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-black text-blue-700 ring-1 ring-blue-200">Syarat membuka nilai</span>
+                            </div>
                             <p class="mt-1 text-sm font-bold text-slate-950">{{ $examRequest->paymentProofLabel() }}</p>
+                            <p class="mt-1 text-xs leading-5 text-slate-600">Belum upload atau belum disetujui tidak menghambat pengajuan dan jadwal sidang.</p>
                             <span class="mt-3 inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $examRequest->paymentProofBadgeClass() }}">{{ $examRequest->paymentProofStatusLabel() }}</span>
                         </div>
                         <div class="flex flex-wrap gap-2">
@@ -71,13 +75,16 @@
             @endif
 
             @if(! $isReady)
-                <div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">Pengajuan sidang dibuka setelah tidak ada logbook KP yang masih menunggu validasi pembimbing lapangan, minimal 8 bimbingan laporan direview pembimbing dalam dan ditandai selesai, bimbingan laporan pembimbing lapangan ditandai selesai, laporan final disetujui kedua pembimbing, dan bukti pembayaran KP siap dilampirkan saat pengajuan. Logbook yang ditolak atau direvisi sudah dianggap direview, tetapi tidak menambah hitungan absen disetujui.</div>
+                <div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">Pengajuan sidang dibuka setelah tidak ada logbook KP yang masih menunggu validasi pembimbing lapangan, minimal 8 bimbingan laporan direview pembimbing dalam dan ditandai selesai, bimbingan laporan pembimbing lapangan ditandai selesai, serta laporan final disetujui kedua pembimbing. Logbook yang ditolak atau direvisi sudah dianggap direview, tetapi tidak menambah hitungan absen disetujui.</div>
             @elseif(! $examRequest)
                 <form method="POST" action="{{ route('student.exams.submit') }}" enctype="multipart/form-data" class="mt-5 space-y-3">
                     @csrf
                     <div class="rounded-2xl border border-cyan-100 bg-cyan-50/40 p-4">
-                        <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Bukti pembayaran KP</p>
-                        <p class="mt-1 text-sm leading-6 text-slate-600">Upload PDF/JPG/PNG maksimal 5MB, atau tempel link file Google Drive jika bukti sudah disimpan di Drive resmi.</p>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Bukti pembayaran KP</p>
+                            <span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-black text-cyan-700 ring-1 ring-cyan-200">Opsional saat mengajukan sidang</span>
+                        </div>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">Boleh dikosongkan agar tetap masuk antrian sidang. Bukti yang disetujui koordinator wajib sebelum nilai dapat dilihat.</p>
                         <div class="mt-3 grid gap-3 md:grid-cols-2">
                             <label class="block">
                                 <span class="text-xs font-black uppercase tracking-widest text-slate-500">Upload file</span>
@@ -100,8 +107,8 @@
                 <form method="POST" action="{{ route('student.exams.payment-proof.update') }}" enctype="multipart/form-data" class="mt-5 space-y-3">
                     @csrf
                     <div class="rounded-2xl border border-cyan-100 bg-cyan-50/40 p-4">
-                        <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Ganti bukti pembayaran KP</p>
-                        <p class="mt-1 text-sm leading-6 text-slate-600">Jika file atau link yang dikirim salah, ganti dari sini. Setelah diganti, bukti pembayaran kembali menunggu validasi koordinator.</p>
+                        <p class="text-xs font-black uppercase tracking-widest text-cyan-700">{{ $examRequest->hasPaymentProof() ? 'Ganti bukti pembayaran KP' : 'Unggah bukti pembayaran KP' }}</p>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">Bukti dapat diunggah atau diganti meskipun sidang sudah dijadwalkan. Setelah disimpan, bukti menunggu validasi koordinator untuk membuka akses nilai.</p>
                         <div class="mt-3 grid gap-3 md:grid-cols-2">
                             <label class="block">
                                 <span class="text-xs font-black uppercase tracking-widest text-slate-500">Upload file pengganti</span>
@@ -117,10 +124,10 @@
                             <input name="payment_proof_label" value="{{ old('payment_proof_label') }}" placeholder="Contoh: Bukti pembayaran KP yang benar" class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
                         </label>
                     </div>
-                    <button class="rounded-lg bg-cyan-700 px-4 py-2 text-sm font-bold text-white">Ganti Bukti Pembayaran</button>
+                    <button class="rounded-lg bg-cyan-700 px-4 py-2 text-sm font-bold text-white">{{ $examRequest->hasPaymentProof() ? 'Ganti Bukti Pembayaran' : 'Unggah Bukti Pembayaran' }}</button>
                 </form>
-            @elseif($examRequest?->hasPaymentProof())
-                <div class="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">Bukti pembayaran sudah terkunci karena pengajuan telah disetujui atau dijadwalkan.</div>
+            @elseif($examRequest)
+                <div class="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">Bukti pembayaran tidak dapat diubah karena pengajuan sidang sudah tidak aktif.</div>
             @endif
 
             @if($examRequest?->review_note)

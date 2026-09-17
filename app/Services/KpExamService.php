@@ -30,10 +30,6 @@ class KpExamService
         if ($assignment->examRequest()->whereNotIn('status', ['ditolak', 'dibatalkan'])->exists()) {
             throw ValidationException::withMessages(['exam' => 'Pengajuan sidang untuk penempatan ini sudah ada.']);
         }
-        if (! $this->paymentProofAvailable($paymentProof)) {
-            throw ValidationException::withMessages(['payment_proof' => 'Bukti pembayaran KP wajib diunggah atau dilampirkan melalui link Drive.']);
-        }
-
         return DB::transaction(function () use ($studentUser, $assignment, $note, $paymentProof) {
             $request = KpExamRequest::create([
                 'kp_assignment_id' => $assignment->id,
@@ -66,7 +62,7 @@ class KpExamService
         if (! $request->hasPaymentProof()) {
             throw ValidationException::withMessages(['payment_proof' => 'Bukti pembayaran belum dilampirkan mahasiswa.']);
         }
-        if (! in_array($request->status, ['diajukan', 'revisi'], true)) {
+        if (! $request->isActive()) {
             throw ValidationException::withMessages(['payment_proof' => 'Bukti pembayaran pada status pengajuan ini tidak bisa divalidasi.']);
         }
 
@@ -87,25 +83,20 @@ class KpExamService
         if (! $request->hasPaymentProof()) {
             throw ValidationException::withMessages(['payment_proof' => 'Bukti pembayaran belum dilampirkan mahasiswa.']);
         }
-        if (! in_array($request->status, ['diajukan', 'revisi'], true)) {
+        if (! $request->isActive()) {
             throw ValidationException::withMessages(['payment_proof' => 'Bukti pembayaran pada status pengajuan ini tidak bisa dikembalikan.']);
         }
 
         return DB::transaction(function () use ($actor, $request, $note) {
             $oldProofStatus = $request->paymentProofStatus();
-            $oldRequestStatus = $request->status;
             $request->update([
-                'status' => 'revisi',
                 'payment_proof_status' => KpExamRequest::PAYMENT_PROOF_REVISION,
                 'payment_proof_review_note' => $note,
                 'payment_proof_reviewed_by' => $actor->id,
                 'payment_proof_reviewed_at' => now(),
-                'reviewed_by' => $actor->id,
-                'reviewed_at' => now(),
-                'review_note' => $note,
             ]);
             $fresh = $request->fresh();
-            $this->logActivity($actor, $fresh, null, 'payment_proof_revision_requested', $oldProofStatus, KpExamRequest::PAYMENT_PROOF_REVISION, $note, ['old_request_status' => $oldRequestStatus]);
+            $this->logActivity($actor, $fresh, null, 'payment_proof_revision_requested', $oldProofStatus, KpExamRequest::PAYMENT_PROOF_REVISION, $note, ['request_status' => $request->status]);
 
             return $fresh;
         });
@@ -117,7 +108,7 @@ class KpExamService
         $this->ensureStudentOwnsAssignment($studentUser, $request->assignment);
 
         if (! $request->canReplacePaymentProof()) {
-            throw ValidationException::withMessages(['payment_proof' => 'Bukti pembayaran hanya bisa diganti sebelum pengajuan disetujui atau dijadwalkan.']);
+            throw ValidationException::withMessages(['payment_proof' => 'Bukti pembayaran pada pengajuan ini tidak bisa diubah.']);
         }
         if (! $this->paymentProofAvailable($paymentProof)) {
             throw ValidationException::withMessages(['payment_proof' => 'Upload bukti pembayaran KP atau tempel link Drive bukti pembayaran pengganti.']);
@@ -129,7 +120,6 @@ class KpExamService
             $oldStatus = $request->paymentProofStatus();
 
             $request->update([
-                'status' => 'diajukan',
                 'payment_proof_url' => null,
                 'payment_proof_label' => null,
                 'payment_proof_original_filename' => null,
@@ -141,7 +131,6 @@ class KpExamService
                 'payment_proof_review_note' => null,
                 'payment_proof_reviewed_by' => null,
                 'payment_proof_reviewed_at' => null,
-                'review_note' => null,
                 ...$this->paymentProofPayload($paymentProof),
             ]);
 
@@ -314,11 +303,6 @@ class KpExamService
             ]);
         }
 
-        if (! $request->paymentProofApproved()) {
-            throw ValidationException::withMessages([
-                'request' => 'Validasi akhir belum bisa dilakukan. Bukti pembayaran KP harus disetujui koordinator terlebih dahulu.',
-            ]);
-        }
     }
 
     private function paymentProofAvailable(array $paymentProof): bool
