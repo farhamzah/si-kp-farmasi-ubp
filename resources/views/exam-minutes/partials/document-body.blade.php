@@ -17,10 +17,10 @@
     .ba-title { text-align: center; margin: 13px 0 16px; }
     .ba-title h1 { margin: 0; font-size: 16px; text-decoration: underline; }
     .ba-title p { margin: 2px 0 0; }
-    .ba-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .ba-table { width: 100%; border-collapse: collapse; }
     .ba-table td { padding: 4px 5px; border-bottom: 1px solid #dbe3ed; vertical-align: top; overflow-wrap: anywhere; }
-    .ba-table td:first-child { width: 155px; }
-    .ba-table td:nth-child(2) { width: 14px; }
+    .ba-table .ba-colon { padding-left: 0; padding-right: 0; text-align: center; }
+    .ba-table .ba-value { padding-left: 4px; }
     .ba-section { margin-top: 15px; font-weight: bold; text-transform: uppercase; }
     .ba-box { border: 1px solid #cbd5e1; padding: 10px; min-height: 46px; margin-top: 5px; overflow-wrap: anywhere; }
     .ba-signatures { width: 100%; border-collapse: collapse; margin-top: 22px; table-layout: fixed; }
@@ -54,23 +54,23 @@
 
     <p>Pada hari ini telah dilaksanakan Sidang Kerja Praktik Program Studi Farmasi, Fakultas Farmasi, Universitas Buana Perjuangan Karawang, dengan data berikut:</p>
     <table class="ba-table">
-        <tr><td>Nama Mahasiswa</td><td>:</td><td><strong>{{ $student->user->name }}</strong></td></tr>
-        <tr><td>NIM</td><td>:</td><td>{{ $student->nim ?: '-' }}</td></tr>
-        <tr><td>Tempat KP</td><td>:</td><td>{{ $assignment->place->name }}</td></tr>
-        <tr><td>Periode KP</td><td>:</td><td>{{ $assignment->period->name }}</td></tr>
-        <tr><td>Hari/Tanggal</td><td>:</td><td>{{ $exam->exam_date?->translatedFormat('l, d F Y') }}</td></tr>
-        <tr><td>Waktu Pelaksanaan</td><td>:</td><td>{{ substr((string) $minute->actual_start_time, 0, 5) }} - {{ substr((string) $minute->actual_end_time, 0, 5) }} WIB</td></tr>
-        <tr><td>Ruang/Media</td><td>:</td><td>{{ $exam->room ?: $exam->meeting_link ?: '-' }}</td></tr>
-        <tr><td>Ketua Sidang</td><td>:</td><td>{{ $chairName }}</td></tr>
-        <tr><td>Tim Penguji</td><td>:</td><td>{{ $exam->examinerNamesLabel() }}</td></tr>
-        <tr><td>Kehadiran</td><td>:</td><td>{{ $attendees->isEmpty() ? '-' : $attendees->map(fn($v) => ucwords(str_replace('_', ' ', $v)))->implode(', ') }}</td></tr>
+        <tr><td width="22%" style="width:22%">Nama Mahasiswa</td><td width="3%" style="width:3%" class="ba-colon">:</td><td width="75%" style="width:75%" class="ba-value"><strong>{{ $student->user->name }}</strong></td></tr>
+        <tr><td width="22%">NIM</td><td width="3%" class="ba-colon">:</td><td width="75%" class="ba-value">{{ $student->nim ?: '-' }}</td></tr>
+        <tr><td width="22%">Tempat KP</td><td width="3%" class="ba-colon">:</td><td width="75%" class="ba-value">{{ $assignment->place->name }}</td></tr>
+        <tr><td width="22%">Periode KP</td><td width="3%" class="ba-colon">:</td><td width="75%" class="ba-value">{{ $assignment->period->name }}</td></tr>
+        <tr><td width="22%">Hari/Tanggal</td><td width="3%" class="ba-colon">:</td><td width="75%" class="ba-value">{{ $exam->exam_date?->translatedFormat('l, d F Y') }}</td></tr>
+        <tr><td width="22%">Waktu Pelaksanaan</td><td width="3%" class="ba-colon">:</td><td width="75%" class="ba-value">{{ substr((string) $minute->actual_start_time, 0, 5) }} - {{ substr((string) $minute->actual_end_time, 0, 5) }} WIB</td></tr>
+        <tr><td width="22%">Ruang/Media</td><td width="3%" class="ba-colon">:</td><td width="75%" class="ba-value">{{ $exam->room ?: $exam->meeting_link ?: '-' }}</td></tr>
+        <tr><td width="22%">Ketua Sidang</td><td width="3%" class="ba-colon">:</td><td width="75%" class="ba-value">{{ $chairName }}</td></tr>
+        <tr><td width="22%">Tim Penguji</td><td width="3%" class="ba-colon">:</td><td width="75%" class="ba-value">{{ $exam->examinerNamesLabel() }}</td></tr>
+        <tr><td width="22%">Kehadiran</td><td width="3%" class="ba-colon">:</td><td width="75%" class="ba-value">{{ $attendees->isEmpty() ? '-' : $attendees->map(fn($v) => ucwords(str_replace('_', ' ', $v)))->implode(', ') }}</td></tr>
     </table>
 
     <p class="ba-section">Keputusan Sidang</p>
     <table class="ba-table">
-        <tr><td>Hasil</td><td>:</td><td><strong>{{ $minute->resultLabel() }}</strong></td></tr>
-        @if($minute->revision_deadline)<tr><td>Batas Revisi</td><td>:</td><td>{{ $minute->revision_deadline->format('d M Y') }}</td></tr>@endif
-        <tr><td>Status Nilai</td><td>:</td><td>{{ $assignment->isAllRequiredScoresSubmitted() ? 'Seluruh nilai wajib telah disubmit' : 'Masih menunggu nilai wajib' }}</td></tr>
+        <tr><td width="22%" style="width:22%">Hasil</td><td width="3%" style="width:3%" class="ba-colon">:</td><td width="75%" style="width:75%" class="ba-value"><strong>{{ $minute->resultLabel() }}</strong></td></tr>
+        @if($minute->revision_deadline)<tr><td width="22%">Batas Revisi</td><td width="3%" class="ba-colon">:</td><td width="75%" class="ba-value">{{ $minute->revision_deadline->format('d M Y') }}</td></tr>@endif
+        <tr><td width="22%">Status Nilai</td><td width="3%" class="ba-colon">:</td><td width="75%" class="ba-value">{{ $assignment->isAllRequiredScoresSubmitted() ? 'Seluruh nilai wajib telah disubmit' : 'Masih menunggu nilai wajib' }}</td></tr>
     </table>
 
     <p class="ba-section">Catatan Sidang</p>
