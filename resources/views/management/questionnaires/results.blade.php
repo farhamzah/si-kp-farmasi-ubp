@@ -5,6 +5,10 @@
 
 @section('content')
 <div class="space-y-5">
+    @php
+        $reportQuery = array_filter($filters, fn ($value) => filled($value));
+    @endphp
+
     <form method="GET" action="{{ route('management.questionnaire-results.index') }}" class="grid gap-3 rounded-3xl border border-sky-100 bg-white p-5 shadow-sm lg:grid-cols-[1fr_260px_140px]">
         <input name="q" value="{{ $filters['q'] ?? '' }}" class="rounded-2xl border border-slate-200 px-4 py-3" placeholder="Cari responden, mahasiswa, email, atau tempat KP">
         <select name="audience" class="rounded-2xl border border-slate-200 px-4 py-3">
@@ -15,6 +19,18 @@
         </select>
         <button class="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white">Filter</button>
     </form>
+
+    <section class="flex flex-col gap-3 rounded-3xl border border-sky-100 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+        <div>
+            <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Laporan Analitik</p>
+            <h2 class="mt-1 text-lg font-black text-slate-950">Ringkasan Hasil Kuisioner</h2>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a target="_blank" rel="noopener" href="{{ route('management.questionnaire-results.preview', ['type' => 'summary'] + $reportQuery) }}" class="rounded-xl border border-cyan-200 px-4 py-2 text-sm font-black text-cyan-700">Preview</a>
+            <a href="{{ route('management.questionnaire-results.download', ['type' => 'summary'] + $reportQuery) }}" class="rounded-xl border border-rose-200 px-4 py-2 text-sm font-black text-rose-700">Download PDF</a>
+            <a target="_blank" rel="noopener" href="{{ route('management.questionnaire-results.preview', ['type' => 'summary', 'print' => 1] + $reportQuery) }}" class="rounded-xl bg-slate-950 px-4 py-2 text-sm font-black text-white">Print</a>
+        </div>
+    </section>
 
     <section class="grid gap-4 xl:grid-cols-2">
         @forelse($summaries as $summary)
@@ -127,9 +143,16 @@
     </section>
 
     <section class="overflow-hidden rounded-3xl border border-sky-100 bg-white shadow-sm">
-        <div class="border-b border-slate-100 p-5">
-            <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Data Mentah</p>
-            <h2 class="mt-1 text-xl font-black text-slate-950">Daftar Respons Kuisioner</h2>
+        <div class="flex flex-col gap-3 border-b border-slate-100 p-5 md:flex-row md:items-center md:justify-between">
+            <div>
+                <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Data Mentah</p>
+                <h2 class="mt-1 text-xl font-black text-slate-950">Daftar Respons Kuisioner</h2>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a target="_blank" rel="noopener" href="{{ route('management.questionnaire-results.preview', ['type' => 'responses'] + $reportQuery) }}" class="rounded-xl border border-cyan-200 px-4 py-2 text-xs font-black text-cyan-700">Preview</a>
+                <a href="{{ route('management.questionnaire-results.download', ['type' => 'responses'] + $reportQuery) }}" class="rounded-xl border border-rose-200 px-4 py-2 text-xs font-black text-rose-700">Download PDF</a>
+                <a target="_blank" rel="noopener" href="{{ route('management.questionnaire-results.preview', ['type' => 'responses', 'print' => 1] + $reportQuery) }}" class="rounded-xl bg-slate-950 px-4 py-2 text-xs font-black text-white">Print</a>
+            </div>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full text-left text-sm">

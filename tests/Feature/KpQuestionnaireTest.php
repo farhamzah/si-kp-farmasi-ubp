@@ -94,7 +94,36 @@ class KpQuestionnaireTest extends TestCase
             ->assertSee('Kuisioner singkat')
             ->assertSee('Rata-rata')
             ->assertSee('Sangat baik')
-            ->assertSee('Kepuasan sangat kuat');
+            ->assertSee('Kepuasan sangat kuat')
+            ->assertSee('Download PDF')
+            ->assertSee('Print');
+
+        $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->get('/management/questionnaire-results/reports/summary/preview?print=1')
+            ->assertOk()
+            ->assertSee('Ringkasan Hasil Kuisioner KP')
+            ->assertSee('onload="window.print()"', false)
+            ->assertSee('Kuisioner singkat');
+
+        $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->get('/management/questionnaire-results/reports/responses/preview')
+            ->assertOk()
+            ->assertSee('Daftar Respons Kuisioner KP')
+            ->assertSee($this->mahasiswa->email);
+
+        $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->get('/management/questionnaire-results/reports/summary/download')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+
+        $this->actingAs($this->admin)
+            ->withSession(['active_role' => 'admin'])
+            ->get('/management/questionnaire-results/reports/responses/download')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
 
         $response = \App\Models\KpQuestionnaireResponse::where('kp_questionnaire_id', $questionnaire->id)->firstOrFail();
 

@@ -195,6 +195,8 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::patch('questionnaire-questions/{question}', [QuestionnaireQuestionController::class, 'update'])->name('questionnaire-questions.update');
             Route::delete('questionnaire-questions/{question}', [QuestionnaireQuestionController::class, 'destroy'])->name('questionnaire-questions.destroy');
             Route::get('questionnaire-results', [QuestionnaireResultController::class, 'index'])->name('questionnaire-results.index');
+            Route::get('questionnaire-results/reports/{type}/preview', [QuestionnaireResultController::class, 'preview'])->name('questionnaire-results.preview');
+            Route::get('questionnaire-results/reports/{type}/download', [QuestionnaireResultController::class, 'download'])->name('questionnaire-results.download');
             Route::get('questionnaire-results/{response}', [QuestionnaireResultController::class, 'show'])->name('questionnaire-results.show');
             Route::get('orientation-tests', [OrientationTestResultController::class, 'index'])->name('orientation-tests.index');
             Route::get('orientation-tests/{attempt}', [OrientationTestResultController::class, 'show'])->name('orientation-tests.show');
