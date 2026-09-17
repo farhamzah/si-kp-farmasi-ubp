@@ -5,82 +5,122 @@
     $date = $exam->exam_date?->translatedFormat('l, d F Y') ?: '-';
     $time = substr((string) $exam->start_time, 0, 5).' - '.substr((string) $exam->end_time, 0, 5).' WIB';
     $location = $exam->room ?: $exam->meeting_link ?: '-';
+    $logoSrc = $logoSrc ?? asset('images/logo-ubp-karawang.png');
+    $qrSrc = $qrSrc ?? route('exam-invitations.qr', $invitation);
 @endphp
 
 <style>
-    .letter p { margin: 0 0 10px; line-height: 1.65; }
-    .letter-table { width: 100%; border-collapse: collapse; }
-    .letter-table td { padding: 4px 0; vertical-align: top; }
-    .signature td { width: 33.333%; padding-top: 28px; vertical-align: bottom; text-align: center; }
-    @media print { .letter { font-size: 12pt; } }
+    .letter { color: #111827; font-family: "DejaVu Sans", Arial, sans-serif; font-size: 10pt; line-height: 1.38; }
+    .letter, .letter * { box-sizing: border-box; }
+    .letter p { margin: 0 0 8px; text-align: justify; }
+    .letter-header { width: 100%; border-collapse: collapse; border-bottom: 3px double #111827; margin-bottom: 12px; }
+    .letter-header td { vertical-align: middle; padding: 0 0 9px; }
+    .letter-logo-cell { width: 88px; text-align: center; }
+    .letter-logo { display: block; width: 76px; height: auto; margin: 0 auto; }
+    .letter-campus { padding-right: 82px !important; text-align: center; }
+    .letter-campus div { letter-spacing: 0; }
+    .letter-foundation { font-size: 9pt; font-weight: 700; }
+    .letter-university { margin-top: 2px; font-size: 14pt; font-weight: 800; }
+    .letter-faculty { margin-top: 1px; font-size: 12.5pt; font-weight: 800; }
+    .letter-address { margin-top: 3px; font-size: 8.3pt; line-height: 1.28; }
+    .letter-title { margin: 11px 0 14px; text-align: center; }
+    .letter-title-main { font-size: 13pt; font-weight: 800; text-decoration: underline; }
+    .letter-number { margin-top: 2px; font-size: 9.5pt; }
+    .letter-addressee { margin-bottom: 9px; }
+    .letter-details { width: 100%; margin: 8px 0 12px; border-collapse: collapse; page-break-inside: avoid; }
+    .letter-details td { border-bottom: 1px solid #e5e7eb; padding: 3px 3px; vertical-align: top; }
+    .letter-details .label { width: 29%; padding-left: 0; }
+    .letter-details .colon { width: 3%; text-align: center; }
+    .letter-details .value { width: 68%; padding-right: 0; font-weight: 500; }
+    .letter-details .student-name { font-weight: 800; }
+    .verification-table { width: 100%; margin-top: 14px; border-collapse: collapse; page-break-inside: avoid; }
+    .verification-table td { vertical-align: middle; }
+    .verification-copy { padding: 8px 10px; border: 1px solid #cbd5e1; background: #f8fafc; font-size: 7.6pt; line-height: 1.35; }
+    .verification-title { font-size: 8.2pt; font-weight: 800; }
+    .verification-url { margin-top: 2px; color: #334155; word-break: break-all; }
+    .verification-qr-cell { width: 86px; padding-left: 10px; text-align: right; }
+    .verification-qr { width: 76px; height: 76px; padding: 4px; border: 1px solid #cbd5e1; }
+    .signature { width: 100%; margin-top: 16px; border-collapse: collapse; table-layout: fixed; page-break-inside: avoid; }
+    .signature td { width: 33.333%; padding: 0 6px; vertical-align: top; text-align: center; font-size: 8.5pt; }
+    .signature-role { min-height: 26px; font-weight: 600; }
+    .signature-space { height: 48px; }
+    .signature-name { font-weight: 800; text-decoration: underline; }
+    .signature-id { margin-top: 1px; }
 </style>
 
 <div class="letter">
-    <div style="display:flex; align-items:center; gap:18px; border-bottom:4px double #111827; padding-bottom:14px; margin-bottom:26px;">
-        <div style="width:74px; height:74px; border:1px solid #cbd5e1; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; color:#0369a1;">UBP</div>
-        <div style="text-align:center; flex:1;">
-            <div style="font-size:15px; font-weight:800; letter-spacing:.08em;">YAYASAN PEMBINA PERGURUAN TINGGI PANGKAL PERJUANGAN</div>
-            <div style="font-size:19px; font-weight:900;">UNIVERSITAS BUANA PERJUANGAN KARAWANG</div>
-            <div style="font-size:18px; font-weight:900;">FAKULTAS FARMASI</div>
-            <div style="font-size:12px;">Jl. HS. Ronggo Waluyo, Telukjambe Timur, Karawang 41361</div>
-            <div style="font-size:12px;">Website: www.ubpkarawang.ac.id</div>
-        </div>
+    <table class="letter-header">
+        <tr>
+            <td class="letter-logo-cell">
+                <img src="{{ $logoSrc }}" alt="Logo UBP Karawang" class="letter-logo">
+            </td>
+            <td class="letter-campus">
+                <div class="letter-foundation">YAYASAN PEMBINA PERGURUAN TINGGI PANGKAL PERJUANGAN</div>
+                <div class="letter-university">UNIVERSITAS BUANA PERJUANGAN KARAWANG</div>
+                <div class="letter-faculty">FAKULTAS FARMASI</div>
+                <div class="letter-address">Jl. HS. Ronggo Waluyo, Puseurjaya, Telukjambe Timur, Karawang 41361<br>www.ubpkarawang.ac.id</div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="letter-title">
+        <div class="letter-title-main">SURAT UNDANGAN SIDANG KERJA PRAKTIK</div>
+        <div class="letter-number">Nomor: {{ $invitation->letter_number }}</div>
     </div>
 
-    <div style="text-align:center; margin-bottom:22px;">
-        <div style="font-weight:900; text-decoration:underline; font-size:18px;">SURAT UNDANGAN SIDANG KERJA PRAKTIK</div>
-        <div style="margin-top:4px;">Nomor: {{ $invitation->letter_number }}</div>
-    </div>
-
-    <p>Yth. Bapak/Ibu Pembimbing dan Penguji Sidang Kerja Praktik<br>di tempat</p>
+    <div class="letter-addressee">Yth. Bapak/Ibu Pembimbing dan Penguji Sidang Kerja Praktik<br>di tempat</div>
 
     <p>Dengan hormat,</p>
     <p>Sehubungan dengan pelaksanaan Sidang Kerja Praktik Program Studi Farmasi Fakultas Farmasi Universitas Buana Perjuangan Karawang, kami mengundang Bapak/Ibu untuk hadir dan melaksanakan penilaian sidang Kerja Praktik mahasiswa berikut:</p>
 
-    <table class="letter-table" style="margin:12px 0 18px;">
-        <tr><td style="width:180px;">Nama Mahasiswa</td><td style="width:18px;">:</td><td><strong>{{ $student?->user?->name ?? '-' }}</strong></td></tr>
-        <tr><td>NIM</td><td>:</td><td>{{ $student?->nim ?: '-' }}</td></tr>
-        <tr><td>Program Studi</td><td>:</td><td>{{ $student?->study_program ?: 'Farmasi' }}</td></tr>
-        <tr><td>Tempat KP</td><td>:</td><td>{{ $assignment?->place?->name ?? '-' }}</td></tr>
-        <tr><td>Periode KP</td><td>:</td><td>{{ $assignment?->period?->name ?? '-' }}</td></tr>
-        <tr><td>Hari/Tanggal</td><td>:</td><td>{{ $date }}</td></tr>
-        <tr><td>Waktu</td><td>:</td><td>{{ $time }}</td></tr>
-        <tr><td>Ruang/Media</td><td>:</td><td>{{ $location }}</td></tr>
-        <tr><td>Pembimbing Dalam</td><td>:</td><td>{{ $exam->supervisor ? lecturer_display_name($exam->supervisor) : '-' }}</td></tr>
-        <tr><td>Pembimbing Lapangan</td><td>:</td><td>{{ $assignment?->fieldSupervisor?->user?->name ?? '-' }}</td></tr>
-        <tr><td>Penguji</td><td>:</td><td>{{ $exam->examinerNamesLabel() }}</td></tr>
+    <table class="letter-details">
+        <tr><td class="label">Nama Mahasiswa</td><td class="colon">:</td><td class="value student-name">{{ $student?->user?->name ?? '-' }}</td></tr>
+        <tr><td class="label">NIM</td><td class="colon">:</td><td class="value">{{ $student?->nim ?: '-' }}</td></tr>
+        <tr><td class="label">Program Studi</td><td class="colon">:</td><td class="value">{{ $student?->study_program ?: 'Farmasi S1' }}</td></tr>
+        <tr><td class="label">Tempat KP</td><td class="colon">:</td><td class="value">{{ $assignment?->place?->name ?? '-' }}</td></tr>
+        <tr><td class="label">Periode KP</td><td class="colon">:</td><td class="value">{{ $assignment?->period?->name ?? '-' }}</td></tr>
+        <tr><td class="label">Hari/Tanggal</td><td class="colon">:</td><td class="value">{{ $date }}</td></tr>
+        <tr><td class="label">Waktu</td><td class="colon">:</td><td class="value">{{ $time }}</td></tr>
+        <tr><td class="label">Ruang/Media</td><td class="colon">:</td><td class="value">{{ $location }}</td></tr>
+        <tr><td class="label">Pembimbing Dalam</td><td class="colon">:</td><td class="value">{{ $exam->supervisor ? lecturer_display_name($exam->supervisor) : '-' }}</td></tr>
+        <tr><td class="label">Pembimbing Lapangan</td><td class="colon">:</td><td class="value">{{ $assignment?->fieldSupervisor?->user?->name ?? '-' }}</td></tr>
+        <tr><td class="label">Penguji</td><td class="colon">:</td><td class="value">{{ $exam->examinerNamesLabel() }}</td></tr>
     </table>
 
     <p>Demikian surat undangan ini disampaikan. Atas perhatian, kehadiran, dan kerja sama Bapak/Ibu, kami ucapkan terima kasih.</p>
 
-    <div style="display:flex; justify-content:space-between; gap:24px; margin-top:26px; align-items:flex-start;">
-        <div style="font-size:12px; color:#475569;">
-            <div style="font-weight:800; color:#0f172a;">Verifikasi Keaslian Surat</div>
-            <div>Kode: <strong>{{ $invitation->verification_code }}</strong></div>
-            <div style="word-break:break-all;">{{ $verificationUrl }}</div>
-        </div>
-        <img src="{{ route('exam-invitations.qr', $invitation) }}" alt="QR Verifikasi" style="width:104px; height:104px; border:1px solid #cbd5e1; padding:6px;">
-    </div>
+    <table class="verification-table">
+        <tr>
+            <td class="verification-copy">
+                <div class="verification-title">VERIFIKASI KEASLIAN SURAT</div>
+                <div>Kode: <strong>{{ $invitation->verification_code }}</strong></div>
+                <div class="verification-url">{{ $verificationUrl }}</div>
+            </td>
+            <td class="verification-qr-cell">
+                <img src="{{ $qrSrc }}" alt="QR Verifikasi" class="verification-qr">
+            </td>
+        </tr>
+    </table>
 
-    <table class="signature" style="width:100%; margin-top:28px;">
+    <table class="signature">
         <tr>
             <td>
-                <div>Koordinator Sidang</div>
-                <div style="height:72px;"></div>
-                <div style="font-weight:800; text-decoration:underline;">{{ $invitation->coordinator_name }}</div>
-                <div>NUPTK. {{ $invitation->coordinator_nuptk ?: '-' }}</div>
+                <div class="signature-role">Koordinator Sidang</div>
+                <div class="signature-space"></div>
+                <div class="signature-name">{{ $invitation->coordinator_name }}</div>
+                <div class="signature-id">NUPTK. {{ $invitation->coordinator_nuptk ?: '-' }}</div>
             </td>
             <td>
-                <div>Ketua Program Studi</div>
-                <div style="height:72px;"></div>
-                <div style="font-weight:800; text-decoration:underline;">{{ $invitation->head_program_name }}</div>
-                <div>NUPTK. {{ $invitation->head_program_nuptk ?: '-' }}</div>
+                <div class="signature-role">Ketua Program Studi Farmasi</div>
+                <div class="signature-space"></div>
+                <div class="signature-name">{{ $invitation->head_program_name }}</div>
+                <div class="signature-id">NUPTK. {{ $invitation->head_program_nuptk ?: '-' }}</div>
             </td>
             <td>
-                <div>Dekan Fakultas Farmasi</div>
-                <div style="height:72px;"></div>
-                <div style="font-weight:800; text-decoration:underline;">{{ $invitation->dean_name }}</div>
-                <div>NUPTK. {{ $invitation->dean_nuptk ?: '-' }}</div>
+                <div class="signature-role">Dekan Fakultas Farmasi</div>
+                <div class="signature-space"></div>
+                <div class="signature-name">{{ $invitation->dean_name }}</div>
+                <div class="signature-id">NUPTK. {{ $invitation->dean_nuptk ?: '-' }}</div>
             </td>
         </tr>
     </table>

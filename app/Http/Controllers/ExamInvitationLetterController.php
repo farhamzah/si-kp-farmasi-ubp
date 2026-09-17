@@ -96,7 +96,15 @@ class ExamInvitationLetterController extends Controller
     {
         $this->authorizeInvitationAccess($request, $invitation);
 
-        return $service->pdfResponse($invitation->load(['exam.assignment.student.user', 'exam.assignment.place', 'exam.supervisor.user', 'exam.examiner.user', 'exam.examiners.user']));
+        return $service->pdfResponse($invitation->load([
+            'exam.assignment.student.user',
+            'exam.assignment.period',
+            'exam.assignment.place',
+            'exam.assignment.fieldSupervisor.user',
+            'exam.supervisor.user',
+            'exam.examiner.user',
+            'exam.examiners.user',
+        ]));
     }
 
     public function downloadWord(Request $request, KpExamInvitation $invitation, KpExamInvitationService $service): Response

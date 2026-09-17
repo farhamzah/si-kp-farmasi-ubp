@@ -6,6 +6,7 @@ use App\Models\KpExam;
 use App\Models\KpExamInvitation;
 use App\Models\KpExamInvitationSignatory;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
@@ -98,10 +99,18 @@ class KpExamInvitationService
 
     public function pdfResponse(KpExamInvitation $invitation): Response
     {
-        $lines = $this->plainTextLines($invitation);
-        $pdf = $this->simplePdf($lines);
+        $pdf = Pdf::loadView('exam-invitations.letter-pdf', [
+            'invitation' => $invitation,
+            'verificationUrl' => $this->verificationUrl($invitation),
+            'logoSrc' => $this->fileDataUri(public_path('images/logo-ubp-karawang.png'), 'image/png'),
+            'qrSrc' => 'data:image/svg+xml;base64,'.base64_encode($this->qrSvg($invitation)),
+        ])->setPaper('a4', 'portrait')->setOption([
+            'defaultFont' => 'DejaVu Sans',
+            'dpi' => 120,
+            'isRemoteEnabled' => false,
+        ]);
 
-        return response($pdf, 200, [
+        return response($pdf->output(), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="undangan-sidang-kp-'.$invitation->kp_exam_id.'.pdf"',
         ]);
@@ -149,74 +158,13 @@ class KpExamInvitationService
         return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '.$svgSize.' '.$svgSize.'" width="'.$svgSize.'" height="'.$svgSize.'"><rect width="100%" height="100%" fill="#fff"/><g fill="#0f172a">'.implode('', $rects).'</g></svg>';
     }
 
-    private function plainTextLines(KpExamInvitation $invitation): array
+    private function fileDataUri(string $path, string $mime): string
     {
-        $exam = $invitation->exam;
-        $assignment = $exam->assignment;
-        $student = $assignment?->student;
-
-        return [
-            'FAKULTAS FARMASI UNIVERSITAS BUANA PERJUANGAN KARAWANG',
-            'UNDANGAN SIDANG KERJA PRAKTIK',
-            'Nomor: '.$invitation->letter_number,
-            '',
-            'Yth. Bapak/Ibu Penguji dan Pembimbing Kerja Praktik',
-            'di tempat',
-            '',
-            'Dengan hormat, sehubungan dengan pelaksanaan Sidang Kerja Praktik Program Studi Farmasi, kami mengundang Bapak/Ibu untuk hadir pada:',
-            'Nama Mahasiswa: '.($student?->user?->name ?: '-'),
-            'NIM: '.($student?->nim ?: '-'),
-            'Tempat KP: '.($assignment?->place?->name ?: '-'),
-            'Hari/Tanggal: '.($exam->exam_date?->translatedFormat('l, d F Y') ?: '-'),
-            'Waktu: '.substr((string) $exam->start_time, 0, 5).' - '.substr((string) $exam->end_time, 0, 5).' WIB',
-            'Lokasi/Media: '.($exam->room ?: $exam->meeting_link ?: '-'),
-            'Pembimbing: '.($exam->supervisor ? lecturer_display_name($exam->supervisor) : '-'),
-            'Penguji: '.$exam->examinerNamesLabel(),
-            '',
-            'Demikian undangan ini disampaikan. Atas perhatian dan kehadiran Bapak/Ibu, kami ucapkan terima kasih.',
-            '',
-            'Koordinator Sidang: '.$invitation->coordinator_name.' / '.($invitation->coordinator_nuptk ?: '-'),
-            'Kaprodi: '.$invitation->head_program_name.' / '.($invitation->head_program_nuptk ?: '-'),
-            'Dekan: '.$invitation->dean_name.' / '.($invitation->dean_nuptk ?: '-'),
-            'Kode verifikasi: '.$invitation->verification_code,
-            'URL verifikasi: '.$this->verificationUrl($invitation),
-        ];
-    }
-
-    private function simplePdf(array $lines): string
-    {
-        $content = "BT\n/F1 11 Tf\n50 790 Td\n14 TL\n";
-        foreach ($lines as $line) {
-            $content .= '('.$this->pdfEscape($line).") Tj\nT*\n";
+        if (! is_file($path)) {
+            return '';
         }
-        $content .= "ET";
 
-        $objects = [];
-        $objects[] = "<< /Type /Catalog /Pages 2 0 R >>";
-        $objects[] = "<< /Type /Pages /Kids [3 0 R] /Count 1 >>";
-        $objects[] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>";
-        $objects[] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>";
-        $objects[] = "<< /Length ".strlen($content)." >>\nstream\n".$content."\nendstream";
-
-        $pdf = "%PDF-1.4\n";
-        $offsets = [0];
-        foreach ($objects as $i => $object) {
-            $offsets[] = strlen($pdf);
-            $pdf .= ($i + 1)." 0 obj\n".$object."\nendobj\n";
-        }
-        $xref = strlen($pdf);
-        $pdf .= "xref\n0 ".(count($objects) + 1)."\n0000000000 65535 f \n";
-        for ($i = 1; $i <= count($objects); $i++) {
-            $pdf .= str_pad((string) $offsets[$i], 10, '0', STR_PAD_LEFT)." 00000 n \n";
-        }
-        $pdf .= "trailer\n<< /Size ".(count($objects) + 1)." /Root 1 0 R >>\nstartxref\n".$xref."\n%%EOF";
-
-        return $pdf;
-    }
-
-    private function pdfEscape(string $text): string
-    {
-        return str_replace(['\\', '(', ')'], ['\\\\', '\(', '\)'], Str::ascii($text));
+        return 'data:'.$mime.';base64,'.base64_encode((string) file_get_contents($path));
     }
 
     private function roman(int $month): string

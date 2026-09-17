@@ -476,12 +476,16 @@ class KpExamSchedulingTest extends TestCase
             ->get('/undangan-sidang/surat/'.$invitation->id)
             ->assertOk()
             ->assertSee('UNDANGAN SIDANG KERJA PRAKTIK')
+            ->assertSee('Logo UBP Karawang')
             ->assertSee($invitation->letter_number);
 
-        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+        $pdfResponse = $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
             ->get('/undangan-sidang/surat/'.$invitation->id.'/pdf')
             ->assertOk()
-            ->assertHeader('Content-Type', 'application/pdf');
+            ->assertHeader('Content-Type', 'application/pdf')
+            ->assertDownload('undangan-sidang-kp-'.$exam->id.'.pdf');
+
+        $this->assertStringStartsWith('%PDF-', $pdfResponse->getContent());
 
         $otherStudentUser = $this->makeUser('other-letter-exam@test.local', ['mahasiswa']);
         $this->makeStudent($otherStudentUser, '2210631230888');
