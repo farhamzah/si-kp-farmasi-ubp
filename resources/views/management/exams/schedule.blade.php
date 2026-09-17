@@ -7,7 +7,7 @@
     $eligibility = $assignment->examEligibility();
     $report = $assignment->finalReport;
     $selectedExaminerIds = collect(old('examiner_ids', $exam?->examinerIds() ?? []))->map(fn ($id) => (int) $id)->all();
-    $selectedChairId = (int) old('chair_lecturer_id', $exam?->chair_lecturer_id);
+    $selectedChairId = (int) old('chair_lecturer_id', $exam?->chair_lecturer_id ?? $assignment->internal_supervisor_id);
 @endphp
 <div class="space-y-5">
     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -93,12 +93,14 @@
                     <div class="mt-5 max-w-xl">
                         <label class="text-sm font-bold text-slate-800">Ketua Sidang</label>
                         <select name="chair_lecturer_id" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm shadow-sm">
-                            <option value="">Pilih ketua dari penguji yang dipilih</option>
+                            <option value="{{ $assignment->internal_supervisor_id }}" @selected($selectedChairId === (int) $assignment->internal_supervisor_id)>Default - {{ $assignment->internalSupervisor ? lecturer_display_name($assignment->internalSupervisor) : 'Pembimbing Dalam' }}</option>
                             @foreach($examiners as $examiner)
-                                <option value="{{ $examiner->id }}" @selected($selectedChairId === $examiner->id)>{{ lecturer_display_name($examiner) }}</option>
+                                @if($examiner->id !== $assignment->internal_supervisor_id)
+                                    <option value="{{ $examiner->id }}" @selected($selectedChairId === $examiner->id)>Pengganti - {{ lecturer_display_name($examiner) }}</option>
+                                @endif
                             @endforeach
                         </select>
-                        <p class="mt-1 text-xs text-slate-500">Ketua Sidang bertugas menutup sidang dan membuat berita acara. Pilihan harus termasuk dalam daftar penguji di atas.</p>
+                        <p class="mt-1 text-xs text-slate-500">Pembimbing Dalam otomatis menjadi Ketua Sidang. Ubah hanya bila berhalangan; pengganti harus termasuk penguji yang dipilih.</p>
                         @error('chair_lecturer_id')<p class="mt-1 text-xs font-semibold text-red-600">{{ $message }}</p>@enderror
                     </div>
                 </section>

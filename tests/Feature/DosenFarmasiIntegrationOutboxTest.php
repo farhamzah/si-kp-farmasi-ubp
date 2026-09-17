@@ -83,7 +83,6 @@ class DosenFarmasiIntegrationOutboxTest extends TestCase
 
         $exam = app(KpExamService::class)->scheduleExam($admin, $request, [
             'examiner_ids' => [$examinerA->id, $examinerB->id],
-            'chair_lecturer_id' => $examinerA->id,
             'exam_date' => now()->addWeek()->toDateString(),
             'start_time' => '09:00',
             'end_time' => '10:00',
@@ -93,12 +92,12 @@ class DosenFarmasiIntegrationOutboxTest extends TestCase
         ]);
 
         $this->assertSame(1, (int) $exam->fresh()->integration_revision);
+        $this->assertSame($supervisor->id, $exam->fresh()->chair_lecturer_id);
         $this->assertSame(2, IntegrationOutboxEvent::query()->where('event_type', 'kp.examiner.assigned')->count());
         $this->assertSame(3, IntegrationOutboxEvent::query()->where('event_type', 'kp.exam.scheduled')->count());
 
         app(KpExamService::class)->rescheduleExam($admin, $exam, [
             'examiner_ids' => [$examinerA->id, $examinerB->id],
-            'chair_lecturer_id' => $examinerA->id,
             'exam_date' => now()->addWeeks(2)->toDateString(),
             'start_time' => '13:00',
             'end_time' => '14:00',

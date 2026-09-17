@@ -367,7 +367,7 @@ class KpExamSchedulingTest extends TestCase
         $this->assertSame('dijadwalkan', $request->fresh()->status);
         $this->assertEqualsCanonicalizing([$this->examiner->id, $this->secondExaminer->id], $exam->examiners()->pluck('lecturers.id')->all());
         $this->assertSame($this->examiner->id, $exam->examiner_id);
-        $this->assertSame($this->examiner->id, $exam->chair_lecturer_id);
+        $this->assertSame($this->supervisor->id, $exam->chair_lecturer_id);
         $this->assertNotNull($exam->minutes_number);
         $this->assertDatabaseHas('kp_exam_logs', ['action' => 'exam_scheduled']);
 
@@ -559,6 +559,10 @@ class KpExamSchedulingTest extends TestCase
             ->assertSessionHasErrors('examiner_ids');
 
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-requests/'.$request->id.'/schedule', $this->validSchedulePayload(['chair_lecturer_id' => $this->nonExaminer->id]))
+            ->assertSessionHasErrors('chair_lecturer_id');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->post('/management/exam-requests/'.$request->id.'/schedule', $this->validSchedulePayload(['end_time' => '08:00']))
             ->assertSessionHasErrors('end_time');
 
@@ -626,8 +630,8 @@ class KpExamSchedulingTest extends TestCase
             ->post('/penguji/jadwal-sidang/'.$exam->id.'/tutup', $payload)
             ->assertForbidden();
 
-        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
-            ->post('/penguji/jadwal-sidang/'.$exam->id.'/tutup', $payload)
+        $this->actingAs($this->supervisorUser)->withSession(['active_role' => 'pembimbing_dalam'])
+            ->post('/pembimbing-dalam/jadwal-sidang/'.$exam->id.'/tutup', $payload)
             ->assertRedirect();
 
         $this->assertDatabaseHas('kp_exam_minutes', [
@@ -635,16 +639,16 @@ class KpExamSchedulingTest extends TestCase
             'minutes_number' => $exam->minutes_number,
             'status' => 'menunggu_nilai',
             'result' => 'lulus_revisi',
-            'closed_by' => $this->examinerUser->id,
+            'closed_by' => $this->supervisorUser->id,
         ]);
         $this->assertSame('selesai', $exam->fresh()->status);
 
         $minute = $exam->fresh()->minutes;
-        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+        $this->actingAs($this->supervisorUser)->withSession(['active_role' => 'pembimbing_dalam'])
             ->get('/berita-acara-sidang/'.$minute->id)
             ->assertOk()
             ->assertSee('DRAFT - MENUNGGU NILAI');
-        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+        $this->actingAs($this->supervisorUser)->withSession(['active_role' => 'pembimbing_dalam'])
             ->get('/berita-acara-sidang/'.$minute->id.'/pdf')
             ->assertOk()
             ->assertHeader('Content-Type', 'application/pdf');
@@ -671,7 +675,6 @@ class KpExamSchedulingTest extends TestCase
     {
         return array_merge([
             'examiner_ids' => [$this->examiner->id, $this->secondExaminer->id],
-            'chair_lecturer_id' => $this->examiner->id,
             'exam_date' => now()->addWeek()->toDateString(),
             'start_time' => '09:00',
             'end_time' => '10:00',
@@ -726,7 +729,7 @@ class KpExamSchedulingTest extends TestCase
             'kp_assignment_id' => $this->assignment->id,
             'supervisor_id' => $this->supervisor->id,
             'examiner_id' => $this->examiner->id,
-            'chair_lecturer_id' => $this->examiner->id,
+            'chair_lecturer_id' => $this->supervisor->id,
             'minutes_sequence' => 1,
             'minutes_number' => '001/BA-SKP/FF-UBP/'.$romanMonth.'/'.$examDate->year,
             'exam_date' => $examDate->toDateString(),

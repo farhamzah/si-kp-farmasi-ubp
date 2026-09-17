@@ -7,6 +7,23 @@ use Illuminate\Validation\Rule;
 
 class ScheduleExamRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if ($this->filled('chair_lecturer_id')) {
+            return;
+        }
+
+        $examRequest = $this->route('examRequest');
+        $exam = $this->route('exam');
+        $internalSupervisorId = $examRequest?->assignment?->internal_supervisor_id
+            ?? $exam?->assignment?->internal_supervisor_id
+            ?? $exam?->supervisor_id;
+
+        if ($internalSupervisorId) {
+            $this->merge(['chair_lecturer_id' => $internalSupervisorId]);
+        }
+    }
+
     public function authorize(): bool
     {
         return $this->user()?->hasAnyRole(['admin', 'koordinator_kp']) ?? false;
@@ -31,8 +48,16 @@ class ScheduleExamRequest extends FormRequest
     public function after(): array
     {
         return [function ($validator): void {
-            if ($this->filled('chair_lecturer_id') && ! in_array((int) $this->chair_lecturer_id, array_map('intval', $this->input('examiner_ids', [])), true)) {
-                $validator->errors()->add('chair_lecturer_id', 'Ketua sidang harus dipilih dari daftar penguji sidang.');
+            $examRequest = $this->route('examRequest');
+            $exam = $this->route('exam');
+            $internalSupervisorId = (int) ($examRequest?->assignment?->internal_supervisor_id
+                ?? $exam?->assignment?->internal_supervisor_id
+                ?? $exam?->supervisor_id);
+            $chairId = (int) $this->chair_lecturer_id;
+            $examinerIds = array_map('intval', $this->input('examiner_ids', []));
+
+            if ($chairId && $chairId !== $internalSupervisorId && ! in_array($chairId, $examinerIds, true)) {
+                $validator->errors()->add('chair_lecturer_id', 'Ketua sidang pengganti harus dipilih dari daftar penguji sidang.');
             }
         }];
     }

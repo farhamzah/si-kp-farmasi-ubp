@@ -194,6 +194,8 @@ class KpExamService
                 throw ValidationException::withMessages(['supervisor_id' => 'Pembimbing dalam belum ditentukan.']);
             }
 
+            $data['chair_lecturer_id'] ??= $assignment->internal_supervisor_id;
+
             $examinerIds = $this->examinerIdsFrom($data);
             $this->ensureExaminers($examinerIds);
 
@@ -219,6 +221,7 @@ class KpExamService
                 throw ValidationException::withMessages(['exam' => 'Sidang ini tidak bisa dijadwalkan ulang.']);
             }
             $oldExaminerIds = $exam->examinerIds();
+            $data['chair_lecturer_id'] ??= $exam->supervisor_id;
             $examinerIds = $this->examinerIdsFrom($data);
             $this->ensureExaminers($examinerIds);
             $oldStatus = $exam->status;
