@@ -29,9 +29,9 @@
     .letter-addressee { margin-bottom: 9px; }
     .letter-details { width: 100%; margin: 8px 0 12px; border-collapse: collapse; page-break-inside: avoid; }
     .letter-details td { border-bottom: 1px solid #e5e7eb; padding: 3px 3px; vertical-align: top; }
-    .letter-details .label { width: 29%; padding-left: 0; }
+    .letter-details .label { width: 29%; padding-left: 0; text-align: left !important; white-space: nowrap; }
     .letter-details .colon { width: 3%; text-align: center; }
-    .letter-details .value { width: 68%; padding-right: 0; font-weight: 500; }
+    .letter-details .value { width: 68%; padding-right: 0; font-weight: 500; text-align: left !important; }
     .letter-details .student-name { font-weight: 800; }
     .verification-table { width: 100%; margin-top: 14px; border-collapse: collapse; page-break-inside: avoid; }
     .verification-table td { vertical-align: middle; }
