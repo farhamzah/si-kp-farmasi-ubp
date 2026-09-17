@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExamInvitationInboxController;
 use App\Http\Controllers\ExamInvitationLetterController;
+use App\Http\Controllers\ExamMinuteController;
 use App\Http\Controllers\Examiner\AssessmentController as ExaminerAssessmentController;
 use App\Http\Controllers\Examiner\ExamScheduleController as ExaminerExamScheduleController;
 use App\Http\Controllers\FieldSupervisor\AssessmentController as FieldAssessmentController;
@@ -72,6 +73,8 @@ Route::redirect('/', '/login');
 
 Route::get('/undangan-sidang/verifikasi/{code}', [ExamInvitationLetterController::class, 'verify'])->name('exam-invitations.verify');
 Route::get('/undangan-sidang/qr/{invitation}', [ExamInvitationLetterController::class, 'qr'])->name('exam-invitations.qr');
+Route::get('/berita-acara-sidang/verifikasi/{code}', [ExamMinuteController::class, 'verify'])->name('exam-minutes.verify');
+Route::get('/berita-acara-sidang/qr/{minute}', [ExamMinuteController::class, 'qr'])->name('exam-minutes.qr');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
@@ -101,6 +104,8 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/undangan-sidang/surat/{invitation}', [ExamInvitationLetterController::class, 'preview'])->name('exam-invitations.letter.preview');
         Route::get('/undangan-sidang/surat/{invitation}/pdf', [ExamInvitationLetterController::class, 'downloadPdf'])->name('exam-invitations.letter.pdf');
         Route::get('/undangan-sidang/surat/{invitation}/word', [ExamInvitationLetterController::class, 'downloadWord'])->name('exam-invitations.letter.word');
+        Route::get('/berita-acara-sidang/{minute}', [ExamMinuteController::class, 'preview'])->name('exam-minutes.preview');
+        Route::get('/berita-acara-sidang/{minute}/pdf', [ExamMinuteController::class, 'downloadPdf'])->name('exam-minutes.pdf');
 
         Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
             Route::post('users/sync-core', [UserManagementController::class, 'bulkSyncFromCore'])->name('users.sync-core');
@@ -179,11 +184,11 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('exam-requests/{examRequest}/schedule', [ManagementExamScheduleController::class, 'create'])->name('exam-requests.schedule');
             Route::post('exam-requests/{examRequest}/schedule', [ManagementExamScheduleController::class, 'store'])->name('exam-requests.schedule.store');
             Route::get('exams', [ManagementExamScheduleController::class, 'index'])->name('exams.index');
+            Route::post('exam-minutes/{minute}/publish', [ExamMinuteController::class, 'publish'])->name('exam-minutes.publish');
             Route::get('exams/{exam}', [ManagementExamScheduleController::class, 'show'])->name('exams.show');
             Route::get('exams/{exam}/edit', [ManagementExamScheduleController::class, 'edit'])->name('exams.edit');
             Route::put('exams/{exam}', [ManagementExamScheduleController::class, 'update'])->name('exams.update');
             Route::post('exams/{exam}/cancel', [ManagementExamScheduleController::class, 'cancel'])->name('exams.cancel');
-            Route::post('exams/{exam}/complete', [ManagementExamScheduleController::class, 'complete'])->name('exams.complete');
             Route::post('exams/invitations/signatory', [ExamInvitationLetterController::class, 'updateSignatory'])->name('exams.invitations.signatory.update');
             Route::post('exams/invitations/bulk', [ExamInvitationLetterController::class, 'bulkStore'])->name('exams.invitations.bulk-store');
             Route::post('exams/{exam}/invitation', [ExamInvitationLetterController::class, 'store'])->name('exams.invitation.store');
@@ -299,6 +304,7 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('laporan-akhir/files/{file}/download', [FinalReportReviewController::class, 'download'])->name('final-reports.files.download');
             Route::get('jadwal-sidang', [InternalExamScheduleController::class, 'index'])->name('exams.index');
             Route::get('jadwal-sidang/{exam}', [InternalExamScheduleController::class, 'show'])->name('exams.show');
+            Route::post('jadwal-sidang/{exam}/tutup', [ExamMinuteController::class, 'close'])->name('exams.close');
             Route::get('penilaian', [InternalAssessmentController::class, 'index'])->name('assessments.index');
             Route::get('penilaian/{assignment}', [InternalAssessmentController::class, 'show'])->name('assessments.show');
             Route::post('penilaian/{assignment}/save', [InternalAssessmentController::class, 'save'])->name('assessments.save');
@@ -341,6 +347,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::middleware('role:penguji')->prefix('penguji')->name('examiner.')->group(function () {
             Route::get('jadwal-sidang', [ExaminerExamScheduleController::class, 'index'])->name('exams.index');
             Route::get('jadwal-sidang/{exam}', [ExaminerExamScheduleController::class, 'show'])->name('exams.show');
+            Route::post('jadwal-sidang/{exam}/tutup', [ExamMinuteController::class, 'close'])->name('exams.close');
             Route::get('penilaian', [ExaminerAssessmentController::class, 'index'])->name('assessments.index');
             Route::get('penilaian/{exam}', [ExaminerAssessmentController::class, 'show'])->name('assessments.show');
             Route::post('penilaian/{exam}/save', [ExaminerAssessmentController::class, 'save'])->name('assessments.save');

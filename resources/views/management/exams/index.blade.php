@@ -129,6 +129,9 @@
                                 @else
                                     <span class="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-black text-amber-700 ring-1 ring-amber-100">Belum ada surat</span>
                                 @endif
+                                @if($exam->minutes)
+                                    <span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-black text-cyan-700 ring-1 ring-cyan-200">BA: {{ $exam->minutes->statusLabel() }}</span>
+                                @endif
                             </div>
                             <h3 class="mt-3 text-lg font-black text-slate-950">{{ $exam->assignment->student->user->name }}</h3>
                             <p class="mt-1 text-sm text-slate-500">{{ $exam->assignment->student->nim ?: '-' }} · {{ $exam->assignment->period?->name ?? '-' }}</p>
@@ -145,11 +148,13 @@
                                 <p class="text-[11px] font-black uppercase tracking-widest text-slate-500">Penguji dan pembimbing</p>
                                 <p class="mt-1 text-xs leading-5"><strong>Pembimbing:</strong> {{ $exam->supervisor ? lecturer_display_name($exam->supervisor) : '-' }}</p>
                                 <p class="text-xs leading-5"><strong>Penguji:</strong> {{ $exam->examinerNamesLabel() }}</p>
+                                <p class="text-xs leading-5"><strong>Ketua:</strong> {{ $exam->chair ? lecturer_display_name($exam->chair) : '-' }}</p>
                             </div>
                         </div>
 
                         <div class="flex flex-col gap-2 xl:min-w-60">
                             <a href="{{ route('management.exams.show',$exam) }}" class="rounded-xl bg-cyan-700 px-4 py-2 text-center text-sm font-black text-white">Detail Sidang</a>
+                            @if($exam->minutes)<a href="{{ route('exam-minutes.preview',$exam->minutes) }}" class="rounded-xl border border-emerald-200 bg-white px-4 py-2 text-center text-xs font-black text-emerald-700">Preview Berita Acara</a>@endif
                             @if($invitation)
                                 <a href="{{ route('exam-invitations.letter.preview', $invitation) }}" class="rounded-xl border border-cyan-200 bg-white px-4 py-2 text-center text-xs font-black text-cyan-700">Preview Surat</a>
                                 <a href="{{ route('exam-invitations.letter.pdf', $invitation) }}" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-center text-xs font-black text-slate-700">PDF</a>

@@ -197,6 +197,8 @@ class KpExamService
             $examinerIds = $this->examinerIdsFrom($data);
             $this->ensureExaminers($examinerIds);
 
+            $this->reserveMinutesNumber($data);
+
             $exam = KpExam::create($this->examPayload($request, $assignment, $actor, $data));
             $this->syncExaminers($exam, $examinerIds);
             $exam->update(['integration_revision' => 1]);
@@ -222,6 +224,7 @@ class KpExamService
             $oldStatus = $exam->status;
             $exam->update([
                 'examiner_id' => $examinerIds[0],
+                'chair_lecturer_id' => $data['chair_lecturer_id'],
                 'exam_date' => $data['exam_date'],
                 'start_time' => $data['start_time'],
                 'end_time' => $data['end_time'],
@@ -360,6 +363,9 @@ class KpExamService
             'kp_assignment_id' => $assignment->id,
             'supervisor_id' => $assignment->internal_supervisor_id,
             'examiner_id' => $this->examinerIdsFrom($data)[0],
+            'chair_lecturer_id' => $data['chair_lecturer_id'],
+            'minutes_sequence' => $data['minutes_sequence'],
+            'minutes_number' => $data['minutes_number'],
             'exam_date' => $data['exam_date'],
             'start_time' => $data['start_time'],
             'end_time' => $data['end_time'],
@@ -391,5 +397,18 @@ class KpExamService
             ->all();
 
         $exam->examiners()->sync($sync);
+    }
+
+    private function reserveMinutesNumber(array &$data): void
+    {
+        $date = \Illuminate\Support\Carbon::parse($data['exam_date']);
+        $sequence = ((int) KpExam::query()
+            ->whereYear('exam_date', $date->year)
+            ->lockForUpdate()
+            ->max('minutes_sequence')) + 1;
+        $roman = [1 => 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'][$date->month];
+
+        $data['minutes_sequence'] = $sequence;
+        $data['minutes_number'] = str_pad((string) $sequence, 3, '0', STR_PAD_LEFT).'/BA-SKP/FF-UBP/'.$roman.'/'.$date->year;
     }
 }

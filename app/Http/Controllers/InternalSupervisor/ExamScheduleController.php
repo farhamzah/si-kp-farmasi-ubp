@@ -23,6 +23,6 @@ class ExamScheduleController extends Controller
     public function show(KpExam $exam): View
     {
         abort_unless(request()->user()->lecturer?->id === $exam->supervisor_id, 403);
-        return view('internal-supervisor.exams.show', ['exam' => $exam->load(['assignment.student.user', 'assignment.place', 'assignment.finalReport.latestFile', 'examiner.user', 'examiners.user'])]);
+        return view('internal-supervisor.exams.show', ['exam' => $exam->load(['assignment.student.user', 'assignment.place', 'assignment.finalReport.latestFile', 'examiner.user', 'examiners.user', 'chair.user', 'minutes'])]);
     }
 }

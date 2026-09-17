@@ -12,6 +12,7 @@ use App\Models\KpExamRequest;
 use App\Models\KpPeriod;
 use App\Models\Lecturer;
 use App\Services\KpExamService;
+use App\Services\KpExamMinuteService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -21,7 +22,7 @@ class ExamScheduleController extends Controller
     public function index(Request $request): View
     {
         $exams = KpExam::query()
-            ->with(['assignment.student.user', 'assignment.period', 'assignment.place', 'supervisor.user', 'examiner.user', 'examiners.user', 'invitation'])
+            ->with(['assignment.student.user', 'assignment.period', 'assignment.place', 'supervisor.user', 'examiner.user', 'examiners.user', 'chair.user', 'invitation', 'minutes'])
             ->when($request->filled('period'), fn ($q) => $q->whereHas('assignment', fn ($a) => $a->where('kp_period_id', $request->period)))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
             ->latest('exam_date')
@@ -36,9 +37,14 @@ class ExamScheduleController extends Controller
         ]);
     }
 
-    public function show(KpExam $exam): View
+    public function show(KpExam $exam, KpExamMinuteService $minuteService): View
     {
-        return view('management.exams.show', ['exam' => $exam->load(['request.logs.user', 'assignment.student.user', 'assignment.place', 'supervisor.user', 'examiner.user', 'examiners.user'])]);
+        $exam->load(['request.logs.user', 'assignment.student.user', 'assignment.period', 'assignment.place', 'assignment.scores', 'supervisor.user', 'examiner.user', 'examiners.user', 'chair.user', 'minutes']);
+        if ($exam->minutes) {
+            $minuteService->syncReadiness($exam->minutes);
+            $exam->load('minutes');
+        }
+        return view('management.exams.show', compact('exam'));
     }
 
     public function create(KpExamRequest $examRequest): View|RedirectResponse
@@ -80,12 +86,6 @@ class ExamScheduleController extends Controller
     {
         $service->cancelExam($request->user(), $exam, $request->reason);
         return back()->with('status', 'Sidang berhasil dibatalkan.');
-    }
-
-    public function complete(Request $request, KpExam $exam, KpExamService $service): RedirectResponse
-    {
-        $service->completeExam($request->user(), $exam, $request->input('note'));
-        return back()->with('status', 'Sidang ditandai selesai.');
     }
 
     private function examiners()

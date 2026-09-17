@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class KpExam extends Model
 {
-    protected $fillable = ['kp_exam_request_id', 'kp_assignment_id', 'supervisor_id', 'examiner_id', 'exam_date', 'start_time', 'end_time', 'mode', 'room', 'meeting_link', 'status', 'scheduled_by', 'scheduled_at', 'note', 'integration_revision'];
+    protected $fillable = ['kp_exam_request_id', 'kp_assignment_id', 'supervisor_id', 'examiner_id', 'chair_lecturer_id', 'minutes_sequence', 'minutes_number', 'exam_date', 'start_time', 'end_time', 'mode', 'room', 'meeting_link', 'status', 'scheduled_by', 'scheduled_at', 'note', 'integration_revision'];
 
     protected function casts(): array
     {
@@ -18,12 +18,14 @@ class KpExam extends Model
     public function assignment() { return $this->belongsTo(KpAssignment::class, 'kp_assignment_id'); }
     public function supervisor() { return $this->belongsTo(Lecturer::class, 'supervisor_id'); }
     public function examiner() { return $this->belongsTo(Lecturer::class, 'examiner_id'); }
+    public function chair() { return $this->belongsTo(Lecturer::class, 'chair_lecturer_id'); }
     public function examExaminers() { return $this->hasMany(KpExaminer::class, 'kp_exam_id'); }
     public function examiners() { return $this->belongsToMany(Lecturer::class, 'kp_exam_examiners', 'kp_exam_id', 'lecturer_id')->withPivot('sort_order')->withTimestamps()->orderBy('kp_exam_examiners.sort_order'); }
     public function scheduledBy() { return $this->belongsTo(User::class, 'scheduled_by'); }
     public function logs() { return $this->hasMany(KpExamLog::class, 'kp_exam_id'); }
     public function scores() { return $this->hasMany(KpScore::class, 'kp_exam_id'); }
     public function invitation() { return $this->hasOne(KpExamInvitation::class, 'kp_exam_id'); }
+    public function minutes() { return $this->hasOne(KpExamMinute::class, 'kp_exam_id'); }
 
     public function scopeForExaminer(Builder $query, ?int $lecturerId): Builder
     {

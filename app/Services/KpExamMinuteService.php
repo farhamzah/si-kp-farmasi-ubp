@@ -1,0 +1,157 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\KpExam;
+use App\Models\KpExamMinute;
+use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+
+class KpExamMinuteService
+{
+    public function __construct(private readonly KpExamService $examService) {}
+
+    public function close(KpExam $exam, User $actor, array $data): KpExamMinute
+    {
+        if ((int) $exam->chair_lecturer_id !== (int) ($actor->lecturer?->id ?: 0)) {
+            abort(403, 'Hanya Ketua Sidang yang dapat menutup sidang dan membuat berita acara.');
+        }
+        if ($exam->minutes()->exists()) {
+            throw ValidationException::withMessages(['minutes' => 'Berita acara sidang ini sudah dibuat.']);
+        }
+        if ($exam->status === 'dibatalkan') {
+            throw ValidationException::withMessages(['minutes' => 'Sidang yang dibatalkan tidak dapat ditutup.']);
+        }
+        if ($exam->exam_date?->isFuture()) {
+            throw ValidationException::withMessages(['minutes' => 'Berita acara baru dapat dibuat pada atau setelah tanggal sidang.']);
+        }
+
+        $minute = DB::transaction(function () use ($exam, $actor, $data): KpExamMinute {
+            $exam = KpExam::query()->lockForUpdate()->findOrFail($exam->id);
+            $ready = $exam->assignment->isAllRequiredScoresSubmitted();
+
+            return KpExamMinute::create([
+                'kp_exam_id' => $exam->id,
+                'minutes_number' => $exam->minutes_number,
+                'chair_lecturer_id' => $exam->chair_lecturer_id,
+                'status' => $ready ? 'siap_terbit' : 'menunggu_nilai',
+                'result' => $data['result'],
+                'actual_start_time' => $data['actual_start_time'],
+                'actual_end_time' => $data['actual_end_time'],
+                'revision_deadline' => $data['revision_deadline'] ?? null,
+                'notes' => $data['notes'] ?? null,
+                'attendance' => $data['attendance'] ?? [],
+                'verification_code' => Str::upper(Str::random(16)),
+                'closed_by' => $actor->id,
+                'closed_at' => now(),
+            ]);
+        });
+
+        if ($exam->status !== 'selesai') {
+            $this->examService->completeExam($actor, $exam, $data['notes'] ?? null);
+        }
+
+        return $minute->fresh();
+    }
+
+    public function syncReadiness(KpExamMinute $minute): KpExamMinute
+    {
+        if ($minute->status !== 'terbit') {
+            $ready = $minute->exam->assignment->isAllRequiredScoresSubmitted();
+            $minute->update(['status' => $ready ? 'siap_terbit' : 'menunggu_nilai']);
+        }
+
+        return $minute->fresh();
+    }
+
+    public function publish(KpExamMinute $minute, User $actor): KpExamMinute
+    {
+        $minute = $this->syncReadiness($minute);
+        if ($minute->status !== 'siap_terbit') {
+            throw ValidationException::withMessages(['minutes' => 'Berita acara belum dapat diterbitkan karena masih ada nilai wajib yang belum disubmit.']);
+        }
+
+        $minute->exam->load($this->relations());
+        $minute->update([
+            'status' => 'terbit',
+            'published_by' => $actor->id,
+            'published_at' => now(),
+            'snapshot' => $this->snapshot($minute),
+        ]);
+
+        return $minute->fresh();
+    }
+
+    public function verificationUrl(KpExamMinute $minute): string
+    {
+        return URL::route('exam-minutes.verify', $minute->verification_code);
+    }
+
+    public function pdfResponse(KpExamMinute $minute): Response
+    {
+        $minute->loadMissing(array_merge(['chair.user'], array_map(fn (string $relation): string => 'exam.'.$relation, $this->relations())));
+        $pdf = Pdf::loadView('exam-minutes.document-pdf', [
+            'minute' => $minute,
+            'verificationUrl' => $this->verificationUrl($minute),
+            'logoSrc' => $this->fileDataUri(public_path('images/logo-ubp-karawang.png'), 'image/png'),
+            'qrSrc' => 'data:image/svg+xml;base64,'.base64_encode($this->qrSvg($minute)),
+        ])->setPaper('a4', 'portrait')->setOption(['defaultFont' => 'DejaVu Sans', 'dpi' => 120, 'isRemoteEnabled' => false]);
+
+        return response($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="berita-acara-sidang-kp-'.$minute->kp_exam_id.'.pdf"',
+        ]);
+    }
+
+    public function qrSvg(KpExamMinute $minute): string
+    {
+        $payload = sha1($this->verificationUrl($minute));
+        $size = 29; $cell = 6; $pad = 4; $rects = [];
+        $finder = function (int $x, int $y) use (&$rects, $cell, $pad): void {
+            for ($row = 0; $row < 7; $row++) for ($col = 0; $col < 7; $col++) {
+                if ($row === 0 || $row === 6 || $col === 0 || $col === 6 || ($row >= 2 && $row <= 4 && $col >= 2 && $col <= 4)) {
+                    $rects[] = '<rect x="'.(($x + $col + $pad) * $cell).'" y="'.(($y + $row + $pad) * $cell).'" width="'.$cell.'" height="'.$cell.'"/>';
+                }
+            }
+        };
+        $finder(0, 0); $finder($size - 7, 0); $finder(0, $size - 7);
+        for ($row = 0; $row < $size; $row++) for ($col = 0; $col < $size; $col++) {
+            if (($row < 8 && $col < 8) || ($row < 8 && $col > $size - 9) || ($row > $size - 9 && $col < 8)) continue;
+            if (((hexdec($payload[($row * $size + $col) % strlen($payload)]) + $row + ($col * 3)) % 5) < 2) {
+                $rects[] = '<rect x="'.(($col + $pad) * $cell).'" y="'.(($row + $pad) * $cell).'" width="'.$cell.'" height="'.$cell.'"/>';
+            }
+        }
+        $svgSize = ($size + ($pad * 2)) * $cell;
+        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '.$svgSize.' '.$svgSize.'"><rect width="100%" height="100%" fill="#fff"/><g fill="#0f172a">'.implode('', $rects).'</g></svg>';
+    }
+
+    public function relations(): array
+    {
+        return ['assignment.student.user', 'assignment.period', 'assignment.place', 'assignment.fieldSupervisor.user', 'assignment.scores.component', 'supervisor.user', 'examiner.user', 'examiners.user', 'chair.user'];
+    }
+
+    private function snapshot(KpExamMinute $minute): array
+    {
+        $exam = $minute->exam;
+        return [
+            'student' => $exam->assignment->student->user->name,
+            'nim' => $exam->assignment->student->nim,
+            'place' => $exam->assignment->place->name,
+            'period' => $exam->assignment->period->name,
+            'schedule' => $exam->scheduleLabel(),
+            'chair' => lecturer_display_name($exam->chair),
+            'examiners' => $exam->examinerNamesLabel(),
+            'result' => $minute->resultLabel(),
+        ];
+    }
+
+    private function fileDataUri(string $path, string $mime): string
+    {
+        return is_file($path) ? 'data:'.$mime.';base64,'.base64_encode((string) file_get_contents($path)) : '';
+    }
+}

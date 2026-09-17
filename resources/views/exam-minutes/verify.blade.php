@@ -1,0 +1,9 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Verifikasi Berita Acara Sidang KP</title>@vite(['resources/css/app.css','resources/js/app.js'])</head>
+<body class="bg-cyan-50 font-sans text-slate-900"><main class="mx-auto flex min-h-screen max-w-3xl items-center px-4 py-10"><section class="w-full rounded-3xl bg-white p-6 shadow-sm ring-1 ring-cyan-100 md:p-8">
+@if($minute && $minute->status === 'terbit')
+<p class="text-xs font-black uppercase tracking-widest text-emerald-700">Dokumen Valid</p><h1 class="mt-2 text-2xl font-black">Berita Acara Sidang Kerja Praktik</h1><p class="mt-2 text-sm text-slate-600">Kode verifikasi cocok dengan berita acara resmi yang tersimpan di SI-KP Farmasi UBP.</p>
+<div class="mt-5 grid gap-3 text-sm"><div class="rounded-2xl bg-slate-50 p-4"><p class="text-xs font-black uppercase text-slate-500">Nomor</p><p class="mt-1 font-black">{{ $minute->minutes_number }}</p></div><div class="rounded-2xl bg-slate-50 p-4"><p class="text-xs font-black uppercase text-slate-500">Mahasiswa</p><p class="mt-1 font-black">{{ $minute->exam->assignment->student->user->name }}</p><p>{{ $minute->exam->assignment->student->nim }}</p></div><div class="rounded-2xl bg-slate-50 p-4"><p class="text-xs font-black uppercase text-slate-500">Keputusan</p><p class="mt-1 font-black">{{ $minute->resultLabel() }}</p><p>Diterbitkan {{ $minute->published_at?->format('d M Y H:i') }}</p></div></div>
+@else
+<p class="text-xs font-black uppercase tracking-widest text-red-700">Tidak Valid</p><h1 class="mt-2 text-2xl font-black">Dokumen resmi tidak ditemukan</h1><p class="mt-2 text-sm text-slate-600">Kode tidak cocok atau berita acara masih berstatus draft dan belum diterbitkan koordinator.</p>
+@endif
+</section></main></body></html>

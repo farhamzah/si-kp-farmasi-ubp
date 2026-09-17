@@ -7,6 +7,7 @@
     $eligibility = $assignment->examEligibility();
     $report = $assignment->finalReport;
     $selectedExaminerIds = collect(old('examiner_ids', $exam?->examinerIds() ?? []))->map(fn ($id) => (int) $id)->all();
+    $selectedChairId = (int) old('chair_lecturer_id', $exam?->chair_lecturer_id);
 @endphp
 <div class="space-y-5">
     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -88,6 +89,18 @@
                     </div>
                     @error('examiner_ids')<p class="mt-2 text-xs font-semibold text-red-600">{{ $message }}</p>@enderror
                     @error('examiner_ids.*')<p class="mt-2 text-xs font-semibold text-red-600">{{ $message }}</p>@enderror
+
+                    <div class="mt-5 max-w-xl">
+                        <label class="text-sm font-bold text-slate-800">Ketua Sidang</label>
+                        <select name="chair_lecturer_id" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-3 text-sm shadow-sm">
+                            <option value="">Pilih ketua dari penguji yang dipilih</option>
+                            @foreach($examiners as $examiner)
+                                <option value="{{ $examiner->id }}" @selected($selectedChairId === $examiner->id)>{{ lecturer_display_name($examiner) }}</option>
+                            @endforeach
+                        </select>
+                        <p class="mt-1 text-xs text-slate-500">Ketua Sidang bertugas menutup sidang dan membuat berita acara. Pilihan harus termasuk dalam daftar penguji di atas.</p>
+                        @error('chair_lecturer_id')<p class="mt-1 text-xs font-semibold text-red-600">{{ $message }}</p>@enderror
+                    </div>
                 </section>
 
                 <section class="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100 md:p-5">

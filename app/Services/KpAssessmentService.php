@@ -131,6 +131,8 @@ class KpAssessmentService
                 $score->update(['status' => 'submitted', 'submitted_at' => now()]);
                 $this->logActivity($assessor, $assignment, 'score_submitted', $score, $old, 'submitted', $score->note);
             });
+
+        $this->syncExamMinutesReadiness($assignment);
     }
 
     public function calculateFinalScore(KpAssignment $assignment): KpFinalScore
@@ -194,6 +196,8 @@ class KpAssessmentService
                 $this->logActivity($actor, $assignment, 'score_overridden_by_management', $kpScore, null, 'submitted', $row['note'] ?? null, ['component_id' => $component->id]);
             }
         });
+
+        $this->syncExamMinutesReadiness($assignment);
     }
 
     public function finalizeScore(User $actor, KpAssignment $assignment, ?string $note = null): KpFinalScore
@@ -229,6 +233,16 @@ class KpAssessmentService
         $this->logActivity($actor, $finalScore->assignment, 'final_score_unlocked', null, $old, 'calculated', $reason, null, $finalScore->fresh());
 
         return $finalScore->fresh();
+    }
+
+    private function syncExamMinutesReadiness(KpAssignment $assignment): void
+    {
+        $assignment = $assignment->fresh(['scores', 'period.assessmentComponents', 'exam.examiners.user', 'exam.examiner.user', 'exam.minutes']);
+        $minute = $assignment?->exam?->minutes;
+
+        if ($minute && $minute->status !== 'terbit') {
+            $minute->update(['status' => $assignment->isAllRequiredScoresSubmitted() ? 'siap_terbit' : 'menunggu_nilai']);
+        }
     }
 
     public function logActivity(?User $user, KpAssignment $assignment, string $action, ?KpScore $score = null, ?string $oldStatus = null, ?string $newStatus = null, ?string $note = null, ?array $metadata = null, ?KpFinalScore $finalScore = null): void

@@ -367,6 +367,8 @@ class KpExamSchedulingTest extends TestCase
         $this->assertSame('dijadwalkan', $request->fresh()->status);
         $this->assertEqualsCanonicalizing([$this->examiner->id, $this->secondExaminer->id], $exam->examiners()->pluck('lecturers.id')->all());
         $this->assertSame($this->examiner->id, $exam->examiner_id);
+        $this->assertSame($this->examiner->id, $exam->chair_lecturer_id);
+        $this->assertNotNull($exam->minutes_number);
         $this->assertDatabaseHas('kp_exam_logs', ['action' => 'exam_scheduled']);
 
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
@@ -594,6 +596,7 @@ class KpExamSchedulingTest extends TestCase
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->post('/management/exam-requests/'.$request->id.'/schedule', $this->validSchedulePayload([
                 'examiner_ids' => [$this->supervisor->id, $this->examiner->id],
+                'chair_lecturer_id' => $this->supervisor->id,
             ]))
             ->assertRedirect();
 
@@ -601,7 +604,57 @@ class KpExamSchedulingTest extends TestCase
         $this->assertEqualsCanonicalizing([$this->supervisor->id, $this->examiner->id], $exam->examiners()->pluck('lecturers.id')->all());
     }
 
-    public function test_admin_can_cancel_and_complete_exam_with_logs(): void
+    public function test_only_chair_closes_exam_and_minutes_wait_for_late_scores(): void
+    {
+        $exam = $this->scheduledExam();
+        $exam->update(['exam_date' => now()->toDateString()]);
+        $exam->examiners()->sync([
+            $this->examiner->id => ['sort_order' => 1],
+            $this->secondExaminer->id => ['sort_order' => 2],
+        ]);
+
+        $payload = [
+            'result' => 'lulus_revisi',
+            'actual_start_time' => '09:05',
+            'actual_end_time' => '10:10',
+            'revision_deadline' => now()->addWeek()->toDateString(),
+            'notes' => 'Perbaiki format laporan final.',
+            'attendance' => ['mahasiswa', 'ketua_sidang', 'tim_penguji'],
+        ];
+
+        $this->actingAs($this->secondExaminerUser)->withSession(['active_role' => 'penguji'])
+            ->post('/penguji/jadwal-sidang/'.$exam->id.'/tutup', $payload)
+            ->assertForbidden();
+
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->post('/penguji/jadwal-sidang/'.$exam->id.'/tutup', $payload)
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('kp_exam_minutes', [
+            'kp_exam_id' => $exam->id,
+            'minutes_number' => $exam->minutes_number,
+            'status' => 'menunggu_nilai',
+            'result' => 'lulus_revisi',
+            'closed_by' => $this->examinerUser->id,
+        ]);
+        $this->assertSame('selesai', $exam->fresh()->status);
+
+        $minute = $exam->fresh()->minutes;
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->get('/berita-acara-sidang/'.$minute->id)
+            ->assertOk()
+            ->assertSee('DRAFT - MENUNGGU NILAI');
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->get('/berita-acara-sidang/'.$minute->id.'/pdf')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-minutes/'.$minute->id.'/publish')
+            ->assertSessionHasErrors('minutes');
+    }
+
+    public function test_admin_can_cancel_exam_with_log(): void
     {
         $exam = $this->scheduledExam();
 
@@ -612,20 +665,13 @@ class KpExamSchedulingTest extends TestCase
         $this->assertSame('dibatalkan', $exam->fresh()->status);
         $this->assertDatabaseHas('kp_exam_logs', ['action' => 'exam_cancelled']);
 
-        $exam->update(['status' => 'dijadwalkan']);
-
-        $this->actingAs($this->admin)->withSession(['active_role' => 'admin'])
-            ->post('/management/exams/'.$exam->id.'/complete', ['note' => 'Selesai.'])
-            ->assertRedirect();
-
-        $this->assertSame('selesai', $exam->fresh()->status);
-        $this->assertDatabaseHas('kp_exam_logs', ['action' => 'exam_completed']);
     }
 
     private function validSchedulePayload(array $overrides = []): array
     {
         return array_merge([
             'examiner_ids' => [$this->examiner->id, $this->secondExaminer->id],
+            'chair_lecturer_id' => $this->examiner->id,
             'exam_date' => now()->addWeek()->toDateString(),
             'start_time' => '09:00',
             'end_time' => '10:00',
@@ -672,13 +718,18 @@ class KpExamSchedulingTest extends TestCase
     private function scheduledExam(): KpExam
     {
         $request = $this->approvedExamRequest();
+        $examDate = now()->addWeek();
+        $romanMonth = [1 => 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'][$examDate->month];
 
         return KpExam::create([
             'kp_exam_request_id' => $request->id,
             'kp_assignment_id' => $this->assignment->id,
             'supervisor_id' => $this->supervisor->id,
             'examiner_id' => $this->examiner->id,
-            'exam_date' => now()->addWeek()->toDateString(),
+            'chair_lecturer_id' => $this->examiner->id,
+            'minutes_sequence' => 1,
+            'minutes_number' => '001/BA-SKP/FF-UBP/'.$romanMonth.'/'.$examDate->year,
+            'exam_date' => $examDate->toDateString(),
             'start_time' => '09:00',
             'end_time' => '10:00',
             'mode' => 'offline',

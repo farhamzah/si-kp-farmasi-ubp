@@ -8,4 +8,5 @@
     <div class="mt-5 grid gap-4 md:grid-cols-3"><div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-500">Jadwal</p><p class="font-bold">{{ $exam->scheduleLabel() }}</p></div><div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-500">Pembimbing</p><p class="font-bold">{{ $exam->supervisor ? lecturer_display_name($exam->supervisor) : '-' }}</p></div><div class="rounded-xl bg-slate-50 p-4"><p class="text-xs text-slate-500">Status</p><p class="font-bold">{{ $exam->statusLabel() }}</p></div></div>
     <div class="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">Input nilai penguji akan tersedia pada tahap berikutnya.</div>
 </x-ui.card>
+<div class="mt-5">@include('exam-minutes.partials.close-panel')</div>
 @endsection
