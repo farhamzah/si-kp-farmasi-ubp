@@ -11,7 +11,7 @@
 @endphp
 
 <style>
-    .invitation-sheet { width: 210mm; min-height: 297mm; padding: 15mm 17mm 14mm; box-sizing: border-box; }
+    .invitation-sheet { width: 210mm; min-height: 297mm; padding: 15mm 17mm 14mm; box-sizing: border-box; overflow: hidden; }
     @media (max-width: 900px) {
         .invitation-sheet { width: 100%; min-height: 0; padding: 24px; }
     }

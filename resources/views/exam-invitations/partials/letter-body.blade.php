@@ -10,8 +10,9 @@
 @endphp
 
 <style>
-    .letter { color: #111827; font-family: "DejaVu Sans", Arial, sans-serif; font-size: 10pt; line-height: 1.38; }
+    .letter { width: 100%; max-width: 100%; overflow: hidden; color: #111827; font-family: "DejaVu Sans", Arial, sans-serif; font-size: 10pt; line-height: 1.38; }
     .letter, .letter * { box-sizing: border-box; }
+    .letter table { width: 100%; max-width: 100%; }
     .letter p { margin: 0 0 8px; text-align: justify; }
     .letter-header { width: 100%; border-collapse: collapse; border-bottom: 3px double #111827; margin-bottom: 12px; }
     .letter-header td { vertical-align: middle; padding: 0 0 9px; }
@@ -27,11 +28,11 @@
     .letter-title-main { font-size: 13pt; font-weight: 800; text-decoration: underline; }
     .letter-number { margin-top: 2px; font-size: 9.5pt; }
     .letter-addressee { margin-bottom: 9px; }
-    .letter-details { width: 100%; margin: 8px 0 12px; border-collapse: collapse; page-break-inside: avoid; }
+    .letter-details { width: 100%; margin: 8px 0 12px; border-collapse: collapse; table-layout: fixed; page-break-inside: avoid; }
     .letter-details td { border-bottom: 1px solid #e5e7eb; padding: 3px 3px; vertical-align: top; }
     .letter-details .label { width: 29%; padding-left: 0; text-align: left !important; white-space: nowrap; }
     .letter-details .colon { width: 3%; text-align: center; }
-    .letter-details .value { width: 68%; padding-right: 0; font-weight: 500; text-align: left !important; }
+    .letter-details .value { width: 68%; padding-right: 0; font-weight: 500; text-align: left !important; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
     .letter-details .student-name { font-weight: 800; }
     .verification-table { width: 100%; margin-top: 14px; border-collapse: collapse; page-break-inside: avoid; }
     .verification-table td { vertical-align: middle; }
