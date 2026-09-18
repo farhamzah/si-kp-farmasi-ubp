@@ -6,6 +6,9 @@
     $scoreLocked = $assignment->finalScore?->isLocked() || $assessmentLocked;
 @endphp
 <div class="space-y-6">
+    @if(session('status'))
+        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{{ session('status') }}</div>
+    @endif
     <section class="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
         <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
@@ -103,7 +106,7 @@
         @if($errors->any())<div class="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{{ $errors->first() }}</div>@endif
         <div class="mt-6 flex justify-end gap-2"><button class="rounded-2xl border border-cyan-200 px-4 py-2 text-sm font-bold text-cyan-700 disabled:cursor-not-allowed disabled:opacity-50" @disabled($scoreLocked)>Simpan Draft</button></div>
     </form>
-    <form method="POST" action="{{ $submitRoute }}" onsubmit="return confirm('Submit nilai? Nilai tidak dapat diubah setelah nilai akhir dikunci.')" class="flex justify-end">@csrf<button class="rounded-2xl bg-cyan-700 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50" @disabled($scoreLocked)>Submit Nilai</button></form>
+    <form method="POST" action="{{ $submitRoute }}" onsubmit="return confirm('Submit nilai? Nilai tidak dapat diubah setelah nilai akhir dikunci.')" class="flex justify-end">@csrf<button class="rounded-2xl bg-cyan-700 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50" @disabled($scoreLocked)>{{ $submitLabel ?? 'Submit Nilai' }}</button></form>
 </div>
 
 @push('scripts')

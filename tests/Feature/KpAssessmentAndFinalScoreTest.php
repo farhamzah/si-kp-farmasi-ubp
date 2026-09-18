@@ -162,6 +162,74 @@ class KpAssessmentAndFinalScoreTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_exam_chair_completes_score_and_minutes_from_the_same_assessment_page(): void
+    {
+        [, , $examinerComponent] = $this->components();
+        $this->exam->update([
+            'chair_lecturer_id' => $this->examiner->id,
+            'minutes_sequence' => 1,
+            'minutes_number' => '001/BA-SKP/FF-UBP/IX/2026',
+        ]);
+
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->get('/penguji/penilaian/'.$this->exam->id)
+            ->assertOk()
+            ->assertSee('Submit Nilai dan Isi Berita Acara')
+            ->assertSee('Submit nilai terlebih dahulu');
+
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->post('/penguji/penilaian/'.$this->exam->id.'/save', [
+                'scores' => [['component_id' => $examinerComponent->id, 'score' => 88]],
+            ])
+            ->assertRedirect();
+
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->post('/penguji/penilaian/'.$this->exam->id.'/submit')
+            ->assertRedirect('/penguji/penilaian/'.$this->exam->id.'#berita-acara');
+
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->get('/penguji/penilaian/'.$this->exam->id)
+            ->assertOk()
+            ->assertSee('Tutup Sidang dan Buat Berita Acara')
+            ->assertDontSee('Submit nilai terlebih dahulu');
+
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->post('/penguji/jadwal-sidang/'.$this->exam->id.'/tutup', [
+                'result' => 'lulus_revisi',
+                'actual_start_time' => '09:05',
+                'actual_end_time' => '10:10',
+                'revision_deadline' => now()->addWeek()->toDateString(),
+                'notes' => 'Perbaiki format laporan.',
+                'attendance' => ['mahasiswa', 'ketua_sidang', 'tim_penguji'],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('kp_exam_minutes', [
+            'kp_exam_id' => $this->exam->id,
+            'chair_lecturer_id' => $this->examiner->id,
+            'result' => 'lulus_revisi',
+        ]);
+    }
+
+    public function test_chair_without_examiner_assignment_can_open_minutes_section_without_score_form(): void
+    {
+        $this->supervisorUser->roles()->syncWithoutDetaching(Role::where('name', 'penguji')->value('id'));
+        $this->exam->update(['chair_lecturer_id' => $this->supervisor->id]);
+
+        $this->actingAs($this->supervisorUser)->withSession(['active_role' => 'penguji'])
+            ->get('/penguji/penilaian')
+            ->assertOk()
+            ->assertSee($this->mahasiswa->name)
+            ->assertSee('Ketua Sidang');
+
+        $this->actingAs($this->supervisorUser)->withSession(['active_role' => 'penguji'])
+            ->get('/penguji/penilaian/'.$this->exam->id)
+            ->assertOk()
+            ->assertSee('tidak tercatat sebagai anggota tim penguji')
+            ->assertSee('Tutup Sidang dan Buat Berita Acara')
+            ->assertDontSee('Simpan Draft');
+    }
+
     public function test_multiple_assigned_examiners_can_score_and_finalization_waits_for_each_examiner(): void
     {
         [, $field, $examiner] = $this->components();

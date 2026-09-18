@@ -14,6 +14,11 @@
             <a href="{{ route('exam-minutes.preview', $exam->minutes) }}" class="rounded-xl bg-cyan-700 px-4 py-2 text-sm font-bold text-white">Preview Berita Acara</a>
             <a href="{{ route('exam-minutes.pdf', $exam->minutes) }}" class="rounded-xl border border-cyan-200 px-4 py-2 text-sm font-bold text-cyan-700">Download PDF</a>
         </div>
+    @elseif($isChair && ($requireChairScoreSubmitted ?? false) && ! ($chairScoreSubmitted ?? false))
+        <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <p class="font-black">Submit nilai terlebih dahulu</p>
+            <p class="mt-1 leading-6 text-amber-800">Setelah seluruh nilai wajib Ketua Sidang disubmit, formulir hasil sidang dan berita acara akan terbuka di bagian ini.</p>
+        </div>
     @elseif($isChair)
         <form method="POST" action="{{ $closeRoute }}" class="mt-5 space-y-4" onsubmit="return confirm('Tutup sidang dan buat berita acara?')">
             @csrf
