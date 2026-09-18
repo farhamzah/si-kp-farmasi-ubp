@@ -12,6 +12,7 @@ use App\Models\KpFinalScore;
 use App\Models\KpLogbook;
 use App\Models\KpPeriod;
 use App\Models\KpPlace;
+use App\Models\KpPostExamReport;
 use App\Models\KpRegistration;
 use App\Models\KpReportGuidanceLog;
 use App\Models\Lecturer;
@@ -30,15 +31,25 @@ class KpAssessmentAndFinalScoreTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private User $koordinator;
+
     private User $mahasiswa;
+
     private User $supervisorUser;
+
     private User $fieldUser;
+
     private User $examinerUser;
+
     private Lecturer $supervisor;
+
     private Lecturer $examiner;
+
     private FieldSupervisor $field;
+
     private KpAssignment $assignment;
+
     private KpExam $exam;
 
     protected function setUp(): void
@@ -69,6 +80,15 @@ class KpAssessmentAndFinalScoreTest extends TestCase
             'payment_proof_reviewed_at' => now(),
         ]);
         $this->exam = KpExam::create(['kp_exam_request_id' => $request->id, 'kp_assignment_id' => $this->assignment->id, 'supervisor_id' => $this->supervisor->id, 'examiner_id' => $this->examiner->id, 'exam_date' => now()->toDateString(), 'start_time' => '09:00', 'end_time' => '10:00', 'mode' => 'offline', 'room' => 'R1', 'status' => 'dijadwalkan']);
+        KpPostExamReport::create([
+            'kp_assignment_id' => $this->assignment->id,
+            'status' => KpPostExamReport::STATUS_APPROVED,
+            'document_url' => 'https://drive.google.com/example-post-exam-report',
+            'submitted_at' => now(),
+            'reviewed_by' => $this->koordinator->id,
+            'reviewed_at' => now(),
+            'approved_at' => now(),
+        ]);
     }
 
     public function test_admin_and_koordinator_can_manage_assessment_components(): void
@@ -560,6 +580,7 @@ class KpAssessmentAndFinalScoreTest extends TestCase
     {
         $user = User::create(['name' => 'User Test', 'email' => $email, 'password' => Hash::make('password'), 'status' => 'active']);
         $user->roles()->sync(Role::whereIn('name', $roles)->pluck('id'));
+
         return $user;
     }
 }

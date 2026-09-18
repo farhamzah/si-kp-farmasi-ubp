@@ -344,6 +344,57 @@
                         @endforelse
                     </div>
                 </section>
+
+                @if($assignment->exam?->minutes)
+                    @php($postExamReport = $assignment->postExamReport)
+                    <section class="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm md:p-6">
+                        <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                            <div>
+                                <p class="text-xs font-black uppercase tracking-widest text-emerald-700">Sesudah Sidang</p>
+                                <h3 class="mt-1 text-xl font-black text-slate-950">Dokumen Final Pascasidang</h3>
+                                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Upload satu PDF laporan yang sudah diperbaiki setelah sidang, ditandatangani, dan disahkan. Dokumen ini berbeda dari laporan yang dipakai untuk mendaftar sidang.</p>
+                            </div>
+                            <span class="inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $postExamReport?->statusBadgeClass() ?? 'bg-slate-100 text-slate-700 ring-slate-200' }}">{{ $postExamReport?->statusLabel() ?? 'Belum Upload' }}</span>
+                        </div>
+
+                        @if($postExamReport?->review_note)
+                            <div class="mt-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800"><strong>Catatan Koordinator:</strong> {{ $postExamReport->review_note }}</div>
+                        @endif
+
+                        @if($postExamReport?->hasDocument())
+                            <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-4">
+                                <div><p class="font-bold text-slate-950">{{ $postExamReport->documentLabel() }}</p><p class="text-xs text-slate-500">Versi {{ $postExamReport->version }} · dikirim {{ $postExamReport->submitted_at?->format('d M Y H:i') }}</p></div>
+                                <div class="flex flex-wrap gap-2">
+                                    @if($postExamReport->file_path)
+                                        <a target="_blank" rel="noopener" href="{{ route('student.post-exam-reports.preview') }}" class="rounded-xl border border-cyan-200 bg-white px-4 py-2 text-sm font-bold text-cyan-700">Preview</a>
+                                        <a href="{{ route('student.post-exam-reports.download') }}" class="rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white">Download</a>
+                                    @endif
+                                    @if($postExamReport->document_url)<a target="_blank" rel="noopener" href="{{ $postExamReport->document_url }}" class="rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm font-bold text-emerald-700">Buka Link</a>@endif
+                                </div>
+                            </div>
+                        @endif
+
+                        @if($assignment->exam->minutes->result === 'belum_lulus')
+                            <p class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">Upload dibuka setelah hasil sidang dinyatakan lulus atau lulus dengan revisi.</p>
+                        @elseif(! $postExamReport || $postExamReport->canBeEditedByStudent())
+                            <form method="POST" action="{{ route('student.post-exam-reports.store') }}" enctype="multipart/form-data" class="mt-5 space-y-4">
+                                @csrf
+                                <div class="grid gap-4 md:grid-cols-2">
+                                    <label class="text-sm font-bold text-slate-700">PDF final pascasidang
+                                        <input type="file" name="document_file" accept="application/pdf,.pdf" class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm">
+                                    </label>
+                                    <label class="text-sm font-bold text-slate-700">Atau link file Drive
+                                        <input name="document_url" value="{{ old('document_url') }}" placeholder="https://drive.google.com/file/d/..." class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                    </label>
+                                </div>
+                                <input name="document_label" value="{{ old('document_label') }}" placeholder="Nama dokumen (opsional)" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                <button class="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white">{{ $postExamReport?->hasDocument() ? 'Kirim Ulang Dokumen' : 'Kirim untuk Validasi Koordinator' }}</button>
+                            </form>
+                        @else
+                            <p class="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">Dokumen tidak dapat diganti selama menunggu validasi atau setelah disetujui. Koordinator dapat mengembalikannya jika perlu perbaikan.</p>
+                        @endif
+                    </section>
+                @endif
             </div>
 
             <aside class="space-y-5 xl:sticky xl:top-24 xl:self-start">

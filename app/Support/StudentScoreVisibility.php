@@ -11,7 +11,7 @@ class StudentScoreVisibility
 {
     public function resolve(KpAssignment $assignment): array
     {
-        $assignment->loadMissing(['period', 'student.user', 'finalScore', 'finalReport', 'examRequest']);
+        $assignment->loadMissing(['period', 'student.user', 'finalScore', 'finalReport', 'examRequest', 'postExamReport']);
 
         $override = KpScoreVisibilityOverride::query()
             ->where('kp_period_id', $assignment->kp_period_id)
@@ -45,13 +45,14 @@ class StudentScoreVisibility
 
     public function requirements(KpAssignment $assignment): array
     {
-        $assignment->loadMissing(['finalReport', 'student.user', 'examRequest']);
+        $assignment->loadMissing(['finalReport', 'student.user', 'examRequest', 'postExamReport']);
 
         $report = $assignment->finalReport;
         $hasFinalDocument = $report ? ($report->files()->exists() || filled($report->final_document_url)) : false;
         $reportApproved = (bool) ($report?->isApproved() && $hasFinalDocument);
         $studentQuestionnaireSubmitted = $this->studentQuestionnaireSubmitted($assignment);
         $paymentProofApproved = (bool) $assignment->examRequest?->paymentProofApproved();
+        $postExamReportApproved = (bool) $assignment->postExamReport?->isApproved();
 
         return [
             [
@@ -61,6 +62,14 @@ class StudentScoreVisibility
                 'description' => $reportApproved
                     ? 'Dokumen final tersedia dan review pembimbing lengkap.'
                     : 'Upload/link laporan final harus tersedia dan disetujui pembimbing dalam serta lapangan.',
+            ],
+            [
+                'key' => 'post_exam_report_approved',
+                'label' => 'Dokumen final pascasidang disetujui koordinator',
+                'ready' => $postExamReportApproved,
+                'description' => $postExamReportApproved
+                    ? 'Dokumen hasil revisi, tanda tangan, dan pengesahan sudah divalidasi koordinator.'
+                    : 'Upload dokumen final pascasidang dari menu Laporan Akhir dan tunggu validasi koordinator.',
             ],
             [
                 'key' => 'student_questionnaire_submitted',

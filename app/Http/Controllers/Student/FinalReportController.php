@@ -23,7 +23,7 @@ class FinalReportController extends Controller
         $report = $assignment ? $service->createOrGetReport(request()->user(), $assignment)->load(['latestFile', 'files.uploadedBy', 'logs.user', 'internalReviewedBy', 'fieldReviewedBy']) : null;
 
         return view('student.final-reports.show', [
-            'assignment' => $assignment?->load(['place', 'internalSupervisor.user', 'fieldSupervisor.user', 'reportGuidanceLogs.validatedBy']),
+            'assignment' => $assignment?->load(['place', 'internalSupervisor.user', 'fieldSupervisor.user', 'reportGuidanceLogs.validatedBy', 'exam.minutes', 'postExamReport.reviewer']),
             'report' => $report,
             'examEligibility' => $assignment?->examEligibility(),
             'driveFolderUrl' => config('kp_final_report.drive_folder_url'),
@@ -102,7 +102,7 @@ class FinalReportController extends Controller
     {
         return request()->user()->student?->assignments()
             ->with(['place', 'internalSupervisor.user', 'fieldSupervisor.user'])
-            ->whereIn('status', ['aktif', 'berjalan'])
+            ->whereIn('status', ['aktif', 'berjalan', 'selesai'])
             ->latest()
             ->first();
     }

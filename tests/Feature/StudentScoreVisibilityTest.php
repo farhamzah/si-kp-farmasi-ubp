@@ -8,6 +8,7 @@ use App\Models\KpFinalReport;
 use App\Models\KpFinalScore;
 use App\Models\KpPeriod;
 use App\Models\KpPlace;
+use App\Models\KpPostExamReport;
 use App\Models\KpQuestionnaire;
 use App\Models\KpQuestionnaireResponse;
 use App\Models\KpRegistration;
@@ -25,9 +26,13 @@ class StudentScoreVisibilityTest extends TestCase
     use RefreshDatabase;
 
     private User $koordinator;
+
     private User $mahasiswa;
+
     private Student $student;
+
     private KpPeriod $period;
+
     private KpAssignment $assignment;
 
     protected function setUp(): void
@@ -99,6 +104,17 @@ class StudentScoreVisibilityTest extends TestCase
             'payment_proof_status' => KpExamRequest::PAYMENT_PROOF_APPROVED,
             'payment_proof_reviewed_by' => $this->koordinator->id,
             'payment_proof_reviewed_at' => now(),
+        ]);
+
+        KpPostExamReport::create([
+            'kp_assignment_id' => $this->assignment->id,
+            'status' => KpPostExamReport::STATUS_APPROVED,
+            'document_url' => 'https://drive.google.com/example-post-exam-report',
+            'document_label' => 'Laporan final pascasidang.pdf',
+            'submitted_at' => now(),
+            'reviewed_by' => $this->koordinator->id,
+            'reviewed_at' => now(),
+            'approved_at' => now(),
         ]);
     }
 
@@ -206,6 +222,32 @@ class StudentScoreVisibilityTest extends TestCase
             'payment_proof_status' => KpExamRequest::PAYMENT_PROOF_APPROVED,
             'payment_proof_reviewed_by' => $this->koordinator->id,
             'payment_proof_reviewed_at' => now(),
+        ]);
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/nilai')
+            ->assertOk()
+            ->assertSee('Nilai Akhir KP');
+    }
+
+    public function test_approved_post_exam_report_is_required_to_view_score(): void
+    {
+        $this->period->update(['score_visible_to_students' => true]);
+        $this->assignment->postExamReport->update([
+            'status' => KpPostExamReport::STATUS_REVISION,
+            'approved_at' => null,
+            'review_note' => 'Halaman pengesahan belum lengkap.',
+        ]);
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/nilai')
+            ->assertOk()
+            ->assertSee('Dokumen final pascasidang disetujui koordinator')
+            ->assertDontSee('Nilai Akhir KP');
+
+        $this->assignment->postExamReport->update([
+            'status' => KpPostExamReport::STATUS_APPROVED,
+            'approved_at' => now(),
         ]);
 
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])

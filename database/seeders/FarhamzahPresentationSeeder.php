@@ -8,8 +8,8 @@ use App\Models\KpAssignment;
 use App\Models\KpDocument;
 use App\Models\KpDocumentRequirement;
 use App\Models\KpExam;
-use App\Models\KpExamInvitationSignatory;
 use App\Models\KpExaminer;
+use App\Models\KpExamInvitationSignatory;
 use App\Models\KpExamLog;
 use App\Models\KpExamRequest;
 use App\Models\KpFinalReport;
@@ -23,6 +23,7 @@ use App\Models\KpPlace;
 use App\Models\KpPlaceFieldSupervisor;
 use App\Models\KpPlaceQuota;
 use App\Models\KpPlaceSelection;
+use App\Models\KpPostExamReport;
 use App\Models\KpQuestionnaire;
 use App\Models\KpQuestionnaireQuestion;
 use App\Models\KpQuestionnaireResponse;
@@ -34,8 +35,8 @@ use App\Models\Lecturer;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\User;
-use App\Support\KpScoreCalculator;
 use App\Services\KpExamInvitationService;
+use App\Support\KpScoreCalculator;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
@@ -497,6 +498,19 @@ class FarhamzahPresentationSeeder extends Seeder
                 'field_guidance_completed_at' => now()->subDays(10 - $index),
                 'field_guidance_completion_note' => 'Bimbingan lapangan sudah selesai.',
             ],
+        );
+
+        KpPostExamReport::updateOrCreate(
+            ['kp_assignment_id' => $assignment->id],
+            [
+                'status' => KpPostExamReport::STATUS_APPROVED,
+                'document_url' => 'https://drive.google.com/file/d/presentation-final-pascasidang-'.$assignment->id.'/view',
+                'document_label' => 'Laporan Final Pascasidang Mahasiswa '.$index.'.pdf',
+                'submitted_at' => now()->subDays(max(1, 4 - $index)),
+                'reviewed_by' => $reviewer->id,
+                'reviewed_at' => now()->subDays(max(0, 3 - $index)),
+                'approved_at' => now()->subDays(max(0, 3 - $index)),
+            ]
         );
 
         KpFinalReportFile::updateOrCreate(

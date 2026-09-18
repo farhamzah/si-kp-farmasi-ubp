@@ -42,6 +42,7 @@ class KpAssignment extends Model
     public function logs() { return $this->hasMany(KpAssignmentLog::class, 'kp_assignment_id'); }
     public function logbooks() { return $this->hasMany(KpLogbook::class, 'kp_assignment_id'); }
     public function finalReport() { return $this->hasOne(KpFinalReport::class, 'kp_assignment_id'); }
+    public function postExamReport() { return $this->hasOne(KpPostExamReport::class, 'kp_assignment_id'); }
     public function reportGuidanceLogs() { return $this->hasMany(KpReportGuidanceLog::class, 'kp_assignment_id'); }
     public function examRequest() { return $this->hasOne(KpExamRequest::class, 'kp_assignment_id'); }
     public function exam() { return $this->hasOne(KpExam::class, 'kp_assignment_id'); }

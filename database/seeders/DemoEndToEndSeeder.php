@@ -19,6 +19,7 @@ use App\Models\KpPlace;
 use App\Models\KpPlaceFieldSupervisor;
 use App\Models\KpPlaceQuota;
 use App\Models\KpPlaceSelection;
+use App\Models\KpPostExamReport;
 use App\Models\KpRegistration;
 use App\Models\KpScore;
 use App\Models\KpScoreLog;
@@ -26,6 +27,7 @@ use App\Models\Lecturer;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\User;
+use App\Support\KpScoreCalculator;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
@@ -403,6 +405,19 @@ class DemoEndToEndSeeder extends Seeder
             ]
         );
 
+        KpPostExamReport::updateOrCreate(
+            ['kp_assignment_id' => $assignment->id],
+            [
+                'status' => KpPostExamReport::STATUS_APPROVED,
+                'document_url' => 'https://drive.google.com/file/d/demo-final-pascasidang-'.$assignment->id.'/view',
+                'document_label' => 'Laporan Final Pascasidang.pdf',
+                'submitted_at' => now()->subDay(),
+                'reviewed_by' => $reviewer->id,
+                'reviewed_at' => now(),
+                'approved_at' => now(),
+            ]
+        );
+
         KpFinalReportFile::updateOrCreate(
             ['kp_final_report_id' => $report->id, 'version' => 1],
             [
@@ -581,7 +596,7 @@ class DemoEndToEndSeeder extends Seeder
                 'note' => 'Nilai akhir demo sudah dipublikasikan.',
             ]
         );
-        $final = app(\App\Support\KpScoreCalculator::class)->breakdown($assignment->fresh())['final_score'];
+        $final = app(KpScoreCalculator::class)->breakdown($assignment->fresh())['final_score'];
         $finalScore->update([
             'final_score' => $final,
             'final_grade' => $this->grade($final),
