@@ -25,8 +25,9 @@
         td { font-size: 6.5px; line-height: 1.3; }
         tr { page-break-inside: avoid; }
         .number { text-align: center; width: 4%; }
-        .schedule { width: 12%; } .student { width: 15%; } .location { width: 13%; } .status { width: 9%; }
+        .schedule { width: 11%; } .time { width: 8%; } .student { width: 15%; } .title { width: 18%; } .location { width: 13%; } .team { width: 31%; }
         .backdate { color: #a16207; font-size: 6px; font-weight: 700; }
+        .muted { color: #64748b; font-size: 6px; }
         .empty { color: #64748b; padding: 25px; text-align: center; }
         footer { color: #64748b; font-size: 6px; margin-top: 7px; text-align: right; }
     </style>

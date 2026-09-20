@@ -43,11 +43,13 @@ class FinalReportController extends Controller
     public function saveFinalLink(Request $request, KpFinalReportService $service): RedirectResponse
     {
         $request->merge([
+            'report_title' => $this->cleanNullableText($request->input('report_title')),
             'final_document_url' => $this->normalizeDocumentUrl($request->input('final_document_url')),
             'final_document_label' => $this->cleanNullableText($request->input('final_document_label')),
         ]);
 
         $data = $request->validate([
+            'report_title' => ['nullable', 'string', 'max:255'],
             'final_document_url' => ['required', 'url:http,https', 'max:2048'],
             'final_document_label' => ['nullable', 'string', 'max:255'],
         ]);
@@ -56,6 +58,9 @@ class FinalReportController extends Controller
 
         $assignment = $this->requireActiveAssignment();
         $report = $service->createOrGetReport($request->user(), $assignment);
+        if (filled($data['report_title'] ?? null)) {
+            $report->update(['report_title' => $data['report_title']]);
+        }
         $service->saveFinalDocumentLink($request->user(), $report, $data['final_document_url'], $data['final_document_label'] ?? null);
 
         return back()->with('status', 'Link laporan final berhasil disimpan.');

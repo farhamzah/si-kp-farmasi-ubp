@@ -306,6 +306,7 @@
                     @if(! $report || $report->canBeEditedByStudent())
                         <form method="POST" action="{{ route('student.final-reports.final-link') }}" class="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_260px_auto]">
                             @csrf
+                            <input name="report_title" value="{{ old('report_title', $report?->report_title) }}" placeholder="Judul laporan Kerja Praktik" class="rounded-xl border border-slate-300 px-3 py-2 text-sm shadow-sm md:col-span-3" required>
                             <input name="final_document_url" value="{{ old('final_document_url', $report?->final_document_url) }}" placeholder="https://drive.google.com/file/d/..." class="rounded-xl border border-slate-300 px-3 py-2 text-sm shadow-sm">
                             <input name="final_document_label" value="{{ old('final_document_label', $report?->final_document_label ?: $suggestedFinalFilename) }}" placeholder="Judul/link opsional" class="rounded-xl border border-slate-300 px-3 py-2 text-sm shadow-sm">
                             <button class="rounded-xl bg-cyan-700 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-cyan-700/15">Simpan Link</button>

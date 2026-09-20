@@ -616,10 +616,20 @@ class KpExamSchedulingTest extends TestCase
         $query = ['status' => 'dijadwalkan', 'date_from' => now()->toDateString()];
 
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/exams?q=Pelayanan+Kefarmasian')
+            ->assertOk()
+            ->assertSee($this->mahasiswa->name)
+            ->assertSee('Evaluasi Pelayanan Kefarmasian di Apotek Sehat');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->get('/management/exams/report/preview?'.http_build_query($query))
             ->assertOk()
             ->assertSee('DAFTAR JADWAL SIDANG KERJA PRAKTIK')
             ->assertSee($this->mahasiswa->name)
+            ->assertSee($this->student->nim)
+            ->assertSee('Evaluasi Pelayanan Kefarmasian di Apotek Sehat')
+            ->assertSee('Ruang Sidang 1')
+            ->assertSee('Apotek Sehat')
             ->assertSee('Download PDF')
             ->assertSee('Print');
 
@@ -861,6 +871,7 @@ class KpExamSchedulingTest extends TestCase
             [
                 'current_version' => 1,
                 'status' => 'disetujui',
+                'report_title' => 'Evaluasi Pelayanan Kefarmasian di Apotek Sehat',
                 'final_document_url' => 'https://docs.google.com/document/d/final',
                 'internal_review_status' => 'disetujui',
                 'internal_reviewed_by' => $this->supervisorUser->id,

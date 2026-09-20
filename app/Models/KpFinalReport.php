@@ -14,6 +14,7 @@ class KpFinalReport extends Model
         'reviewed_by',
         'reviewed_at',
         'review_note',
+        'report_title',
         'final_document_url',
         'final_document_label',
         'approved_at',

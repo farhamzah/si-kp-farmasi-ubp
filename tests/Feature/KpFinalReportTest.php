@@ -156,11 +156,13 @@ class KpFinalReportTest extends TestCase
     {
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
             ->post('/mahasiswa/laporan-akhir/link-final', [
+                'report_title' => 'Evaluasi Pelayanan Kefarmasian di Apotek Sehat',
                 'final_document_url' => 'https://docs.google.com/document/d/final-report',
                 'final_document_label' => 'Laporan Final KP',
             ])->assertRedirect();
 
         $report = KpFinalReport::first();
+        $this->assertSame('Evaluasi Pelayanan Kefarmasian di Apotek Sehat', $report->report_title);
         $this->assertSame('https://docs.google.com/document/d/final-report', $report->final_document_url);
 
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])

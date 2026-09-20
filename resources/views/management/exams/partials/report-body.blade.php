@@ -24,29 +24,27 @@
     <thead>
         <tr>
             <th class="number">No</th>
-            <th class="schedule">Tanggal &amp; Waktu</th>
+            <th class="schedule">Hari / Tanggal</th>
+            <th class="time">Waktu</th>
             <th class="student">Mahasiswa</th>
-            <th>Tempat KP</th>
+            <th class="title">Judul Laporan</th>
             <th class="location">Ruang / Media</th>
-            <th>Ketua Sidang</th>
-            <th>Tim Penguji</th>
-            <th class="status">Status</th>
+            <th class="team">Tim Sidang</th>
         </tr>
     </thead>
     <tbody>
         @forelse($exams as $exam)
             <tr>
                 <td class="number">{{ $loop->iteration }}</td>
-                <td><strong>{{ $exam->exam_date?->translatedFormat('d M Y') }}</strong><br>{{ substr((string) $exam->start_time, 0, 5) }} - {{ substr((string) $exam->end_time, 0, 5) }} WIB</td>
+                <td><strong>{{ $exam->exam_date?->translatedFormat('l') }}</strong><br>{{ $exam->exam_date?->translatedFormat('d F Y') }}<br><span class="muted">{{ $exam->statusLabel() }}</span></td>
+                <td>{{ substr((string) $exam->start_time, 0, 5) }}–{{ substr((string) $exam->end_time, 0, 5) }} WIB</td>
                 <td><strong>{{ $exam->assignment?->student?->user?->name ?? '-' }}</strong><br>{{ $exam->assignment?->student?->nim ?? '-' }}</td>
-                <td>{{ $exam->assignment?->place?->name ?? '-' }}</td>
-                <td><strong>{{ $exam->modeLabel() }}</strong><br>{{ $exam->room ?: $exam->meeting_link ?: '-' }}</td>
-                <td>{{ $exam->chair ? lecturer_display_name($exam->chair) : '-' }}</td>
-                <td>{{ $exam->examinerNamesLabel() }}</td>
-                <td>{{ $exam->statusLabel() }}@if($exam->backdate_reason)<br><span class="backdate">Backdate tercatat</span>@endif</td>
+                <td>{{ $exam->assignment?->finalReport?->report_title ?: $exam->assignment?->finalReport?->final_document_label ?: 'Judul belum diisi' }}</td>
+                <td><strong>{{ $exam->room ?: ($exam->mode === 'online' ? 'Daring' : '-') }}</strong><br>{{ $exam->modeLabel() }}<br><span class="muted">KP: {{ $exam->assignment?->place?->name ?? '-' }}</span></td>
+                <td><strong>Ketua:</strong> {{ $exam->chair ? lecturer_display_name($exam->chair) : '-' }}<br><strong>Pembimbing:</strong> {{ $exam->supervisor ? lecturer_display_name($exam->supervisor) : '-' }}<br><strong>Penguji:</strong> {{ $exam->examinerNamesLabel() }}</td>
             </tr>
         @empty
-            <tr><td colspan="8" class="empty">Belum ada jadwal sidang sesuai filter.</td></tr>
+            <tr><td colspan="7" class="empty">Belum ada jadwal sidang sesuai filter.</td></tr>
         @endforelse
     </tbody>
 </table>

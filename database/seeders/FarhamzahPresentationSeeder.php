@@ -480,6 +480,7 @@ class FarhamzahPresentationSeeder extends Seeder
                 'reviewed_by' => $reviewer->id,
                 'reviewed_at' => now()->subDays(8 - $index),
                 'review_note' => 'Laporan final dummy presentasi disetujui lengkap.',
+                'report_title' => 'Evaluasi Pelayanan Kefarmasian di '.($assignment->place?->name ?? 'Tempat KP'),
                 'final_document_url' => 'https://drive.google.com/file/d/final-presentasi-'.$assignment->id.'/view',
                 'final_document_label' => 'Laporan Final KP Presentasi '.$assignment->student?->nim,
                 'approved_at' => now()->subDays(8 - $index),

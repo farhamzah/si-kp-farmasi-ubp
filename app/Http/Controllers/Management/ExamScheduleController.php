@@ -24,16 +24,26 @@ class ExamScheduleController extends Controller
 {
     public function index(Request $request): View
     {
-        $exams = $this->filteredExamQuery($request)
-            ->latest('exam_date')
+        $filteredQuery = $this->filteredExamQuery($request);
+        $today = now()->toDateString();
+        $exams = (clone $filteredQuery)
+            ->orderByRaw("CASE WHEN exam_date >= ? AND status IN ('dijadwalkan', 'ditunda') THEN 0 ELSE 1 END", [$today])
+            ->orderByRaw("CASE WHEN exam_date >= ? AND status IN ('dijadwalkan', 'ditunda') THEN exam_date END ASC", [$today])
+            ->orderByRaw("CASE WHEN exam_date < ? OR status NOT IN ('dijadwalkan', 'ditunda') THEN exam_date END DESC", [$today])
+            ->orderBy('start_time')
             ->paginate(10)
             ->withQueryString();
 
         return view('management.exams.index', [
             'exams' => $exams,
             'periods' => KpPeriod::latest()->get(),
-            'filters' => $request->only(['period', 'status', 'date_from', 'date_to']),
+            'filters' => $request->only(['period', 'status', 'date_from', 'date_to', 'q']),
             'signatory' => KpExamInvitationSignatory::active(),
+            'stats' => [
+                'total' => (clone $filteredQuery)->count(),
+                'upcoming' => (clone $filteredQuery)->whereDate('exam_date', '>=', $today)->whereIn('status', ['dijadwalkan', 'ditunda'])->count(),
+                'completed' => (clone $filteredQuery)->where('status', 'selesai')->count(),
+            ],
         ]);
     }
 
@@ -115,11 +125,22 @@ class ExamScheduleController extends Controller
     private function filteredExamQuery(Request $request): Builder
     {
         return KpExam::query()
-            ->with(['assignment.student.user', 'assignment.period', 'assignment.place', 'supervisor.user', 'examiner.user', 'examiners.user', 'chair.user', 'invitation', 'minutes'])
+            ->with(['assignment.student.user', 'assignment.period', 'assignment.place', 'assignment.finalReport', 'supervisor.user', 'examiner.user', 'examiners.user', 'chair.user', 'invitation', 'minutes'])
             ->when($request->filled('period'), fn (Builder $q) => $q->whereHas('assignment', fn (Builder $a) => $a->where('kp_period_id', $request->integer('period'))))
             ->when($request->filled('status'), fn (Builder $q) => $q->where('status', $request->string('status')))
             ->when($request->filled('date_from'), fn (Builder $q) => $q->whereDate('exam_date', '>=', $request->date('date_from')))
-            ->when($request->filled('date_to'), fn (Builder $q) => $q->whereDate('exam_date', '<=', $request->date('date_to')));
+            ->when($request->filled('date_to'), fn (Builder $q) => $q->whereDate('exam_date', '<=', $request->date('date_to')))
+            ->when($request->filled('q'), function (Builder $query) use ($request): void {
+                $keyword = $request->string('q')->toString();
+                $query->where(function (Builder $query) use ($keyword): void {
+                    $query->where('room', 'like', "%{$keyword}%")
+                        ->orWhereHas('assignment.student', fn (Builder $student) => $student
+                            ->where('nim', 'like', "%{$keyword}%")
+                            ->orWhereHas('user', fn (Builder $user) => $user->where('name', 'like', "%{$keyword}%")))
+                        ->orWhereHas('assignment.place', fn (Builder $place) => $place->where('name', 'like', "%{$keyword}%"))
+                        ->orWhereHas('assignment.finalReport', fn (Builder $report) => $report->where('report_title', 'like', "%{$keyword}%"));
+                });
+            });
     }
 
     private function reportData(Request $request): array
@@ -132,8 +153,9 @@ class ExamScheduleController extends Controller
                 'Periode' => $period?->name ?? 'Semua periode',
                 'Status' => $request->filled('status') ? ucfirst((string) $request->status) : 'Semua status',
                 'Rentang tanggal' => ($request->date_from ?: 'Awal').' s.d. '.($request->date_to ?: 'Akhir'),
+                'Pencarian' => $request->filled('q') ? (string) $request->q : 'Semua jadwal',
             ],
-            'query' => $request->only(['period', 'status', 'date_from', 'date_to']),
+            'query' => $request->only(['period', 'status', 'date_from', 'date_to', 'q']),
             'logoSrc' => $this->fileDataUri(public_path('images/logo-ubp-karawang.png'), 'image/png'),
         ];
     }

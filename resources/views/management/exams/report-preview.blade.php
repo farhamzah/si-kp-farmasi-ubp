@@ -30,8 +30,9 @@
         th { background: #e6f7fa; color: #155e75; font-size: 8px; text-transform: uppercase; }
         td { font-size: 9px; line-height: 1.35; }
         .number { text-align: center; width: 4%; }
-        .schedule { width: 12%; } .student { width: 15%; } .location { width: 13%; } .status { width: 9%; }
+        .schedule { width: 11%; } .time { width: 8%; } .student { width: 15%; } .title { width: 18%; } .location { width: 13%; } .team { width: 31%; }
         .backdate { color: #a16207; font-size: 8px; font-weight: 700; }
+        .muted { color: #64748b; font-size: 8px; }
         .empty { color: #64748b; padding: 30px; text-align: center; }
         footer { color: #64748b; font-size: 8px; margin-top: 10px; text-align: right; }
         @media print { body { background: #fff; padding: 0; } .toolbar { display: none; } .sheet { box-shadow: none; max-width: none; min-height: 0; padding: 0; } }
