@@ -145,15 +145,25 @@ class KpAssignment extends Model
         [$reviewedInternalGuidance, $pendingInternalGuidance] = $this->reportGuidanceCounts(KpReportGuidanceLog::REVIEWER_INTERNAL);
         [$reviewedFieldGuidance, $pendingFieldGuidance] = $this->reportGuidanceCounts(KpReportGuidanceLog::REVIEWER_FIELD);
         $report = $this->finalReport;
-        $internalGuidanceCompleted = (bool) $report?->internal_guidance_completed_at;
-        $fieldGuidanceCompleted = (bool) $report?->field_guidance_completed_at;
+        $internalGuidanceCompletion = $this->guidanceCompletionState(
+            KpReportGuidanceLog::REVIEWER_INTERNAL,
+            $reviewedInternalGuidance,
+            $pendingInternalGuidance
+        );
+        $fieldGuidanceCompletion = $this->guidanceCompletionState(
+            KpReportGuidanceLog::REVIEWER_FIELD,
+            $reviewedFieldGuidance,
+            $pendingFieldGuidance
+        );
         $internalGuidanceDescription = match (true) {
-            $internalGuidanceCompleted => $reviewedInternalGuidance.'/8 sesi direview, bimbingan dalam selesai',
+            $internalGuidanceCompletion['marked'] => $reviewedInternalGuidance.'/8 sesi direview, bimbingan dalam selesai',
+            $internalGuidanceCompletion['automatic'] => $reviewedInternalGuidance.'/8 sesi direview, otomatis selesai karena laporan disetujui',
             $reviewedInternalGuidance >= 8 && $pendingInternalGuidance === 0 => $reviewedInternalGuidance.'/8 sesi direview, menunggu pembimbing dalam klik Tandai Bimbingan Dalam Selesai',
             default => $reviewedInternalGuidance.'/8 sesi direview, '.$pendingInternalGuidance.' menunggu validasi',
         };
         $fieldGuidanceDescription = match (true) {
-            $fieldGuidanceCompleted => $reviewedFieldGuidance.' sesi direview, bimbingan lapangan selesai',
+            $fieldGuidanceCompletion['marked'] => $reviewedFieldGuidance.' sesi direview, bimbingan lapangan selesai',
+            $fieldGuidanceCompletion['automatic'] => $reviewedFieldGuidance.' sesi direview, otomatis selesai karena laporan disetujui',
             $reviewedFieldGuidance > 0 && $pendingFieldGuidance === 0 => $reviewedFieldGuidance.' sesi direview, menunggu pembimbing lapangan klik Tandai Bimbingan Lapangan Selesai',
             default => $reviewedFieldGuidance.' sesi direview, '.$pendingFieldGuidance.' menunggu validasi',
         };
@@ -174,13 +184,13 @@ class KpAssignment extends Model
             [
                 'key' => 'field_report_guidance_completed',
                 'label' => 'Bimbingan laporan pembimbing lapangan selesai',
-                'ready' => $fieldGuidanceCompleted && $reviewedFieldGuidance > 0 && $pendingFieldGuidance === 0,
+                'ready' => $fieldGuidanceCompletion['effective'],
                 'description' => $fieldGuidanceDescription,
             ],
             [
                 'key' => 'internal_report_guidance_completed',
                 'label' => 'Bimbingan laporan pembimbing dalam minimal 8 kali dan selesai',
-                'ready' => $internalGuidanceCompleted && $reviewedInternalGuidance >= 8 && $pendingInternalGuidance === 0,
+                'ready' => $internalGuidanceCompletion['effective'],
                 'description' => $internalGuidanceDescription,
             ],
             [
@@ -298,7 +308,11 @@ class KpAssignment extends Model
         $reviewedUnapprovedLogbooks = $logbookCounts['reviewed_unapproved'];
         [$reviewedFieldGuidance, $pendingFieldGuidance] = $this->reportGuidanceCounts(KpReportGuidanceLog::REVIEWER_FIELD);
         $report = $this->finalReport;
-        $fieldGuidanceCompleted = (bool) $report?->field_guidance_completed_at;
+        $fieldGuidanceCompletion = $this->guidanceCompletionState(
+            KpReportGuidanceLog::REVIEWER_FIELD,
+            $reviewedFieldGuidance,
+            $pendingFieldGuidance
+        );
 
         return [
             [
@@ -309,11 +323,13 @@ class KpAssignment extends Model
             ],
             [
                 'key' => 'field_report_guidance_completed',
-                'label' => 'Bimbingan laporan lapangan sudah ditandai selesai',
-                'ready' => $fieldGuidanceCompleted && $reviewedFieldGuidance > 0 && $pendingFieldGuidance === 0,
-                'description' => $fieldGuidanceCompleted
-                    ? $reviewedFieldGuidance.' sesi direview, selesai'
-                    : $reviewedFieldGuidance.' sesi direview, '.$pendingFieldGuidance.' menunggu validasi',
+                'label' => 'Bimbingan laporan lapangan selesai',
+                'ready' => $fieldGuidanceCompletion['effective'],
+                'description' => match (true) {
+                    $fieldGuidanceCompletion['marked'] => $reviewedFieldGuidance.' sesi direview, selesai',
+                    $fieldGuidanceCompletion['automatic'] => $reviewedFieldGuidance.' sesi direview, otomatis selesai karena laporan disetujui',
+                    default => $reviewedFieldGuidance.' sesi direview, '.$pendingFieldGuidance.' menunggu validasi',
+                },
             ],
             [
                 'key' => 'field_report_approved',
@@ -328,15 +344,20 @@ class KpAssignment extends Model
     {
         [$reviewedInternalGuidance, $pendingInternalGuidance] = $this->reportGuidanceCounts(KpReportGuidanceLog::REVIEWER_INTERNAL);
         $report = $this->finalReport;
-        $internalGuidanceCompleted = (bool) $report?->internal_guidance_completed_at;
+        $internalGuidanceCompletion = $this->guidanceCompletionState(
+            KpReportGuidanceLog::REVIEWER_INTERNAL,
+            $reviewedInternalGuidance,
+            $pendingInternalGuidance
+        );
 
         return [
             [
                 'key' => 'internal_report_guidance_completed',
                 'label' => 'Bimbingan laporan pembimbing dalam minimal 8 kali dan selesai',
-                'ready' => $internalGuidanceCompleted && $reviewedInternalGuidance >= 8 && $pendingInternalGuidance === 0,
+                'ready' => $internalGuidanceCompletion['effective'],
                 'description' => match (true) {
-                    $internalGuidanceCompleted => $reviewedInternalGuidance.'/8 sesi direview, selesai',
+                    $internalGuidanceCompletion['marked'] => $reviewedInternalGuidance.'/8 sesi direview, selesai',
+                    $internalGuidanceCompletion['automatic'] => $reviewedInternalGuidance.'/8 sesi direview, otomatis selesai karena laporan disetujui',
                     $reviewedInternalGuidance >= 8 && $pendingInternalGuidance === 0 => $reviewedInternalGuidance.'/8 sesi direview, menunggu pembimbing dalam klik Tandai Bimbingan Dalam Selesai',
                     default => $reviewedInternalGuidance.'/8 sesi direview, '.$pendingInternalGuidance.' menunggu validasi',
                 },
@@ -367,6 +388,22 @@ class KpAssignment extends Model
         $pending = (clone $query)->where('status', 'menunggu_validasi')->count();
 
         return [$reviewed, $pending];
+    }
+
+    private function guidanceCompletionState(string $reviewerType, int $reviewed, int $pending): array
+    {
+        $report = $this->finalReport;
+        $isInternal = $reviewerType === KpReportGuidanceLog::REVIEWER_INTERNAL;
+        $minimum = $isInternal ? 8 : 1;
+        $marked = filled($isInternal ? $report?->internal_guidance_completed_at : $report?->field_guidance_completed_at);
+        $reportApproved = ($isInternal ? $report?->internal_review_status : $report?->field_review_status) === 'disetujui';
+        $automatic = ! $marked && $reportApproved && $reviewed >= $minimum && $pending === 0;
+
+        return [
+            'marked' => $marked,
+            'automatic' => $automatic,
+            'effective' => ($marked || $automatic) && $reviewed >= $minimum && $pending === 0,
+        ];
     }
 
     private function logbookValidationCounts(): array

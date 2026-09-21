@@ -384,6 +384,8 @@ class KpFinalReportService
             'validation_note' => $note,
         ]);
 
+        $this->syncGuidanceCompletionFromApprovedReport($guidance->assignment->finalReport);
+
         return $guidance->fresh();
     }
 
@@ -395,6 +397,8 @@ class KpFinalReportService
             'validated_at' => now(),
             'validation_note' => $note,
         ]);
+
+        $this->syncGuidanceCompletionFromApprovedReport($guidance->assignment->finalReport);
 
         return $guidance->fresh();
     }
@@ -481,7 +485,46 @@ class KpFinalReportService
         ];
 
         $report->update($payload);
+        $report = $this->syncGuidanceCompletionFromApprovedReport($report);
         $this->logActivity($reviewer, $report->fresh(), $action, $oldStatus, $newStatus, $note, ['reviewer_role' => $prefix]);
+
+        return $report->fresh();
+    }
+
+    private function syncGuidanceCompletionFromApprovedReport(?KpFinalReport $report): ?KpFinalReport
+    {
+        if (! $report) {
+            return null;
+        }
+
+        $report->loadMissing('assignment');
+        $updates = [];
+
+        if (! $report->internal_guidance_completed_at
+            && $report->internal_review_status === 'disetujui'
+            && $this->reviewedGuidanceCount($report->assignment, KpReportGuidanceLog::REVIEWER_INTERNAL) >= 8
+            && $this->pendingGuidanceCount($report->assignment, KpReportGuidanceLog::REVIEWER_INTERNAL) === 0) {
+            $updates += [
+                'internal_guidance_completed_by' => $report->internal_reviewed_by,
+                'internal_guidance_completed_at' => now(),
+                'internal_guidance_completion_note' => 'Otomatis selesai karena laporan disetujui dan minimal 8 sesi bimbingan telah direview.',
+            ];
+        }
+
+        if (! $report->field_guidance_completed_at
+            && $report->field_review_status === 'disetujui'
+            && $this->reviewedGuidanceCount($report->assignment, KpReportGuidanceLog::REVIEWER_FIELD) >= 1
+            && $this->pendingGuidanceCount($report->assignment, KpReportGuidanceLog::REVIEWER_FIELD) === 0) {
+            $updates += [
+                'field_guidance_completed_by' => $report->field_reviewed_by,
+                'field_guidance_completed_at' => now(),
+                'field_guidance_completion_note' => 'Otomatis selesai karena laporan disetujui dan minimal satu sesi bimbingan lapangan telah direview.',
+            ];
+        }
+
+        if ($updates !== []) {
+            $report->update($updates);
+        }
 
         return $report->fresh();
     }

@@ -20,28 +20,40 @@ class KpExamService
     public function submitRequest(User $studentUser, KpAssignment $assignment, ?string $note = null, array $paymentProof = []): KpExamRequest
     {
         $this->ensureStudentOwnsAssignment($studentUser, $assignment);
-        $assignment->loadMissing('finalReport');
+        return $this->createRequest($studentUser, $assignment, $note, $paymentProof);
+    }
 
-        if (! $assignment->isEligibleForExamRequest()) {
-            $pending = collect($assignment->examEligibility()['items'])->first(fn (array $item): bool => ! $item['ready']);
-            throw ValidationException::withMessages([
-                'exam' => 'Pengajuan sidang belum bisa dilakukan. Lengkapi: '.($pending['label'] ?? 'syarat sidang').'.',
-            ]);
-        }
-        if ($assignment->examRequest()->whereNotIn('status', ['ditolak', 'dibatalkan'])->exists()) {
-            throw ValidationException::withMessages(['exam' => 'Pengajuan sidang untuk penempatan ini sudah ada.']);
-        }
-        return DB::transaction(function () use ($studentUser, $assignment, $note, $paymentProof) {
+    public function submitForCoordinator(User $actor, KpAssignment $assignment): KpExamRequest
+    {
+        abort_unless($actor->hasRole('admin') || $actor->hasRole('koordinator_kp'), 403);
+
+        return $this->createRequest($actor, $assignment, 'Dimasukkan ke antrean sidang oleh koordinator.');
+    }
+
+    private function createRequest(User $actor, KpAssignment $assignment, ?string $note = null, array $paymentProof = []): KpExamRequest
+    {
+        return DB::transaction(function () use ($actor, $assignment, $note, $paymentProof) {
+            $assignment = KpAssignment::query()->whereKey($assignment->id)->lockForUpdate()->firstOrFail();
+            if ($assignment->examRequest()->exists()) {
+                throw ValidationException::withMessages(['exam' => 'Pengajuan sidang untuk penempatan ini sudah ada.']);
+            }
+            if (! $assignment->isEligibleForExamRequest()) {
+                $pending = collect($assignment->examEligibility()['items'])->first(fn (array $item): bool => ! $item['ready']);
+                throw ValidationException::withMessages([
+                    'exam' => 'Pengajuan sidang belum bisa dilakukan. Lengkapi: '.($pending['label'] ?? 'syarat sidang').'.',
+                ]);
+            }
+
             $request = KpExamRequest::create([
                 'kp_assignment_id' => $assignment->id,
-                'requested_by' => $studentUser->id,
+                'requested_by' => $actor->id,
                 'status' => 'diajukan',
                 'request_note' => $note,
                 ...$this->paymentProofPayload($paymentProof),
                 'submitted_at' => now(),
             ]);
 
-            $this->logActivity($studentUser, $request, null, 'request_submitted', null, 'diajukan', $note);
+            $this->logActivity($actor, $request, null, 'request_submitted', null, 'diajukan', $note);
 
             return $request;
         });

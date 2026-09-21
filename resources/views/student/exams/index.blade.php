@@ -75,7 +75,7 @@
             @endif
 
             @if(! $isReady)
-                <div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">Pengajuan sidang dibuka setelah tidak ada logbook KP yang masih menunggu validasi pembimbing lapangan, minimal 8 bimbingan laporan direview pembimbing dalam dan ditandai selesai, bimbingan laporan pembimbing lapangan ditandai selesai, serta laporan final disetujui kedua pembimbing. Logbook yang ditolak atau direvisi sudah dianggap direview, tetapi tidak menambah hitungan absen disetujui.</div>
+                <div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">Pengajuan sidang dibuka setelah tidak ada logbook KP yang masih menunggu validasi, minimal 8 bimbingan pembimbing dalam dan minimal 1 bimbingan pembimbing lapangan sudah direview, serta laporan final disetujui kedua pembimbing. Jika laporan sudah disetujui, bimbingan otomatis dianggap selesai saat jumlah minimal terpenuhi. Bukti pembayaran tidak mengunci pengajuan sidang.</div>
             @elseif(! $examRequest)
                 <form method="POST" action="{{ route('student.exams.submit') }}" enctype="multipart/form-data" class="mt-5 space-y-3">
                     @csrf

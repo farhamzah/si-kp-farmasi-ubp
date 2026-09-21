@@ -3,7 +3,7 @@
 @section('page_title','Antrian Validasi Sidang')
 @section('content')
 @php
-    $statusOptions = ['diajukan' => 'Menunggu Validasi', 'disetujui' => 'Siap Dijadwalkan', 'dijadwalkan' => 'Sudah Dijadwalkan', 'revisi' => 'Perlu Revisi', 'ditolak' => 'Ditolak'];
+    $statusOptions = ['siap_diajukan' => 'Siap Diajukan', 'diajukan' => 'Menunggu Validasi', 'disetujui' => 'Siap Dijadwalkan', 'dijadwalkan' => 'Sudah Dijadwalkan', 'revisi' => 'Perlu Revisi', 'ditolak' => 'Ditolak'];
     $summaryCards = [
         ['label' => 'Menunggu validasi', 'value' => $summary['diajukan'] ?? 0, 'tone' => 'text-amber-700 ring-amber-200 bg-amber-50'],
         ['label' => 'Siap dijadwalkan', 'value' => $summary['disetujui'] ?? 0, 'tone' => 'text-emerald-700 ring-emerald-200 bg-emerald-50'],
@@ -12,6 +12,9 @@
     ];
 @endphp
 <div class="space-y-5">
+    @if(session('status'))
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">{{ session('status') }}</div>
+    @endif
     <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         @foreach($summaryCards as $card)
             <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
@@ -29,7 +32,7 @@
             <div>
                 <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Meja kerja koordinator</p>
                 <h2 class="mt-1 text-xl font-black text-slate-950">Validasi kandidat sebelum penjadwalan</h2>
-                <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-600">Mahasiswa masuk ke antrian ini setelah mengajukan sidang. Cek validasi logbook, minimal 8 bimbingan laporan pembimbing dalam, bimbingan laporan pembimbing lapangan sudah ditandai selesai, dan persetujuan laporan dari kedua pembimbing sebelum menjadwalkan.</p>
+                <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-600">Mahasiswa masuk ke antrian ini setelah mengajukan sidang. Minimal 8 bimbingan pembimbing dalam dan 1 bimbingan lapangan otomatis dianggap selesai ketika sudah direview dan laporan telah disetujui pembimbing terkait. Bukti pembayaran tidak menghambat antrean maupun penjadwalan.</p>
             </div>
             <a href="{{ route('management.exams.index') }}" class="inline-flex justify-center rounded-xl border border-cyan-200 px-4 py-3 text-sm font-bold text-cyan-700 shadow-sm">Lihat Jadwal Sidang</a>
         </div>
@@ -50,6 +53,29 @@
             <button class="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white shadow-sm">Filter</button>
         </form>
     </x-ui.card>
+
+    @if((! ($filters['status'] ?? null) || $filters['status'] === 'siap_diajukan') && $candidates->isNotEmpty())
+        <section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-emerald-200">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 class="text-lg font-black text-slate-950">Siap diajukan: {{ $candidates->count() }} mahasiswa</h2>
+                <p class="text-sm text-slate-600">Syarat akademik lengkap; bukti pembayaran dapat menyusul untuk membuka nilai.</p>
+            </div>
+            <div class="mt-4 divide-y divide-slate-100">
+                @foreach($candidates as $candidate)
+                    <div class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="min-w-0">
+                            <p class="font-bold text-slate-950">{{ $candidate->student?->user?->name ?? '-' }} <span class="font-normal text-slate-500">· {{ $candidate->student?->nim ?? '-' }}</span></p>
+                            <p class="mt-1 text-xs text-slate-600">{{ $candidate->period?->name ?? '-' }} · {{ $candidate->place?->name ?? '-' }}</p>
+                        </div>
+                        <form method="POST" action="{{ route('management.exam-requests.candidates.enqueue', $candidate) }}">
+                            @csrf
+                            <button class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white">Masukkan Antrean</button>
+                        </form>
+                    </div>
+                @endforeach
+            </div>
+        </section>
+    @endif
 
     <section class="space-y-3">
         @forelse($requests as $examRequest)
@@ -129,7 +155,7 @@
             <x-ui.card>
                 <div class="py-10 text-center">
                     <p class="text-lg font-black text-slate-950">Belum ada kandidat sidang.</p>
-                    <p class="mt-2 text-sm text-slate-500">Mahasiswa akan muncul setelah mengajukan sidang dari menu Sidang.</p>
+                    <p class="mt-2 text-sm text-slate-500">{{ ($filters['status'] ?? null) === 'siap_diajukan' ? 'Tidak ada mahasiswa lain dengan syarat lengkap yang belum masuk antrean.' : 'Mahasiswa dapat mengajukan sendiri dari menu Sidang, atau koordinator memasukkan kandidat siap dari daftar di atas.' }}</p>
                 </div>
             </x-ui.card>
         @endforelse

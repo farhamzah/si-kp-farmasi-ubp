@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Management;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Management\ReviewExamRequestRequest;
+use App\Models\KpAssignment;
 use App\Models\KpExamRequest;
 use App\Models\KpPeriod;
 use App\Services\KpExamService;
@@ -18,6 +19,21 @@ class ExamRequestController extends Controller
 {
     public function index(Request $request): View
     {
+        $candidates = KpAssignment::query()
+            ->with(['student.user', 'period', 'place', 'finalReport'])
+            ->whereIn('status', ['aktif', 'berjalan'])
+            ->whereDoesntHave('examRequest')
+            ->whereHas('finalReport', fn ($query) => $query
+                ->where('internal_review_status', 'disetujui')
+                ->where('field_review_status', 'disetujui'))
+            ->when($request->filled('period'), fn ($query) => $query->where('kp_period_id', $request->integer('period')))
+            ->when($request->filled('q'), fn ($query) => $query->whereHas('student', fn ($student) => $student
+                ->where('nim', 'like', '%'.$request->q.'%')
+                ->orWhereHas('user', fn ($user) => $user->where('name', 'like', '%'.$request->q.'%'))))
+            ->latest('id')
+            ->get()
+            ->filter(fn (KpAssignment $assignment) => $assignment->isEligibleForExamRequest());
+
         $summary = [
             'diajukan' => KpExamRequest::where('status', 'diajukan')->count(),
             'disetujui' => KpExamRequest::where('status', 'disetujui')->count(),
@@ -36,7 +52,7 @@ class ExamRequestController extends Controller
                 'exam',
             ])
             ->when($request->filled('period'), fn ($q) => $q->whereHas('assignment', fn ($a) => $a->where('kp_period_id', $request->period)))
-            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status === 'siap_diajukan' ? '__none__' : $request->status))
             ->when($request->filled('q'), fn ($q) => $q->whereHas('assignment.student', fn ($s) => $s->where('nim', 'like', "%{$request->q}%")->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$request->q}%"))))
             ->latest()
             ->paginate(10)
@@ -47,7 +63,16 @@ class ExamRequestController extends Controller
             'periods' => KpPeriod::latest()->get(),
             'filters' => $request->only(['period', 'status', 'q']),
             'summary' => $summary,
+            'candidates' => $candidates,
         ]);
+    }
+
+    public function enqueue(Request $request, KpAssignment $assignment, KpExamService $service): RedirectResponse
+    {
+        $examRequest = $service->submitForCoordinator($request->user(), $assignment);
+
+        return redirect()->route('management.exam-requests.show', $examRequest)
+            ->with('status', 'Kandidat masuk antrean. Validasi pengajuan sebelum menjadwalkan sidang.');
     }
 
     public function show(KpExamRequest $examRequest): View

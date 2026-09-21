@@ -182,6 +182,7 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('post-exam-reports/{report}/approve', [ManagementPostExamReportController::class, 'approve'])->name('post-exam-reports.approve');
             Route::post('post-exam-reports/{report}/revision', [ManagementPostExamReportController::class, 'revision'])->name('post-exam-reports.revision');
             Route::get('exam-requests', [ManagementExamRequestController::class, 'index'])->name('exam-requests.index');
+            Route::post('exam-requests/candidates/{assignment}', [ManagementExamRequestController::class, 'enqueue'])->name('exam-requests.candidates.enqueue');
             Route::get('exam-requests/{examRequest}', [ManagementExamRequestController::class, 'show'])->name('exam-requests.show');
             Route::get('exam-requests/{examRequest}/payment-proof/preview', [ManagementExamRequestController::class, 'previewPaymentProof'])->name('exam-requests.payment-proof.preview');
             Route::get('exam-requests/{examRequest}/payment-proof/download', [ManagementExamRequestController::class, 'downloadPaymentProof'])->name('exam-requests.payment-proof.download');

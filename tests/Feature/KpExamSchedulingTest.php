@@ -280,6 +280,140 @@ class KpExamSchedulingTest extends TestCase
         $this->assertDatabaseHas('kp_exams', ['kp_exam_request_id' => $request->id]);
     }
 
+    public function test_approved_reports_and_reviewed_guidance_allow_scheduling_without_manual_completion_or_payment(): void
+    {
+        $report = $this->approvedFinalReport();
+        $report->update([
+            'internal_guidance_completed_at' => null,
+            'internal_guidance_completed_by' => null,
+            'field_guidance_completed_at' => null,
+            'field_guidance_completed_by' => null,
+        ]);
+
+        $eligibility = $this->assignment->fresh()->examEligibility();
+        $this->assertTrue($eligibility['ready']);
+        $this->assertSame('8/8 sesi direview, otomatis selesai karena laporan disetujui', collect($eligibility['items'])->firstWhere('key', 'internal_report_guidance_completed')['description']);
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/sidang')
+            ->assertOk()
+            ->assertSee('Ajukan Sidang');
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/sidang/ajukan')
+            ->assertRedirect();
+
+        $request = KpExamRequest::firstOrFail();
+        $this->assertFalse($request->hasPaymentProof());
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/exam-requests')
+            ->assertOk()
+            ->assertSee($this->mahasiswa->name);
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-requests/'.$request->id.'/approve')
+            ->assertRedirect();
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-requests/'.$request->id.'/schedule', $this->validSchedulePayload())
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('kp_exams', ['kp_exam_request_id' => $request->id]);
+    }
+
+    public function test_approved_report_still_waits_for_pending_guidance_validation(): void
+    {
+        $report = $this->approvedFinalReport();
+        $report->update(['internal_guidance_completed_at' => null]);
+        $this->assignment->reportGuidanceLogs()->create([
+            'reviewer_type' => KpReportGuidanceLog::REVIEWER_INTERNAL,
+            'guidance_date' => now()->toDateString(),
+            'topic' => 'Bimbingan tambahan',
+            'status' => 'menunggu_validasi',
+            'submitted_at' => now(),
+        ]);
+
+        $this->assertFalse($this->assignment->fresh()->isEligibleForExamRequest());
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/sidang/ajukan')
+            ->assertSessionHasErrors('exam');
+    }
+
+    public function test_coordinator_sees_ready_candidate_without_payment_and_can_enqueue_for_review(): void
+    {
+        $report = $this->approvedFinalReport();
+        $report->update(['internal_guidance_completed_at' => null, 'field_guidance_completed_at' => null]);
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/management/exam-requests/candidates/'.$this->assignment->id)
+            ->assertForbidden();
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/exam-requests?status=siap_diajukan')
+            ->assertOk()
+            ->assertSee($this->mahasiswa->name)
+            ->assertSee('Masukkan Antrean');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-requests/candidates/'.$this->assignment->id)
+            ->assertRedirect();
+
+        $request = KpExamRequest::firstOrFail();
+        $this->assertSame('diajukan', $request->status);
+        $this->assertFalse($request->hasPaymentProof());
+        $this->assertSame($this->koordinator->id, $request->requested_by);
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/exam-requests?status=siap_diajukan')
+            ->assertDontSee('Masukkan Antrean');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-requests/candidates/'.$this->assignment->id)
+            ->assertSessionHasErrors('exam');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-requests/'.$request->id.'/approve')
+            ->assertRedirect();
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-requests/'.$request->id.'/schedule', $this->validSchedulePayload())
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('kp_exams', ['kp_exam_request_id' => $request->id]);
+    }
+
+    public function test_existing_approved_reports_are_reconciled_without_touching_pending_guidance(): void
+    {
+        $report = $this->approvedFinalReport();
+        $report->update([
+            'internal_guidance_completed_at' => null,
+            'internal_guidance_completed_by' => null,
+            'field_guidance_completed_at' => null,
+            'field_guidance_completed_by' => null,
+        ]);
+        $migration = require database_path('migrations/2026_09_22_000001_reconcile_approved_report_guidance_completion.php');
+        $migration->up();
+
+        $report->refresh();
+        $this->assertNotNull($report->internal_guidance_completed_at);
+        $this->assertNotNull($report->field_guidance_completed_at);
+        $this->assertSame($this->supervisorUser->id, $report->internal_guidance_completed_by);
+        $this->assertSame($this->fieldUser->id, $report->field_guidance_completed_by);
+
+        $report->update(['internal_guidance_completed_at' => null, 'internal_guidance_completed_by' => null]);
+        $this->assignment->reportGuidanceLogs()->create([
+            'reviewer_type' => KpReportGuidanceLog::REVIEWER_INTERNAL,
+            'guidance_date' => now()->toDateString(),
+            'topic' => 'Belum direview',
+            'status' => 'menunggu_validasi',
+            'submitted_at' => now(),
+        ]);
+        $migration->up();
+
+        $this->assertNull($report->fresh()->internal_guidance_completed_at);
+    }
+
     public function test_payment_proof_can_be_uploaded_and_returned_after_exam_is_scheduled(): void
     {
         $request = $this->approvedExamRequest();
