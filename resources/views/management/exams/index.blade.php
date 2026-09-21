@@ -81,7 +81,7 @@
                                 <span class="rounded-full bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">Belum diajukan</span>
                                 <form method="POST" action="{{ route('management.exam-requests.candidates.enqueue', $candidate) }}">
                                     @csrf
-                                    <button class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white">Masukkan Antrean</button>
+                                    <button type="submit" class="rounded-lg bg-cyan-700 px-4 py-2 text-sm font-bold text-white shadow-sm">Masukkan Antrean</button>
                                 </form>
                             @elseif($requestStatus === 'disetujui')
                                 <a href="{{ route('management.exam-requests.schedule', $candidate->examRequest) }}" class="rounded-lg bg-cyan-700 px-4 py-2 text-sm font-bold text-white">Jadwalkan</a>

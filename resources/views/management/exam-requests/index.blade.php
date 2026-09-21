@@ -67,9 +67,9 @@
                             <p class="font-bold text-slate-950">{{ $candidate->student?->user?->name ?? '-' }} <span class="font-normal text-slate-500">· {{ $candidate->student?->nim ?? '-' }}</span></p>
                             <p class="mt-1 text-xs text-slate-600">{{ $candidate->period?->name ?? '-' }} · {{ $candidate->place?->name ?? '-' }}</p>
                         </div>
-                        <form method="POST" action="{{ route('management.exam-requests.candidates.enqueue', $candidate) }}">
+                        <form method="POST" action="{{ route('management.exam-requests.candidates.enqueue', $candidate) }}" class="shrink-0">
                             @csrf
-                            <button class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white">Masukkan Antrean</button>
+                            <button type="submit" class="rounded-lg bg-cyan-700 px-4 py-2 text-sm font-bold text-white shadow-sm">Masukkan Antrean</button>
                         </form>
                     </div>
                 @endforeach
@@ -88,68 +88,42 @@
                 $allReady = $eligibility['ready'];
                 $report = $assignment->finalReport;
             @endphp
-            <article class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-                <div class="grid gap-0 xl:grid-cols-[1fr_280px]">
-                    <div class="p-5">
-                        <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                            <div>
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <span class="rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $examRequest->statusBadgeClass() }}">{{ $examRequest->statusLabel() }}</span>
-                                    @if($allReady)
-                                        <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">Syarat lengkap</span>
-                                    @else
-                                        <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 ring-1 ring-amber-200">{{ $readyCount }}/{{ $totalCount }} syarat</span>
-                                    @endif
-                                </div>
-                                <h3 class="mt-3 text-xl font-black text-slate-950">{{ $assignment->student->user->name }}</h3>
-                                <p class="mt-1 text-sm text-slate-500">{{ $assignment->student->nim ?: '-' }} · {{ $assignment->period->name }} · {{ $assignment->place->name }}</p>
-                            </div>
-                            <div class="flex flex-wrap gap-2">
-                                <a href="{{ route('management.exam-requests.show', $examRequest) }}" class="rounded-xl border border-cyan-200 px-4 py-2 text-sm font-bold text-cyan-700">Validasi</a>
-                                @if($examRequest->status === 'disetujui' && $allReady && ! $examRequest->exam)
-                                    <a href="{{ route('management.exam-requests.schedule', $examRequest) }}" class="rounded-xl bg-cyan-700 px-4 py-2 text-sm font-bold text-white">Jadwalkan</a>
-                                @elseif($examRequest->exam)
-                                    <a href="{{ route('management.exams.show', $examRequest->exam) }}" class="rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white">Lihat Jadwal</a>
-                                @endif
-                            </div>
+            <article class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-5">
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h3 class="text-base font-black text-slate-950">{{ $assignment->student->user->name }}</h3>
+                            <span class="rounded-full px-2 py-1 text-xs font-bold ring-1 {{ $examRequest->statusBadgeClass() }}">{{ $examRequest->statusLabel() }}</span>
+                            <span class="rounded-full px-2 py-1 text-xs font-bold {{ $allReady ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }}">{{ $allReady ? 'Syarat lengkap' : $readyCount.'/'.$totalCount.' syarat' }}</span>
                         </div>
-
-                        <div class="mt-5 grid gap-3 md:grid-cols-3">
-                            <div class="rounded-xl bg-slate-50 p-4">
-                                <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Pembimbing Dalam</p>
-                                <p class="mt-1 text-sm font-bold text-slate-950">{{ $assignment->internalSupervisor ? lecturer_display_name($assignment->internalSupervisor) : '-' }}</p>
-                            </div>
-                            <div class="rounded-xl bg-slate-50 p-4">
-                                <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Pembimbing Lapangan</p>
-                                <p class="mt-1 text-sm font-bold text-slate-950">{{ $assignment->fieldSupervisor ? field_supervisor_display_name($assignment->fieldSupervisor) : '-' }}</p>
-                            </div>
-                            <div class="rounded-xl bg-slate-50 p-4">
-                                <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Laporan Final</p>
-                                <p class="mt-1 text-sm font-bold text-slate-950">{{ $report?->statusLabel() ?? 'Belum tersedia' }}</p>
-                            </div>
-                        </div>
+                        <p class="mt-1 text-xs text-slate-600">{{ $assignment->student->nim ?: '-' }} · {{ $assignment->period->name }} · {{ $assignment->place->name }}</p>
+                        <p class="mt-2 text-xs text-slate-600">Pembayaran KP: {{ $examRequest->paymentProofStatusLabel() }} · Tidak menghambat jadwal sidang</p>
                     </div>
-
-                    <aside class="border-t border-slate-100 bg-slate-50/70 p-5 xl:border-l xl:border-t-0">
-                        <p class="text-xs font-black uppercase tracking-widest text-slate-500">Checklist sidang</p>
-                        <div class="mt-3 space-y-2">
-                            @foreach($checklistItems as $item)
-                                <div class="flex items-start gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-slate-200">
-                                    <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-black {{ $item['ready'] ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }}">{{ $item['ready'] ? 'OK' : '!' }}</span>
-                                    <div>
-                                        <p class="text-xs font-bold text-slate-950">{{ $item['label'] }}</p>
-                                        <p class="text-[11px] leading-4 text-slate-500">{{ $item['description'] }}</p>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                        <div class="mt-3 rounded-xl bg-blue-50 px-3 py-3 ring-1 ring-blue-200">
-                            <p class="text-[11px] font-black uppercase tracking-wider text-blue-700">Administrasi nilai</p>
-                            <p class="mt-1 text-xs font-bold text-slate-950">Bukti pembayaran KP: {{ $examRequest->paymentProofStatusLabel() }}</p>
-                            <p class="mt-1 text-[11px] leading-4 text-slate-600">Tidak menghambat pengajuan atau jadwal sidang.</p>
-                        </div>
-                    </aside>
+                    <div class="flex shrink-0 flex-wrap gap-2">
+                        <a href="{{ route('management.exam-requests.show', $examRequest) }}" class="rounded-lg border border-cyan-200 px-4 py-2 text-sm font-bold text-cyan-700">Validasi</a>
+                        @if($examRequest->status === 'disetujui' && $allReady && ! $examRequest->exam)
+                            <a href="{{ route('management.exam-requests.schedule', $examRequest) }}" class="rounded-lg bg-cyan-700 px-4 py-2 text-sm font-bold text-white">Jadwalkan</a>
+                        @elseif($examRequest->exam)
+                            <a href="{{ route('management.exams.show', $examRequest->exam) }}" class="rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white">Lihat Jadwal</a>
+                        @endif
+                    </div>
                 </div>
+                <details class="mt-3 border-t border-slate-100 pt-3">
+                    <summary class="cursor-pointer text-xs font-bold text-cyan-700">Detail pembimbing dan checklist ({{ $readyCount }}/{{ $totalCount }})</summary>
+                    <div class="mt-3 grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-3">
+                        <p><span class="font-bold text-slate-500">Pembimbing Dalam</span><br>{{ $assignment->internalSupervisor ? lecturer_display_name($assignment->internalSupervisor) : '-' }}</p>
+                        <p><span class="font-bold text-slate-500">Pembimbing Lapangan</span><br>{{ $assignment->fieldSupervisor ? field_supervisor_display_name($assignment->fieldSupervisor) : '-' }}</p>
+                        <p><span class="font-bold text-slate-500">Laporan Final</span><br>{{ $report?->statusLabel() ?? 'Belum tersedia' }}</p>
+                    </div>
+                    <ul class="mt-3 grid gap-x-6 gap-y-2 border-t border-slate-100 pt-3 sm:grid-cols-2">
+                        @foreach($checklistItems as $item)
+                            <li class="flex items-start gap-2 text-xs">
+                                <span class="font-bold {{ $item['ready'] ? 'text-emerald-700' : 'text-amber-700' }}">{{ $item['ready'] ? 'OK' : '!' }}</span>
+                                <span><strong class="text-slate-950">{{ $item['label'] }}</strong><br><span class="text-slate-500">{{ $item['description'] }}</span></span>
+                            </li>
+                        @endforeach
+                    </ul>
+                </details>
             </article>
         @empty
             <x-ui.card>
