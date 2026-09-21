@@ -383,6 +383,59 @@ class KpExamSchedulingTest extends TestCase
         $this->assertDatabaseHas('kp_exams', ['kp_exam_request_id' => $request->id]);
     }
 
+    public function test_completed_kp_assignment_without_student_submission_is_visible_on_exam_schedule_page(): void
+    {
+        $report = $this->approvedFinalReport();
+        $report->update(['internal_guidance_completed_at' => null, 'field_guidance_completed_at' => null]);
+        $this->assignment->update(['status' => 'selesai']);
+
+        $this->assertTrue($report->fresh()->isInternalGuidanceCompleted());
+        $this->assertTrue($report->fresh()->isFieldGuidanceCompleted());
+        $this->assertTrue($this->assignment->fresh()->isEligibleForExamRequest());
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/exams?status=belum_dijadwalkan')
+            ->assertOk()
+            ->assertSee($this->mahasiswa->name)
+            ->assertSee('Layak sidang, belum dijadwalkan')
+            ->assertSee('Bimbingan dalam dan lapangan selesai')
+            ->assertSee('Masukkan Antrean')
+            ->assertSee('Bukti pembayaran belum diunggah');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-requests/candidates/'.$this->assignment->id)
+            ->assertRedirect();
+        $request = KpExamRequest::firstOrFail();
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-requests/'.$request->id.'/approve')
+            ->assertRedirect();
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-requests/'.$request->id.'/schedule', $this->validSchedulePayload())
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('kp_exams', ['kp_exam_request_id' => $request->id]);
+    }
+
+    public function test_schedule_page_explains_approved_report_that_is_still_blocked_by_pending_guidance(): void
+    {
+        $report = $this->approvedFinalReport();
+        $report->update(['internal_guidance_completed_at' => null]);
+        $this->assignment->reportGuidanceLogs()->create([
+            'reviewer_type' => KpReportGuidanceLog::REVIEWER_INTERNAL,
+            'guidance_date' => now()->toDateString(),
+            'topic' => 'Menunggu review',
+            'status' => 'menunggu_validasi',
+            'submitted_at' => now(),
+        ]);
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/exams')
+            ->assertOk()
+            ->assertSee('laporan disetujui masih perlu tindak lanjut')
+            ->assertSee('Bimbingan laporan pembimbing dalam minimal 8 kali dan selesai')
+            ->assertDontSee('Masukkan Antrean');
+    }
+
     public function test_existing_approved_reports_are_reconciled_without_touching_pending_guidance(): void
     {
         $report = $this->approvedFinalReport();

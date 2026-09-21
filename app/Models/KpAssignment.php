@@ -105,6 +105,14 @@ class KpAssignment extends Model
         return collect($this->examEligibility()['items'])->every(fn (array $item): bool => $item['ready']);
     }
 
+    public function isReportGuidanceComplete(string $reviewerType): bool
+    {
+        $this->loadMissing('finalReport');
+        [$reviewed, $pending] = $this->reportGuidanceCounts($reviewerType);
+
+        return $this->guidanceCompletionState($reviewerType, $reviewed, $pending)['effective'];
+    }
+
     public function isReadyForAssessment(string $assessorType): bool
     {
         return $this->assessmentEligibility($assessorType)['ready'];
@@ -171,8 +179,8 @@ class KpAssignment extends Model
         $items = [
             [
                 'key' => 'assignment_active',
-                'label' => 'Penempatan KP aktif',
-                'ready' => $this->isActive(),
+                'label' => 'Penempatan KP valid',
+                'ready' => in_array($this->status, ['aktif', 'berjalan', 'selesai'], true),
                 'description' => $this->statusLabel(),
             ],
             [

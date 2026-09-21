@@ -26,8 +26,8 @@
             </div>
         </div>
 
-        <div class="mt-5 grid gap-3 sm:grid-cols-3">
-            @foreach([['label' => 'Total Jadwal', 'value' => $stats['total'], 'class' => 'text-slate-950'], ['label' => 'Akan Datang', 'value' => $stats['upcoming'], 'class' => 'text-cyan-700'], ['label' => 'Selesai', 'value' => $stats['completed'], 'class' => 'text-emerald-700']] as $stat)
+        <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            @foreach([['label' => 'Laporan Disetujui', 'value' => $stats['approved_reports'], 'class' => 'text-slate-950'], ['label' => 'Sudah Dijadwalkan', 'value' => $stats['scheduled'], 'class' => 'text-cyan-700'], ['label' => 'Layak, Belum Dijadwalkan', 'value' => $stats['ready_unscheduled'], 'class' => 'text-emerald-700'], ['label' => 'Perlu Tindak Lanjut', 'value' => $stats['blocked'], 'class' => 'text-amber-700']] as $stat)
                 <div class="rounded-xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
                     <p class="text-[11px] font-black uppercase tracking-widest text-slate-500">{{ $stat['label'] }}</p>
                     <p class="mt-1 text-2xl font-black {{ $stat['class'] }}">{{ $stat['value'] }}</p>
@@ -45,6 +45,7 @@
             </select>
             <select name="status" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
                 <option value="">Semua Status</option>
+                <option value="belum_dijadwalkan" @selected(($filters['status'] ?? '') === 'belum_dijadwalkan')>Belum Dijadwalkan</option>
                 @foreach(['dijadwalkan'=>'Dijadwalkan','selesai'=>'Selesai','ditunda'=>'Ditunda','dibatalkan'=>'Dibatalkan'] as $value=>$label)
                     <option value="{{ $value }}" @selected(($filters['status'] ?? '') === $value)>{{ $label }}</option>
                 @endforeach
@@ -57,6 +58,65 @@
             </div>
         </form>
     </section>
+
+    @if(! ($filters['status'] ?? null) || $filters['status'] === 'belum_dijadwalkan')
+        <section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-emerald-200">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 class="text-lg font-black text-slate-950">Layak sidang, belum dijadwalkan</h2>
+                <span class="text-sm font-bold text-emerald-700">{{ $readyCandidates->count() }} mahasiswa</span>
+            </div>
+            <div class="mt-4 divide-y divide-slate-100">
+                @forelse($readyCandidates as $candidate)
+                    @php
+                        $requestStatus = $candidate->examRequest?->status;
+                    @endphp
+                    <div class="flex flex-col gap-3 py-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div class="min-w-0">
+                            <p class="font-bold text-slate-950">{{ $candidate->student?->user?->name ?? '-' }} <span class="font-normal text-slate-500">· {{ $candidate->student?->nim ?? '-' }}</span></p>
+                            <p class="mt-1 text-xs text-slate-600">{{ $candidate->period?->name ?? '-' }} · {{ $candidate->place?->name ?? '-' }}</p>
+                            <p class="mt-1 text-xs text-emerald-700">Bimbingan dalam dan lapangan selesai · laporan disetujui · {{ $candidate->examRequest?->paymentProofStatusLabel() ?? 'Bukti pembayaran belum diunggah' }}</p>
+                        </div>
+                        <div class="flex shrink-0 flex-wrap items-center gap-2">
+                            @if(! $candidate->examRequest)
+                                <span class="rounded-full bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">Belum diajukan</span>
+                                <form method="POST" action="{{ route('management.exam-requests.candidates.enqueue', $candidate) }}">
+                                    @csrf
+                                    <button class="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white">Masukkan Antrean</button>
+                                </form>
+                            @elseif($requestStatus === 'disetujui')
+                                <a href="{{ route('management.exam-requests.schedule', $candidate->examRequest) }}" class="rounded-lg bg-cyan-700 px-4 py-2 text-sm font-bold text-white">Jadwalkan</a>
+                            @else
+                                <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">{{ $candidate->examRequest->statusLabel() }}</span>
+                                <a href="{{ route('management.exam-requests.show', $candidate->examRequest) }}" class="rounded-lg border border-cyan-200 px-4 py-2 text-sm font-bold text-cyan-700">{{ $requestStatus === 'diajukan' ? 'Validasi' : 'Detail Pengajuan' }}</a>
+                            @endif
+                        </div>
+                    </div>
+                @empty
+                    <p class="py-6 text-sm text-slate-500">Tidak ada mahasiswa layak sidang yang menunggu jadwal pada filter ini.</p>
+                @endforelse
+            </div>
+        </section>
+
+        @if($blockedCandidates->isNotEmpty())
+            <details class="rounded-2xl border border-amber-200 bg-white p-5">
+                <summary class="cursor-pointer text-sm font-bold text-amber-800">{{ $blockedCandidates->count() }} laporan disetujui masih perlu tindak lanjut</summary>
+                <div class="mt-4 divide-y divide-slate-100">
+                    @foreach($blockedCandidates as $candidate)
+                        @php
+                            $pending = collect($candidate->examEligibility()['items'])
+                                ->filter(fn ($item) => ! $item['ready'])
+                                ->pluck('label')
+                                ->join(', ');
+                        @endphp
+                        <div class="py-3">
+                            <p class="font-bold text-slate-950">{{ $candidate->student?->user?->name ?? '-' }} <span class="font-normal text-slate-500">· {{ $candidate->student?->nim ?? '-' }}</span></p>
+                            <p class="mt-1 text-xs text-amber-800">Perlu: {{ $pending }}</p>
+                        </div>
+                    @endforeach
+                </div>
+            </details>
+        @endif
+    @endif
 
     <section class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-cyan-100">
         <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">

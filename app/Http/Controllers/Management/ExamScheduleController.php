@@ -7,6 +7,7 @@ use App\Http\Requests\Management\CancelExamRequest;
 use App\Http\Requests\Management\ScheduleExamRequest;
 use App\Http\Requests\Management\UpdateExamScheduleRequest;
 use App\Models\KpExam;
+use App\Models\KpAssignment;
 use App\Models\KpExamInvitationSignatory;
 use App\Models\KpExamRequest;
 use App\Models\KpPeriod;
@@ -26,6 +27,28 @@ class ExamScheduleController extends Controller
     {
         $filteredQuery = $this->filteredExamQuery($request);
         $today = now()->toDateString();
+        $approvedAssignments = KpAssignment::query()
+            ->with(['student.user', 'period', 'place', 'finalReport', 'examRequest', 'exam'])
+            ->whereIn('status', ['aktif', 'berjalan', 'selesai'])
+            ->whereHas('finalReport', fn (Builder $query) => $query
+                ->where('internal_review_status', 'disetujui')
+                ->where('field_review_status', 'disetujui'))
+            ->when($request->filled('period'), fn (Builder $query) => $query->where('kp_period_id', $request->integer('period')))
+            ->when($request->filled('q'), function (Builder $query) use ($request): void {
+                $keyword = $request->string('q')->toString();
+                $query->where(function (Builder $query) use ($keyword): void {
+                    $query->whereHas('student', fn (Builder $student) => $student
+                        ->where('nim', 'like', "%{$keyword}%")
+                        ->orWhereHas('user', fn (Builder $user) => $user->where('name', 'like', "%{$keyword}%")))
+                        ->orWhereHas('place', fn (Builder $place) => $place->where('name', 'like', "%{$keyword}%"))
+                        ->orWhereHas('finalReport', fn (Builder $report) => $report->where('report_title', 'like', "%{$keyword}%"));
+                });
+            })
+            ->orderBy('id')
+            ->get();
+        $unscheduled = $approvedAssignments->filter(fn (KpAssignment $assignment) => ! $assignment->exam);
+        $readyCandidates = $unscheduled->filter(fn (KpAssignment $assignment) => $assignment->isEligibleForExamRequest())->values();
+        $blockedCandidates = $unscheduled->reject(fn (KpAssignment $assignment) => $assignment->isEligibleForExamRequest())->values();
         $exams = (clone $filteredQuery)
             ->orderByRaw("CASE WHEN exam_date >= ? AND status IN ('dijadwalkan', 'ditunda') THEN 0 ELSE 1 END", [$today])
             ->orderByRaw("CASE WHEN exam_date >= ? AND status IN ('dijadwalkan', 'ditunda') THEN exam_date END ASC", [$today])
@@ -39,10 +62,13 @@ class ExamScheduleController extends Controller
             'periods' => KpPeriod::latest()->get(),
             'filters' => $request->only(['period', 'status', 'date_from', 'date_to', 'q']),
             'signatory' => KpExamInvitationSignatory::active(),
+            'readyCandidates' => $readyCandidates,
+            'blockedCandidates' => $blockedCandidates,
             'stats' => [
-                'total' => (clone $filteredQuery)->count(),
-                'upcoming' => (clone $filteredQuery)->whereDate('exam_date', '>=', $today)->whereIn('status', ['dijadwalkan', 'ditunda'])->count(),
-                'completed' => (clone $filteredQuery)->where('status', 'selesai')->count(),
+                'approved_reports' => $approvedAssignments->count(),
+                'scheduled' => $approvedAssignments->filter(fn (KpAssignment $assignment) => (bool) $assignment->exam)->count(),
+                'ready_unscheduled' => $readyCandidates->count(),
+                'blocked' => $blockedCandidates->count(),
             ],
         ]);
     }
@@ -127,7 +153,7 @@ class ExamScheduleController extends Controller
         return KpExam::query()
             ->with(['assignment.student.user', 'assignment.period', 'assignment.place', 'assignment.finalReport', 'supervisor.user', 'examiner.user', 'examiners.user', 'chair.user', 'invitation', 'minutes'])
             ->when($request->filled('period'), fn (Builder $q) => $q->whereHas('assignment', fn (Builder $a) => $a->where('kp_period_id', $request->integer('period'))))
-            ->when($request->filled('status'), fn (Builder $q) => $q->where('status', $request->string('status')))
+            ->when($request->filled('status'), fn (Builder $q) => $q->where('status', $request->status === 'belum_dijadwalkan' ? '__none__' : $request->string('status')))
             ->when($request->filled('date_from'), fn (Builder $q) => $q->whereDate('exam_date', '>=', $request->date('date_from')))
             ->when($request->filled('date_to'), fn (Builder $q) => $q->whereDate('exam_date', '<=', $request->date('date_to')))
             ->when($request->filled('q'), function (Builder $query) use ($request): void {

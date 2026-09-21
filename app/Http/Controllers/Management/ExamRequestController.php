@@ -21,7 +21,7 @@ class ExamRequestController extends Controller
     {
         $candidates = KpAssignment::query()
             ->with(['student.user', 'period', 'place', 'finalReport'])
-            ->whereIn('status', ['aktif', 'berjalan'])
+            ->whereIn('status', ['aktif', 'berjalan', 'selesai'])
             ->whereDoesntHave('examRequest')
             ->whereHas('finalReport', fn ($query) => $query
                 ->where('internal_review_status', 'disetujui')

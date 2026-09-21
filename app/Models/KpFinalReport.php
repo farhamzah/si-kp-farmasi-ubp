@@ -98,12 +98,14 @@ class KpFinalReport extends Model
 
     public function isFieldGuidanceCompleted(): bool
     {
-        return filled($this->field_guidance_completed_at);
+        return filled($this->field_guidance_completed_at)
+            || ($this->assignment?->isReportGuidanceComplete(KpReportGuidanceLog::REVIEWER_FIELD) ?? false);
     }
 
     public function isInternalGuidanceCompleted(): bool
     {
-        return filled($this->internal_guidance_completed_at);
+        return filled($this->internal_guidance_completed_at)
+            || ($this->assignment?->isReportGuidanceComplete(KpReportGuidanceLog::REVIEWER_INTERNAL) ?? false);
     }
 
     public function internalReviewStatusLabel(): string
