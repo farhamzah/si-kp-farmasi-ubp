@@ -27,7 +27,7 @@
         </div>
 
         <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            @foreach([['label' => 'Laporan Disetujui', 'value' => $stats['approved_reports'], 'class' => 'text-slate-950'], ['label' => 'Sudah Dijadwalkan', 'value' => $stats['scheduled'], 'class' => 'text-cyan-700'], ['label' => 'Layak, Belum Dijadwalkan', 'value' => $stats['ready_unscheduled'], 'class' => 'text-emerald-700'], ['label' => 'Perlu Tindak Lanjut', 'value' => $stats['blocked'], 'class' => 'text-amber-700']] as $stat)
+            @foreach([['label' => 'Laporan Final Tersedia', 'value' => $stats['reports_available'], 'class' => 'text-slate-950'], ['label' => 'Sudah Dijadwalkan', 'value' => $stats['scheduled'], 'class' => 'text-cyan-700'], ['label' => 'Layak, Belum Dijadwalkan', 'value' => $stats['ready_unscheduled'], 'class' => 'text-emerald-700'], ['label' => 'Perlu Tindak Lanjut', 'value' => $stats['blocked'], 'class' => 'text-amber-700']] as $stat)
                 <div class="rounded-xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
                     <p class="text-[11px] font-black uppercase tracking-widest text-slate-500">{{ $stat['label'] }}</p>
                     <p class="mt-1 text-2xl font-black {{ $stat['class'] }}">{{ $stat['value'] }}</p>
@@ -74,7 +74,7 @@
                         <div class="min-w-0">
                             <p class="font-bold text-slate-950">{{ $candidate->student?->user?->name ?? '-' }} <span class="font-normal text-slate-500">· {{ $candidate->student?->nim ?? '-' }}</span></p>
                             <p class="mt-1 text-xs text-slate-600">{{ $candidate->period?->name ?? '-' }} · {{ $candidate->place?->name ?? '-' }}</p>
-                            <p class="mt-1 text-xs text-emerald-700">Bimbingan dalam dan lapangan selesai · laporan disetujui · {{ $candidate->examRequest?->paymentProofStatusLabel() ?? 'Bukti pembayaran belum diunggah' }}</p>
+                            <p class="mt-1 text-xs text-emerald-700">Laporan final tersedia · pembimbing dalam: {{ $candidate->finalReport?->internalReviewStatusLabel() ?? 'Belum review' }} · pembimbing lapangan: {{ $candidate->finalReport?->fieldReviewStatusLabel() ?? 'Belum review' }} · {{ $candidate->examRequest?->paymentProofStatusLabel() ?? 'Bukti pembayaran belum diunggah' }}</p>
                         </div>
                         <div class="flex shrink-0 flex-wrap items-center gap-2">
                             @if(! $candidate->examRequest)
@@ -99,12 +99,12 @@
 
         @if($blockedCandidates->isNotEmpty())
             <details class="rounded-2xl border border-amber-200 bg-white p-5">
-                <summary class="cursor-pointer text-sm font-bold text-amber-800">{{ $blockedCandidates->count() }} laporan disetujui masih perlu tindak lanjut</summary>
+                <summary class="cursor-pointer text-sm font-bold text-amber-800">{{ $blockedCandidates->count() }} laporan final masih perlu tindak lanjut</summary>
                 <div class="mt-4 divide-y divide-slate-100">
                     @foreach($blockedCandidates as $candidate)
                         @php
                             $pending = collect($candidate->examEligibility()['items'])
-                                ->filter(fn ($item) => ! $item['ready'])
+                                ->filter(fn ($item) => $item['required_for_scheduling'] && ! $item['ready'])
                                 ->pluck('label')
                                 ->join(', ');
                         @endphp

@@ -102,7 +102,7 @@ class KpAssignment extends Model
 
     public function isEligibleForExamRequest(): bool
     {
-        return collect($this->examEligibility()['items'])->every(fn (array $item): bool => $item['ready']);
+        return $this->examEligibility()['ready'];
     }
 
     public function isReportGuidanceComplete(string $reviewerType): bool
@@ -221,9 +221,21 @@ class KpAssignment extends Model
             ],
         ];
 
+        $allowUnreviewed = (bool) config('kp_final_report.allow_unreviewed_exam_scheduling');
+        $requiredKeys = $allowUnreviewed
+            ? ['assignment_active', 'final_report_submitted']
+            : array_column($items, 'key');
+        $items = array_map(function (array $item) use ($requiredKeys): array {
+            $item['required_for_scheduling'] = in_array($item['key'], $requiredKeys, true);
+
+            return $item;
+        }, $items);
+
         return [
-            'ready' => collect($items)->every(fn (array $item): bool => $item['ready']),
+            'ready' => collect($items)->filter(fn (array $item): bool => $item['required_for_scheduling'])
+                ->every(fn (array $item): bool => $item['ready']),
             'items' => $items,
+            'provisional' => $allowUnreviewed,
         ];
     }
 

@@ -78,7 +78,7 @@ class KpExamSchedulingTest extends TestCase
         $this->assertSame(1, substr_count($response->getContent(), 'bg-cyan-700 text-white'));
     }
 
-    public function test_student_can_only_submit_exam_request_after_final_report_is_approved_and_cannot_duplicate(): void
+    public function test_student_needs_final_document_to_submit_exam_request_and_cannot_duplicate(): void
     {
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
             ->post('/mahasiswa/sidang/ajukan', [
@@ -113,6 +113,81 @@ class KpExamSchedulingTest extends TestCase
             ->post('/mahasiswa/sidang/ajukan', [
                 'payment_proof_url' => 'https://drive.google.com/file/d/payment-proof/view',
             ])
+            ->assertSessionHasErrors('exam');
+    }
+
+    public function test_unreviewed_final_report_can_enter_coordinator_queue_and_be_scheduled(): void
+    {
+        $report = KpFinalReport::create([
+            'kp_assignment_id' => $this->assignment->id,
+            'status' => 'draft',
+            'final_document_url' => 'https://drive.google.com/file/d/final-report/view',
+        ]);
+
+        $eligibility = $this->assignment->fresh()->examEligibility();
+        $this->assertTrue($eligibility['ready']);
+        $this->assertFalse(collect($eligibility['items'])->firstWhere('key', 'internal_report_approved')['ready']);
+        $this->assertFalse(collect($eligibility['items'])->firstWhere('key', 'field_report_approved')['ready']);
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/exam-requests?status=siap_diajukan')
+            ->assertOk()
+            ->assertSee($this->mahasiswa->name)
+            ->assertSee('Masukkan Antrean');
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/exams?status=belum_dijadwalkan')
+            ->assertOk()
+            ->assertSee($this->mahasiswa->name)
+            ->assertSee('Belum Review');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-requests/candidates/'.$this->assignment->id)
+            ->assertRedirect();
+        $request = KpExamRequest::firstOrFail();
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-requests/'.$request->id.'/approve')
+            ->assertRedirect();
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-requests/'.$request->id.'/schedule', $this->validSchedulePayload())
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('kp_exams', ['kp_exam_request_id' => $request->id]);
+        $report->refresh();
+        $this->assertSame('draft', $report->status);
+        $this->assertSame('pending', $report->internal_review_status);
+        $this->assertSame('pending', $report->field_review_status);
+    }
+
+    public function test_student_can_submit_unreviewed_final_report_but_missing_document_still_blocks(): void
+    {
+        $report = KpFinalReport::create([
+            'kp_assignment_id' => $this->assignment->id,
+            'status' => 'draft',
+        ]);
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/sidang/ajukan')
+            ->assertSessionHasErrors('exam');
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/exam-requests?status=siap_diajukan')
+            ->assertOk()
+            ->assertDontSee('Masukkan Antrean');
+
+        $report->update(['final_document_url' => 'https://drive.google.com/file/d/final-report/view']);
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/sidang')
+            ->assertOk()
+            ->assertSee('Ajukan Sidang');
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/sidang/ajukan')
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('kp_exam_requests', [
+            'kp_assignment_id' => $this->assignment->id,
+            'status' => 'diajukan',
+        ]);
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-requests/candidates/'.$this->assignment->id)
             ->assertSessionHasErrors('exam');
     }
 
@@ -324,6 +399,7 @@ class KpExamSchedulingTest extends TestCase
 
     public function test_approved_report_still_waits_for_pending_guidance_validation(): void
     {
+        config()->set('kp_final_report.allow_unreviewed_exam_scheduling', false);
         $report = $this->approvedFinalReport();
         $report->update(['internal_guidance_completed_at' => null]);
         $this->assignment->reportGuidanceLogs()->create([
@@ -398,7 +474,7 @@ class KpExamSchedulingTest extends TestCase
             ->assertOk()
             ->assertSee($this->mahasiswa->name)
             ->assertSee('Layak sidang, belum dijadwalkan')
-            ->assertSee('Bimbingan dalam dan lapangan selesai')
+            ->assertSee('Laporan final tersedia')
             ->assertSee('Masukkan Antrean')
             ->assertSee('Bukti pembayaran belum diunggah');
 
@@ -418,6 +494,7 @@ class KpExamSchedulingTest extends TestCase
 
     public function test_schedule_page_explains_approved_report_that_is_still_blocked_by_pending_guidance(): void
     {
+        config()->set('kp_final_report.allow_unreviewed_exam_scheduling', false);
         $report = $this->approvedFinalReport();
         $report->update(['internal_guidance_completed_at' => null]);
         $this->assignment->reportGuidanceLogs()->create([
@@ -431,7 +508,7 @@ class KpExamSchedulingTest extends TestCase
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->get('/management/exams')
             ->assertOk()
-            ->assertSee('laporan disetujui masih perlu tindak lanjut')
+            ->assertSee('laporan final masih perlu tindak lanjut')
             ->assertSee('Bimbingan laporan pembimbing dalam minimal 8 kali dan selesai')
             ->assertDontSee('Masukkan Antrean');
     }

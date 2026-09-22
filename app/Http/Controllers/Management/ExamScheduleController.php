@@ -27,12 +27,12 @@ class ExamScheduleController extends Controller
     {
         $filteredQuery = $this->filteredExamQuery($request);
         $today = now()->toDateString();
-        $approvedAssignments = KpAssignment::query()
+        $reportAssignments = KpAssignment::query()
             ->with(['student.user', 'period', 'place', 'finalReport', 'examRequest', 'exam'])
             ->whereIn('status', ['aktif', 'berjalan', 'selesai'])
             ->whereHas('finalReport', fn (Builder $query) => $query
-                ->where('internal_review_status', 'disetujui')
-                ->where('field_review_status', 'disetujui'))
+                ->where(fn (Builder $report) => $report->whereHas('files')
+                    ->orWhere(fn (Builder $document) => $document->whereNotNull('final_document_url')->where('final_document_url', '!=', ''))))
             ->when($request->filled('period'), fn (Builder $query) => $query->where('kp_period_id', $request->integer('period')))
             ->when($request->filled('q'), function (Builder $query) use ($request): void {
                 $keyword = $request->string('q')->toString();
@@ -46,7 +46,7 @@ class ExamScheduleController extends Controller
             })
             ->orderBy('id')
             ->get();
-        $unscheduled = $approvedAssignments->filter(fn (KpAssignment $assignment) => ! $assignment->exam);
+        $unscheduled = $reportAssignments->filter(fn (KpAssignment $assignment) => ! $assignment->exam);
         $readyCandidates = $unscheduled->filter(fn (KpAssignment $assignment) => $assignment->isEligibleForExamRequest())->values();
         $blockedCandidates = $unscheduled->reject(fn (KpAssignment $assignment) => $assignment->isEligibleForExamRequest())->values();
         $exams = (clone $filteredQuery)
@@ -65,8 +65,8 @@ class ExamScheduleController extends Controller
             'readyCandidates' => $readyCandidates,
             'blockedCandidates' => $blockedCandidates,
             'stats' => [
-                'approved_reports' => $approvedAssignments->count(),
-                'scheduled' => $approvedAssignments->filter(fn (KpAssignment $assignment) => (bool) $assignment->exam)->count(),
+                'reports_available' => $reportAssignments->count(),
+                'scheduled' => $reportAssignments->filter(fn (KpAssignment $assignment) => (bool) $assignment->exam)->count(),
                 'ready_unscheduled' => $readyCandidates->count(),
                 'blocked' => $blockedCandidates->count(),
             ],

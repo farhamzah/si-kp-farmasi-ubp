@@ -27,7 +27,7 @@
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
                             <span class="rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $examRequest->statusBadgeClass() }}">{{ $examRequest->statusLabel() }}</span>
-                            <span class="rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $allRequirementsReady ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-amber-50 text-amber-700 ring-amber-200' }}">{{ $allRequirementsReady ? 'Syarat lengkap' : 'Ada syarat tertahan' }}</span>
+                            <span class="rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $allRequirementsReady ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-amber-50 text-amber-700 ring-amber-200' }}">{{ $allRequirementsReady ? 'Siap dijadwalkan' : 'Belum siap dijadwalkan' }}</span>
                         </div>
                         <h2 class="mt-4 text-3xl font-black text-slate-950">{{ $assignment->student->user->name }}</h2>
                         <p class="mt-1 text-sm text-slate-500">{{ $assignment->student->nim ?: '-' }} · {{ $assignment->period->name }}</p>
@@ -57,10 +57,10 @@
             <x-ui.card>
                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Syarat masuk jadwal sidang</p>
-                        <h3 class="mt-1 text-xl font-black text-slate-950">Checklist kesiapan mahasiswa</h3>
+                        <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Kesiapan jadwal sidang</p>
+                        <h3 class="mt-1 text-xl font-black text-slate-950">Dokumen dan progres review mahasiswa</h3>
                     </div>
-                    <span class="w-fit rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $allRequirementsReady ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-amber-50 text-amber-700 ring-amber-200' }}">{{ $checklistItems->where('ready', true)->count() }}/{{ $checklistItems->count() }} lengkap</span>
+                    <span class="w-fit rounded-full px-3 py-1 text-xs font-bold ring-1 ring-slate-200 bg-slate-50 text-slate-700">{{ $checklistItems->where('ready', true)->count() }}/{{ $checklistItems->count() }} terpenuhi</span>
                 </div>
                 <div class="mt-5 grid gap-3 md:grid-cols-2">
                     @foreach($checklistItems as $item)
@@ -149,7 +149,13 @@
                         <textarea name="review_note" rows="2" placeholder="Catatan opsional untuk persetujuan" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm shadow-sm"></textarea>
                         <button @disabled(! $canApprove) class="mt-3 w-full rounded-xl px-4 py-3 text-sm font-bold text-white shadow-sm {{ $canApprove ? 'bg-emerald-600' : 'cursor-not-allowed bg-slate-300' }}">Setujui Masuk Jadwal</button>
                         @unless($canApprove)
-                            <p class="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">Validasi akhir terkunci sampai semua checklist kesiapan sidang berstatus OK. Bukti pembayaran tidak termasuk pengunci sidang.</p>
+                            <p class="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                                @if($eligibility['provisional'])
+                                    Validasi akhir menunggu dokumen laporan final dan penempatan KP valid. Bukti pembayaran dan persetujuan pembimbing tidak mengunci jadwal selama aturan sementara berlaku.
+                                @else
+                                    Validasi akhir menunggu seluruh checklist akademik selesai. Bukti pembayaran tidak mengunci jadwal sidang.
+                                @endif
+                            </p>
                         @endunless
                     </form>
                     <form method="POST" action="{{ route('management.exam-requests.revision', $examRequest) }}" class="mt-4">

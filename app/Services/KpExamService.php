@@ -38,7 +38,7 @@ class KpExamService
                 throw ValidationException::withMessages(['exam' => 'Pengajuan sidang untuk penempatan ini sudah ada.']);
             }
             if (! $assignment->isEligibleForExamRequest()) {
-                $pending = collect($assignment->examEligibility()['items'])->first(fn (array $item): bool => ! $item['ready']);
+                $pending = collect($assignment->examEligibility()['items'])->first(fn (array $item): bool => $item['required_for_scheduling'] && ! $item['ready']);
                 throw ValidationException::withMessages([
                     'exam' => 'Pengajuan sidang belum bisa dilakukan. Lengkapi: '.($pending['label'] ?? 'syarat sidang').'.',
                 ]);
@@ -316,7 +316,7 @@ class KpExamService
         $assignment = $request->assignment;
 
         if (! $assignment || ! $assignment->isEligibleForExamRequest()) {
-            $pending = $assignment ? collect($assignment->examEligibility()['items'])->first(fn (array $item): bool => ! $item['ready']) : null;
+            $pending = $assignment ? collect($assignment->examEligibility()['items'])->first(fn (array $item): bool => $item['required_for_scheduling'] && ! $item['ready']) : null;
 
             throw ValidationException::withMessages([
                 'request' => 'Validasi akhir belum bisa dilakukan. Lengkapi: '.($pending['label'] ?? 'syarat sidang').'.',

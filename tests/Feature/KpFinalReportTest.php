@@ -249,6 +249,7 @@ class KpFinalReportTest extends TestCase
 
     public function test_field_supervisor_validates_field_guidance_and_exam_eligibility_needs_both_guidance_tracks(): void
     {
+        config()->set('kp_final_report.allow_unreviewed_exam_scheduling', false);
         KpLogbook::create([
             'kp_assignment_id' => $this->assignment->id,
             'activity_date' => now()->toDateString(),

@@ -45,8 +45,9 @@
             <x-ui.card>
                 <div class="flex items-center justify-between gap-3">
                     <h3 class="text-lg font-black text-slate-950">Checklist</h3>
-                    <span class="rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $eligibility['ready'] ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-amber-50 text-amber-700 ring-amber-200' }}">{{ collect($eligibility['items'])->where('ready', true)->count() }}/{{ count($eligibility['items']) }}</span>
+                    <span class="rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $eligibility['ready'] ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' : 'bg-amber-50 text-amber-700 ring-amber-200' }}">{{ $eligibility['ready'] ? 'Siap dijadwalkan' : 'Belum siap' }}</span>
                 </div>
+                <p class="mt-2 text-xs text-slate-500">{{ collect($eligibility['items'])->where('ready', true)->count() }}/{{ count($eligibility['items']) }} progres akademik terpenuhi. Persetujuan yang belum ada tetap tercatat.</p>
                 <div class="mt-4 space-y-2">
                     @foreach($eligibility['items'] as $item)
                         <div class="flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-100">

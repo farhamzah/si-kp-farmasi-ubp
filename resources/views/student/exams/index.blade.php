@@ -32,6 +32,9 @@
                 @endif
             </div>
 
+            @if($isReady && ($examEligibility['provisional'] ?? false) && collect($examEligibility['items'])->contains(fn ($item) => ! $item['ready']))
+                <p class="mt-5 rounded-lg border border-cyan-100 bg-cyan-50 px-4 py-3 text-sm text-cyan-800">Laporan final tersedia. Pengajuan sidang sementara dapat diproses meski review pembimbing atau bimbingan masih berjalan; statusnya tetap terlihat di bawah.</p>
+            @endif
             <div class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 @foreach(($examEligibility['items'] ?? []) as $item)
                     <div class="rounded-2xl border {{ $item['ready'] ? 'border-emerald-200 bg-emerald-50/60' : 'border-amber-200 bg-amber-50/60' }} p-4">
@@ -75,7 +78,13 @@
             @endif
 
             @if(! $isReady)
-                <div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">Pengajuan sidang dibuka setelah tidak ada logbook KP yang masih menunggu validasi, minimal 8 bimbingan pembimbing dalam dan minimal 1 bimbingan pembimbing lapangan sudah direview, serta laporan final disetujui kedua pembimbing. Jika laporan sudah disetujui, bimbingan otomatis dianggap selesai saat jumlah minimal terpenuhi. Bukti pembayaran tidak mengunci pengajuan sidang.</div>
+                <div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    @if($examEligibility['provisional'] ?? false)
+                        Pengajuan sidang dibuka setelah dokumen laporan final tersedia dan penempatan KP valid. Persetujuan pembimbing, progres bimbingan, serta bukti pembayaran tetap tercatat, tetapi untuk sementara tidak mengunci pengajuan atau jadwal sidang.
+                    @else
+                        Pengajuan sidang dibuka setelah logbook dan bimbingan selesai serta laporan final disetujui kedua pembimbing. Bukti pembayaran tidak mengunci pengajuan sidang.
+                    @endif
+                </div>
             @elseif(! $examRequest)
                 <form method="POST" action="{{ route('student.exams.submit') }}" enctype="multipart/form-data" class="mt-5 space-y-3">
                     @csrf

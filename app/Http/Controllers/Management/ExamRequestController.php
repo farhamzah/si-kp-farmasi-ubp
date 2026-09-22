@@ -24,8 +24,8 @@ class ExamRequestController extends Controller
             ->whereIn('status', ['aktif', 'berjalan', 'selesai'])
             ->whereDoesntHave('examRequest')
             ->whereHas('finalReport', fn ($query) => $query
-                ->where('internal_review_status', 'disetujui')
-                ->where('field_review_status', 'disetujui'))
+                ->where(fn ($report) => $report->whereHas('files')
+                    ->orWhere(fn ($document) => $document->whereNotNull('final_document_url')->where('final_document_url', '!=', ''))))
             ->when($request->filled('period'), fn ($query) => $query->where('kp_period_id', $request->integer('period')))
             ->when($request->filled('q'), fn ($query) => $query->whereHas('student', fn ($student) => $student
                 ->where('nim', 'like', '%'.$request->q.'%')

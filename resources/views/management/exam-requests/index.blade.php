@@ -32,7 +32,7 @@
             <div>
                 <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Meja kerja koordinator</p>
                 <h2 class="mt-1 text-xl font-black text-slate-950">Validasi kandidat sebelum penjadwalan</h2>
-                <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-600">Mahasiswa masuk ke antrian ini setelah mengajukan sidang. Minimal 8 bimbingan pembimbing dalam dan 1 bimbingan lapangan otomatis dianggap selesai ketika sudah direview dan laporan telah disetujui pembimbing terkait. Bukti pembayaran tidak menghambat antrean maupun penjadwalan.</p>
+                <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-600">Mahasiswa dengan laporan final tersedia dapat diajukan oleh mahasiswa atau koordinator. Untuk sementara, persetujuan pembimbing dan bukti pembayaran tidak menghambat antrean maupun penjadwalan; status review tetap tercatat.</p>
             </div>
             <a href="{{ route('management.exams.index') }}" class="inline-flex justify-center rounded-xl border border-cyan-200 px-4 py-3 text-sm font-bold text-cyan-700 shadow-sm">Lihat Jadwal Sidang</a>
         </div>
@@ -58,7 +58,7 @@
         <section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-emerald-200">
             <div class="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 class="text-lg font-black text-slate-950">Siap diajukan: {{ $candidates->count() }} mahasiswa</h2>
-                <p class="text-sm text-slate-600">Syarat akademik lengkap; bukti pembayaran dapat menyusul untuk membuka nilai.</p>
+                <p class="text-sm text-slate-600">Laporan final tersedia; persetujuan pembimbing dan bukti pembayaran dapat menyusul.</p>
             </div>
             <div class="mt-4 divide-y divide-slate-100">
                 @foreach($candidates as $candidate)
@@ -94,7 +94,7 @@
                         <div class="flex flex-wrap items-center gap-2">
                             <h3 class="text-base font-black text-slate-950">{{ $assignment->student->user->name }}</h3>
                             <span class="rounded-full px-2 py-1 text-xs font-bold ring-1 {{ $examRequest->statusBadgeClass() }}">{{ $examRequest->statusLabel() }}</span>
-                            <span class="rounded-full px-2 py-1 text-xs font-bold {{ $allReady ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }}">{{ $allReady ? 'Syarat lengkap' : $readyCount.'/'.$totalCount.' syarat' }}</span>
+                            <span class="rounded-full px-2 py-1 text-xs font-bold {{ $allReady ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }}">{{ $allReady ? 'Siap dijadwalkan' : 'Belum siap dijadwalkan' }}</span>
                         </div>
                         <p class="mt-1 text-xs text-slate-600">{{ $assignment->student->nim ?: '-' }} · {{ $assignment->period->name }} · {{ $assignment->place->name }}</p>
                         <p class="mt-2 text-xs text-slate-600">Pembayaran KP: {{ $examRequest->paymentProofStatusLabel() }} · Tidak menghambat jadwal sidang</p>
@@ -109,7 +109,7 @@
                     </div>
                 </div>
                 <details class="mt-3 border-t border-slate-100 pt-3">
-                    <summary class="cursor-pointer text-xs font-bold text-cyan-700">Detail pembimbing dan checklist ({{ $readyCount }}/{{ $totalCount }})</summary>
+                    <summary class="cursor-pointer text-xs font-bold text-cyan-700">Detail pembimbing dan progres review ({{ $readyCount }}/{{ $totalCount }})</summary>
                     <div class="mt-3 grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-3">
                         <p><span class="font-bold text-slate-500">Pembimbing Dalam</span><br>{{ $assignment->internalSupervisor ? lecturer_display_name($assignment->internalSupervisor) : '-' }}</p>
                         <p><span class="font-bold text-slate-500">Pembimbing Lapangan</span><br>{{ $assignment->fieldSupervisor ? field_supervisor_display_name($assignment->fieldSupervisor) : '-' }}</p>
