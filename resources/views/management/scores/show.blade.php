@@ -69,7 +69,9 @@
             <form method="POST" action="{{ route('management.scores.visibility-override.update', $assignment) }}" class="rounded-2xl border border-slate-100 bg-slate-50 p-5">
                 @csrf
                 @method('PATCH')
-                @php($override = $scoreVisibility['override'] ?? null)
+                @php
+                    $override = $scoreVisibility['override'] ?? null;
+                @endphp
                 <p class="text-xs font-black uppercase tracking-widest text-slate-500">Override mahasiswa</p>
                 <p class="mt-2 text-sm leading-6 text-slate-600">Default mengikuti pengaturan periode: <span class="font-bold text-slate-950">{{ $assignment->period?->scoreVisibilityLabel() }}</span>.</p>
                 <select name="visibility_override" class="mt-4 w-full rounded-2xl border-slate-200 text-sm">

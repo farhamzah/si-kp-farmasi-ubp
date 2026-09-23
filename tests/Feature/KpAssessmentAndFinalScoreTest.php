@@ -125,6 +125,16 @@ class KpAssessmentAndFinalScoreTest extends TestCase
         $this->assertDatabaseHas('kp_assessment_components', ['kp_period_id' => $this->assignment->kp_period_id, 'assessor_type' => 'penguji', 'component_name' => 'Penguasaan Materi KP', 'weight' => 50]);
     }
 
+    public function test_coordinator_can_open_score_monitoring_detail(): void
+    {
+        $this->actingAs($this->koordinator)
+            ->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/scores/'.$this->assignment->id)
+            ->assertOk()
+            ->assertSee($this->mahasiswa->name)
+            ->assertSee('Koreksi Nilai Koordinator');
+    }
+
     public function test_each_assessor_can_score_only_their_own_assignment_and_invalid_score_is_rejected(): void
     {
         [$internal] = $this->components();
