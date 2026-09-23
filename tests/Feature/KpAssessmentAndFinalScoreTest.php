@@ -6,6 +6,7 @@ use App\Models\FieldSupervisor;
 use App\Models\KpAssessmentComponent;
 use App\Models\KpAssignment;
 use App\Models\KpExam;
+use App\Models\KpExamMinute;
 use App\Models\KpExamRequest;
 use App\Models\KpFinalReport;
 use App\Models\KpFinalScore;
@@ -15,6 +16,7 @@ use App\Models\KpPlace;
 use App\Models\KpPostExamReport;
 use App\Models\KpRegistration;
 use App\Models\KpReportGuidanceLog;
+use App\Models\KpScore;
 use App\Models\Lecturer;
 use App\Models\Role;
 use App\Models\Student;
@@ -407,6 +409,99 @@ class KpAssessmentAndFinalScoreTest extends TestCase
 
         $this->assertSame('calculated', $final->fresh()->status);
         $this->assertDatabaseHas('kp_score_logs', ['action' => 'final_score_unlocked']);
+    }
+
+    public function test_coordinator_can_correct_wrong_examiner_after_published_minutes(): void
+    {
+        [, , $component] = $this->components();
+        $retainedUser = $this->makeUser('retained-examiner@test.local', ['penguji']);
+        $retained = Lecturer::create(['user_id' => $retainedUser->id, 'nidn_nip' => '881120', 'status' => 'active']);
+        $replacementUser = $this->makeUser('replacement-examiner@test.local', ['penguji']);
+        $replacement = Lecturer::create(['user_id' => $replacementUser->id, 'nidn_nip' => '881121', 'status' => 'active']);
+        $this->exam->examiners()->sync([
+            $this->examiner->id => ['sort_order' => 1],
+            $retained->id => ['sort_order' => 2],
+        ]);
+
+        $wrongScore = KpScore::create([
+            'kp_assignment_id' => $this->assignment->id,
+            'kp_exam_id' => $this->exam->id,
+            'kp_assessment_component_id' => $component->id,
+            'assessor_user_id' => $this->examinerUser->id,
+            'assessor_type' => 'penguji',
+            'score' => 70,
+            'weighted_score' => 70,
+            'status' => 'submitted',
+            'submitted_at' => now(),
+        ]);
+        $retainedScore = KpScore::create([
+            'kp_assignment_id' => $this->assignment->id,
+            'kp_exam_id' => $this->exam->id,
+            'kp_assessment_component_id' => $component->id,
+            'assessor_user_id' => $retainedUser->id,
+            'assessor_type' => 'penguji',
+            'score' => 90,
+            'weighted_score' => 90,
+            'status' => 'submitted',
+            'submitted_at' => now(),
+        ]);
+        $this->exam->update([
+            'chair_lecturer_id' => $this->supervisor->id,
+            'minutes_sequence' => 1,
+            'minutes_number' => '001/BA-SKP/FF-UBP/IX/2026',
+            'status' => 'selesai',
+        ]);
+        $minute = KpExamMinute::create([
+            'kp_exam_id' => $this->exam->id,
+            'minutes_number' => $this->exam->minutes_number,
+            'chair_lecturer_id' => $this->supervisor->id,
+            'status' => 'terbit',
+            'result' => 'lulus',
+            'actual_start_time' => '09:00',
+            'actual_end_time' => '10:00',
+            'verification_code' => 'WRONGEXAMINER001',
+            'closed_by' => $this->supervisorUser->id,
+            'closed_at' => now(),
+            'published_by' => $this->koordinator->id,
+            'published_at' => now(),
+        ]);
+        KpFinalScore::create([
+            'kp_assignment_id' => $this->assignment->id,
+            'final_score' => 82,
+            'final_grade' => 'B',
+            'status' => 'published',
+            'published_at' => now(),
+        ]);
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exams/'.$this->exam->id.'/correct-examiners', [
+                'examiner_ids' => [$retained->id, $replacement->id],
+                'reason' => 'Penguji pertama salah diplot oleh koordinator.',
+            ])->assertRedirect('/management/exams/'.$this->exam->id);
+
+        $this->exam->refresh();
+        $this->assertSame('dijadwalkan', $this->exam->status);
+        $this->assertEqualsCanonicalizing([$retained->id, $replacement->id], $this->exam->examinerIds());
+        $this->assertDatabaseMissing('kp_scores', ['id' => $wrongScore->id]);
+        $this->assertDatabaseHas('kp_scores', ['id' => $retainedScore->id, 'status' => 'submitted']);
+        $this->assertDatabaseMissing('kp_exam_minutes', ['id' => $minute->id]);
+        $this->assertDatabaseHas('kp_score_logs', ['action' => 'examiner_score_voided', 'user_id' => $this->koordinator->id]);
+        $this->assertDatabaseHas('kp_score_logs', ['action' => 'final_score_reopened_for_examiner_correction']);
+        $this->assertDatabaseHas('kp_exam_logs', ['action' => 'examiner_assignment_corrected']);
+        $final = KpFinalScore::where('kp_assignment_id', $this->assignment->id)->firstOrFail();
+        $this->assertSame('draft', $final->status);
+        $this->assertNull($final->final_score);
+
+        $this->get('/berita-acara-sidang/verifikasi/WRONGEXAMINER001')
+            ->assertOk()
+            ->assertSee('Dokumen Dibatalkan')
+            ->assertSee('Penguji pertama salah diplot oleh koordinator.');
+        $this->actingAs($replacementUser)->withSession(['active_role' => 'penguji'])
+            ->get('/penguji/penilaian/'.$this->exam->id)
+            ->assertOk();
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->get('/penguji/penilaian/'.$this->exam->id)
+            ->assertForbidden();
     }
 
     public function test_management_can_override_scores_before_finalization(): void

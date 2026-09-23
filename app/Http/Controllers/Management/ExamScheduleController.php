@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Management;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Management\CancelExamRequest;
+use App\Http\Requests\Management\CorrectExamExaminersRequest;
 use App\Http\Requests\Management\ScheduleExamRequest;
 use App\Http\Requests\Management\UpdateExamScheduleRequest;
 use App\Models\KpExam;
@@ -99,7 +100,7 @@ class ExamScheduleController extends Controller
             $minuteService->syncReadiness($exam->minutes);
             $exam->load('minutes');
         }
-        return view('management.exams.show', compact('exam'));
+        return view('management.exams.show', ['exam' => $exam, 'examiners' => $this->examiners()]);
     }
 
     public function create(KpExamRequest $examRequest): View|RedirectResponse
@@ -135,6 +136,19 @@ class ExamScheduleController extends Controller
     {
         $service->rescheduleExam($request->user(), $exam, $request->validated());
         return redirect()->route('management.exams.show', $exam)->with('status', 'Jadwal sidang berhasil diperbarui.');
+    }
+
+    public function correctExaminers(CorrectExamExaminersRequest $request, KpExam $exam, KpExamService $service): RedirectResponse
+    {
+        $service->correctExaminers(
+            $request->user(),
+            $exam,
+            array_map('intval', $request->validated('examiner_ids')),
+            $request->validated('reason'),
+        );
+
+        return redirect()->route('management.exams.show', $exam)
+            ->with('status', 'Penguji berhasil dikoreksi. Nilai penguji yang dibatalkan dan berita acara lama sudah dicabut.');
     }
 
     public function cancel(CancelExamRequest $request, KpExam $exam, KpExamService $service): RedirectResponse

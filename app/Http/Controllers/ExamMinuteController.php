@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\KpExam;
+use App\Models\KpExamLog;
 use App\Models\KpExamMinute;
 use App\Services\KpExamMinuteService;
 use Illuminate\Database\Eloquent\Builder;
@@ -54,7 +55,16 @@ class ExamMinuteController extends Controller
     public function verify(string $code): View
     {
         $minute = KpExamMinute::with(['exam.assignment.student.user', 'exam.assignment.place', 'chair.user'])->where('verification_code', $code)->first();
-        return view('exam-minutes.verify', compact('minute'));
+        $revokedCorrection = null;
+        if (! $minute) {
+            $revokedCorrection = KpExamLog::with(['exam.assignment.student.user'])
+                ->where('action', 'examiner_assignment_corrected')
+                ->where('metadata->revoked_minute->verification_code', $code)
+                ->latest()
+                ->first();
+        }
+
+        return view('exam-minutes.verify', compact('minute', 'revokedCorrection'));
     }
 
     public function qr(KpExamMinute $minute, KpExamMinuteService $service): Response

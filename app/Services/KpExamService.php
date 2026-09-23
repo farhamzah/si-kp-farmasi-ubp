@@ -260,6 +260,115 @@ class KpExamService
         });
     }
 
+    public function correctExaminers(User $actor, KpExam $exam, array $examinerIds, string $reason): KpExam
+    {
+        $this->ensureExaminers($examinerIds);
+
+        return DB::transaction(function () use ($actor, $exam, $examinerIds, $reason): KpExam {
+            $exam = KpExam::query()->lockForUpdate()->findOrFail($exam->id);
+            $exam->load(['request', 'assignment.finalScore', 'examiners.user', 'examiner.user', 'chair', 'minutes']);
+            $hasExaminerScores = $exam->assignment->scores()->where('assessor_type', 'penguji')->exists();
+            if (! $exam->minutes && ! $hasExaminerScores && $exam->status !== 'selesai') {
+                throw ValidationException::withMessages(['examiner_ids' => 'Belum ada nilai atau berita acara. Gunakan Edit Jadwal untuk mengganti penguji.']);
+            }
+            if ($exam->status === 'dibatalkan') {
+                throw ValidationException::withMessages(['examiner_ids' => 'Sidang yang dibatalkan tidak dapat dikoreksi.']);
+            }
+            $oldExaminerIds = collect($exam->examinerIds())->map(fn ($id): int => (int) $id)->sort()->values();
+            $newExaminerIds = collect($examinerIds)->map(fn ($id): int => (int) $id)->unique()->sort()->values();
+
+            if ($oldExaminerIds->all() === $newExaminerIds->all()) {
+                throw ValidationException::withMessages(['examiner_ids' => 'Pilih tim penguji yang berbeda untuk melakukan koreksi.']);
+            }
+
+            $removedLecturerIds = $oldExaminerIds->diff($newExaminerIds)->values();
+            $removedUserIds = Lecturer::whereIn('id', $removedLecturerIds)->pluck('user_id')->filter()->values();
+            $removedScores = $exam->assignment->scores()
+                ->where('assessor_type', 'penguji')
+                ->whereIn('assessor_user_id', $removedUserIds)
+                ->get();
+            $scoreSnapshot = $removedScores->map(fn ($score): array => $score->only([
+                'id', 'kp_exam_id', 'kp_assessment_component_id', 'assessor_user_id', 'score',
+                'weighted_score', 'note', 'status', 'submitted_at', 'locked_at',
+            ]))->values()->all();
+
+            foreach ($removedScores as $score) {
+                \App\Models\KpScoreLog::create([
+                    'kp_assignment_id' => $exam->kp_assignment_id,
+                    'kp_score_id' => $score->id,
+                    'user_id' => $actor->id,
+                    'action' => 'examiner_score_voided',
+                    'old_status' => $score->status,
+                    'new_status' => 'voided',
+                    'note' => $reason,
+                    'metadata' => ['score' => $score->only(['score', 'weighted_score', 'note']), 'assessor_user_id' => $score->assessor_user_id],
+                ]);
+                $score->delete();
+            }
+
+            $finalScore = $exam->assignment->finalScore;
+            $finalScoreSnapshot = $finalScore?->only([
+                'id', 'final_score', 'final_grade', 'status', 'calculated_at', 'finalized_by',
+                'finalized_at', 'published_at', 'note',
+            ]);
+            if ($finalScore) {
+                $oldFinalStatus = $finalScore->status;
+                $finalScore->update([
+                    'final_score' => null,
+                    'final_grade' => null,
+                    'status' => 'draft',
+                    'calculated_at' => null,
+                    'finalized_by' => null,
+                    'finalized_at' => null,
+                    'published_at' => null,
+                    'note' => $reason,
+                ]);
+                \App\Models\KpScoreLog::create([
+                    'kp_assignment_id' => $exam->kp_assignment_id,
+                    'kp_final_score_id' => $finalScore->id,
+                    'user_id' => $actor->id,
+                    'action' => 'final_score_reopened_for_examiner_correction',
+                    'old_status' => $oldFinalStatus,
+                    'new_status' => 'draft',
+                    'note' => $reason,
+                    'metadata' => ['previous_final_score' => $finalScoreSnapshot],
+                ]);
+            }
+
+            $minuteSnapshot = $exam->minutes?->attributesToArray();
+            $exam->minutes?->delete();
+            $oldStatus = $exam->status;
+            $chairId = $removedLecturerIds->contains((int) $exam->chair_lecturer_id)
+                ? $exam->supervisor_id
+                : $exam->chair_lecturer_id;
+            $exam->update([
+                'examiner_id' => $newExaminerIds->first(),
+                'chair_lecturer_id' => $chairId,
+                'status' => 'dijadwalkan',
+                'note' => $reason,
+                'integration_revision' => ((int) $exam->integration_revision) + 1,
+            ]);
+            $this->syncExaminers($exam, $newExaminerIds->all());
+            $exam->request?->update(['status' => 'dijadwalkan']);
+
+            $metadata = [
+                'old_examiner_ids' => $oldExaminerIds->all(),
+                'new_examiner_ids' => $newExaminerIds->all(),
+                'voided_scores' => $scoreSnapshot,
+                'previous_final_score' => $finalScoreSnapshot,
+                'revoked_minute' => $minuteSnapshot,
+            ];
+            $this->logActivity($actor, $exam->request, $exam->fresh(), 'examiner_assignment_corrected', $oldStatus, 'dijadwalkan', $reason, $metadata);
+            $this->outbox->enqueueExamRescheduled(
+                $exam->fresh(['assignment.student.user', 'assignment.period', 'supervisor', 'examiner', 'examiners']),
+                $oldExaminerIds->all(),
+                $reason,
+            );
+
+            return $exam->fresh(['examiners', 'minutes']);
+        });
+    }
+
     public function cancelExam(User $actor, KpExam $exam, string $reason): void
     {
         DB::transaction(function () use ($actor, $exam, $reason): void {
