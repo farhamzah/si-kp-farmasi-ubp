@@ -18,6 +18,7 @@ class KpExamMinuteService
     public function __construct(
         private readonly KpExamService $examService,
         private readonly KpDocumentSignatureService $signatureService,
+        private readonly QrCodeService $qrCodeService,
     ) {}
 
     public function close(KpExam $exam, User $actor, array $data): KpExamMinute
@@ -127,7 +128,7 @@ class KpExamMinuteService
             'minute' => $minute,
             'verificationUrl' => $this->verificationUrl($minute),
             'logoSrc' => $this->fileDataUri(public_path('images/logo-ubp-karawang.png'), 'image/png'),
-            'qrSrc' => 'data:image/svg+xml;base64,'.base64_encode($this->qrSvg($minute)),
+            'qrSrc' => $this->qrCodeService->dataUri($this->verificationUrl($minute)),
             'signatureQrSrcs' => $this->signatureQrSources($minute),
         ])->setPaper('a4', 'portrait')->setOption(['defaultFont' => 'DejaVu Sans', 'dpi' => 120, 'isRemoteEnabled' => false]);
 
@@ -139,24 +140,7 @@ class KpExamMinuteService
 
     public function qrSvg(KpExamMinute $minute): string
     {
-        $payload = sha1($this->verificationUrl($minute));
-        $size = 29; $cell = 6; $pad = 4; $rects = [];
-        $finder = function (int $x, int $y) use (&$rects, $cell, $pad): void {
-            for ($row = 0; $row < 7; $row++) for ($col = 0; $col < 7; $col++) {
-                if ($row === 0 || $row === 6 || $col === 0 || $col === 6 || ($row >= 2 && $row <= 4 && $col >= 2 && $col <= 4)) {
-                    $rects[] = '<rect x="'.(($x + $col + $pad) * $cell).'" y="'.(($y + $row + $pad) * $cell).'" width="'.$cell.'" height="'.$cell.'"/>';
-                }
-            }
-        };
-        $finder(0, 0); $finder($size - 7, 0); $finder(0, $size - 7);
-        for ($row = 0; $row < $size; $row++) for ($col = 0; $col < $size; $col++) {
-            if (($row < 8 && $col < 8) || ($row < 8 && $col > $size - 9) || ($row > $size - 9 && $col < 8)) continue;
-            if (((hexdec($payload[($row * $size + $col) % strlen($payload)]) + $row + ($col * 3)) % 5) < 2) {
-                $rects[] = '<rect x="'.(($col + $pad) * $cell).'" y="'.(($row + $pad) * $cell).'" width="'.$cell.'" height="'.$cell.'"/>';
-            }
-        }
-        $svgSize = ($size + ($pad * 2)) * $cell;
-        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '.$svgSize.' '.$svgSize.'"><rect width="100%" height="100%" fill="#fff"/><g fill="#0f172a">'.implode('', $rects).'</g></svg>';
+        return $this->qrCodeService->svg($this->verificationUrl($minute));
     }
 
     public function relations(): array

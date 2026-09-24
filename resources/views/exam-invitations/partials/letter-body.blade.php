@@ -49,8 +49,8 @@
     .signature { width: 100%; margin-top: 16px; border-collapse: collapse; table-layout: fixed; page-break-inside: avoid; }
     .signature td { width: 33.333%; padding: 0 6px; vertical-align: top; text-align: center; font-size: 8.5pt; }
     .signature-role { min-height: 26px; font-weight: 600; }
-    .signature-space { height: 48px; display: flex; align-items: center; justify-content: center; }
-    .signature-qr { width: 44px; height: 44px; padding: 2px; border: 1px solid #cbd5e1; }
+    .signature-space { height: 64px; display: flex; align-items: center; justify-content: center; }
+    .signature-qr { width: 60px; height: 60px; padding: 2px; border: 1px solid #cbd5e1; }
     .signature-name { font-weight: 800; text-decoration: underline; }
     .signature-id { margin-top: 1px; }
 </style>

@@ -17,6 +17,7 @@ class KpExamInvitationService
     public function __construct(
         private readonly KpDocumentSignatureService $signatureService,
         private readonly KpOfficialIdentityResolver $identityResolver,
+        private readonly QrCodeService $qrCodeService,
     ) {}
 
     public function createOrUpdate(KpExam $exam, User $actor, ?KpExamInvitationSignatory $signatory = null): KpExamInvitation
@@ -178,7 +179,7 @@ class KpExamInvitationService
             'invitation' => $invitation,
             'verificationUrl' => $this->verificationUrl($invitation),
             'logoSrc' => $this->fileDataUri(public_path('images/logo-ubp-karawang.png'), 'image/png'),
-            'qrSrc' => 'data:image/svg+xml;base64,'.base64_encode($this->qrSvg($invitation)),
+            'qrSrc' => $this->qrCodeService->dataUri($this->verificationUrl($invitation)),
             'signatureQrSrcs' => $this->signatureQrSources($invitation),
         ])->setPaper('a4', 'portrait')->setOption([
             'defaultFont' => 'DejaVu Sans',
@@ -194,44 +195,7 @@ class KpExamInvitationService
 
     public function qrSvg(KpExamInvitation $invitation): string
     {
-        $payload = sha1($this->verificationUrl($invitation));
-        $size = 29;
-        $cell = 6;
-        $pad = 4;
-        $svgSize = ($size + ($pad * 2)) * $cell;
-        $rects = [];
-
-        $finder = function (int $x, int $y) use (&$rects, $cell, $pad): void {
-            for ($row = 0; $row < 7; $row++) {
-                for ($col = 0; $col < 7; $col++) {
-                    $edge = $row === 0 || $row === 6 || $col === 0 || $col === 6;
-                    $inner = $row >= 2 && $row <= 4 && $col >= 2 && $col <= 4;
-                    if ($edge || $inner) {
-                        $rects[] = '<rect x="'.(($x + $col + $pad) * $cell).'" y="'.(($y + $row + $pad) * $cell).'" width="'.$cell.'" height="'.$cell.'"/>';
-                    }
-                }
-            }
-        };
-
-        $finder(0, 0);
-        $finder($size - 7, 0);
-        $finder(0, $size - 7);
-
-        for ($row = 0; $row < $size; $row++) {
-            for ($col = 0; $col < $size; $col++) {
-                if (($row < 8 && $col < 8) || ($row < 8 && $col > $size - 9) || ($row > $size - 9 && $col < 8)) {
-                    continue;
-                }
-
-                $index = ($row * $size + $col) % strlen($payload);
-                $value = hexdec($payload[$index]);
-                if ((($value + $row + ($col * 3)) % 5) < 2) {
-                    $rects[] = '<rect x="'.(($col + $pad) * $cell).'" y="'.(($row + $pad) * $cell).'" width="'.$cell.'" height="'.$cell.'"/>';
-                }
-            }
-        }
-
-        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '.$svgSize.' '.$svgSize.'" width="'.$svgSize.'" height="'.$svgSize.'"><rect width="100%" height="100%" fill="#fff"/><g fill="#0f172a">'.implode('', $rects).'</g></svg>';
+        return $this->qrCodeService->svg($this->verificationUrl($invitation));
     }
 
     private function fileDataUri(string $path, string $mime): string

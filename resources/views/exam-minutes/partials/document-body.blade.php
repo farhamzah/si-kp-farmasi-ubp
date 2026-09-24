@@ -30,8 +30,8 @@
     .ba-box { border: 1px solid #cbd5e1; padding: 10px; min-height: 46px; margin-top: 5px; overflow-wrap: anywhere; }
     .ba-signatures { width: 100%; border-collapse: collapse; margin-top: 22px; table-layout: fixed; }
     .ba-signatures td { width: 33.33%; text-align: center; vertical-align: top; padding: 0 8px; }
-    .ba-sign-space { height: 54px; display: flex; align-items: center; justify-content: center; }
-    .ba-sign-qr { width: 48px; height: 48px; padding: 2px; border: 1px solid #cbd5e1; }
+    .ba-sign-space { height: 64px; display: flex; align-items: center; justify-content: center; }
+    .ba-sign-qr { width: 60px; height: 60px; padding: 2px; border: 1px solid #cbd5e1; }
     .ba-verification { margin-top: 20px; border: 1px solid #cbd5e1; padding: 8px; display: table; width: 100%; }
     .ba-verification-text, .ba-verification-qr { display: table-cell; vertical-align: middle; }
     .ba-verification-qr { width: 76px; text-align: right; }
