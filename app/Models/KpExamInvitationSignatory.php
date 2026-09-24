@@ -7,10 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 class KpExamInvitationSignatory extends Model
 {
     protected $fillable = [
+        'coordinator_lecturer_id',
         'coordinator_name',
         'coordinator_nuptk',
+        'head_program_lecturer_id',
         'head_program_name',
         'head_program_nuptk',
+        'dean_lecturer_id',
         'dean_name',
         'dean_nuptk',
         'effective_start_date',
@@ -31,6 +34,21 @@ class KpExamInvitationSignatory extends Model
     public function updatedBy()
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function coordinatorLecturer()
+    {
+        return $this->belongsTo(Lecturer::class, 'coordinator_lecturer_id');
+    }
+
+    public function headProgramLecturer()
+    {
+        return $this->belongsTo(Lecturer::class, 'head_program_lecturer_id');
+    }
+
+    public function deanLecturer()
+    {
+        return $this->belongsTo(Lecturer::class, 'dean_lecturer_id');
     }
 
     public static function active(): ?self

@@ -60,10 +60,13 @@ class ExamInvitationLetterController extends Controller
         abort_unless(in_array($request->session()->get('active_role'), ['admin', 'koordinator_kp'], true), 403);
 
         $data = $request->validate([
+            'coordinator_lecturer_id' => ['nullable', 'integer', 'exists:lecturers,id'],
             'coordinator_name' => ['required', 'string', 'max:120'],
             'coordinator_nuptk' => ['nullable', 'string', 'max:80'],
+            'head_program_lecturer_id' => ['nullable', 'integer', 'exists:lecturers,id'],
             'head_program_name' => ['required', 'string', 'max:120'],
             'head_program_nuptk' => ['nullable', 'string', 'max:80'],
+            'dean_lecturer_id' => ['nullable', 'integer', 'exists:lecturers,id'],
             'dean_name' => ['required', 'string', 'max:120'],
             'dean_nuptk' => ['nullable', 'string', 'max:80'],
             'effective_start_date' => ['nullable', 'date'],

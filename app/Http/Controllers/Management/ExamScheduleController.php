@@ -15,6 +15,7 @@ use App\Models\KpPeriod;
 use App\Models\Lecturer;
 use App\Services\KpExamMinuteService;
 use App\Services\KpExamService;
+use App\Services\KpOfficialIdentityResolver;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -24,7 +25,7 @@ use Illuminate\View\View;
 
 class ExamScheduleController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, KpOfficialIdentityResolver $identityResolver): View
     {
         $filteredQuery = $this->filteredExamQuery($request);
         $today = now()->toDateString();
@@ -63,6 +64,7 @@ class ExamScheduleController extends Controller
             'periods' => KpPeriod::latest()->get(),
             'filters' => $request->only(['period', 'status', 'date_from', 'date_to', 'q']),
             'signatory' => KpExamInvitationSignatory::active(),
+            'officialLecturers' => $identityResolver->options(),
             'readyCandidates' => $readyCandidates,
             'blockedCandidates' => $blockedCandidates,
             'stats' => [

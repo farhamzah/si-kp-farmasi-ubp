@@ -164,43 +164,56 @@
 
             <details class="mt-4 rounded-2xl border border-white/80 bg-white p-4" @if(! $signatory || $errors->has('signatory')) open @endif>
                 <summary class="cursor-pointer text-sm font-black text-cyan-700">{{ $signatory ? 'Ubah pejabat aktif' : 'Isi pejabat penandatangan' }}</summary>
-                <form method="POST" action="{{ route('management.exams.invitations.signatory.update') }}" class="mt-4 grid gap-3 lg:grid-cols-3">
+                <p class="mt-3 text-xs leading-5 text-slate-500">Pilih dosen agar nama bergelar dan NUPTK diambil otomatis dari Core Farmasi. Isian manual hanya dipakai sebagai cadangan bila profil Core belum tersedia.</p>
+                <form method="POST" action="{{ route('management.exams.invitations.signatory.update') }}" class="mt-4 grid gap-5 lg:grid-cols-3" data-official-form>
                     @csrf
-                    <label class="block">
-                        <span class="text-xs font-black uppercase tracking-widest text-slate-500">Koordinator Sidang</span>
-                        <input name="coordinator_name" value="{{ old('coordinator_name', $signatory?->coordinator_name ?? auth()->user()->name) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" required>
-                    </label>
-                    <label class="block">
-                        <span class="text-xs font-black uppercase tracking-widest text-slate-500">NUPTK Koordinator</span>
-                        <input name="coordinator_nuptk" value="{{ old('coordinator_nuptk', $signatory?->coordinator_nuptk) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                    </label>
-                    <label class="block">
+                    @foreach([
+                        ['key' => 'coordinator', 'label' => 'Koordinator Sidang', 'selected' => $signatory?->coordinator_lecturer_id, 'name' => $signatory?->coordinator_name ?? auth()->user()->name, 'nuptk' => $signatory?->coordinator_nuptk],
+                        ['key' => 'head_program', 'label' => 'Ketua Program Studi', 'selected' => $signatory?->head_program_lecturer_id, 'name' => $signatory?->head_program_name, 'nuptk' => $signatory?->head_program_nuptk],
+                        ['key' => 'dean', 'label' => 'Dekan Fakultas Farmasi', 'selected' => $signatory?->dean_lecturer_id, 'name' => $signatory?->dean_name, 'nuptk' => $signatory?->dean_nuptk],
+                    ] as $official)
+                        <fieldset class="space-y-3 border-l-2 border-cyan-100 pl-4">
+                            <legend class="text-xs font-black uppercase tracking-widest text-cyan-700">{{ $official['label'] }}</legend>
+                            <label class="block">
+                                <span class="text-xs font-bold text-slate-500">Dosen Core</span>
+                                <select name="{{ $official['key'] }}_lecturer_id" data-official-select="{{ $official['key'] }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                    <option value="">Cocokkan otomatis dari nama</option>
+                                    @foreach($officialLecturers as $lecturerOption)
+                                        <option value="{{ $lecturerOption['id'] }}" data-name="{{ $lecturerOption['name'] }}" data-nuptk="{{ $lecturerOption['nuptk'] }}" @selected((string) old($official['key'].'_lecturer_id', $official['selected']) === (string) $lecturerOption['id'])>
+                                            {{ $lecturerOption['name'] }}{{ $lecturerOption['nuptk'] ? ' - NUPTK '.$lecturerOption['nuptk'] : ' - NUPTK belum ada di Core' }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </label>
+                            <label class="block">
+                                <span class="text-xs font-bold text-slate-500">Nama pada surat</span>
+                                <input name="{{ $official['key'] }}_name" value="{{ old($official['key'].'_name', $official['name']) }}" data-official-name="{{ $official['key'] }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" required>
+                            </label>
+                            <label class="block">
+                                <span class="text-xs font-bold text-slate-500">NUPTK</span>
+                                <input name="{{ $official['key'] }}_nuptk" value="{{ old($official['key'].'_nuptk', $official['nuptk']) }}" data-official-nuptk="{{ $official['key'] }}" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                            </label>
+                        </fieldset>
+                    @endforeach
+                    <label class="block lg:col-span-2">
                         <span class="text-xs font-black uppercase tracking-widest text-slate-500">Mulai Berlaku</span>
                         <input type="date" name="effective_start_date" value="{{ old('effective_start_date', $signatory?->effective_start_date?->toDateString() ?? now()->toDateString()) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                    </label>
-
-                    <label class="block">
-                        <span class="text-xs font-black uppercase tracking-widest text-slate-500">Kaprodi</span>
-                        <input name="head_program_name" value="{{ old('head_program_name', $signatory?->head_program_name) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" required>
-                    </label>
-                    <label class="block">
-                        <span class="text-xs font-black uppercase tracking-widest text-slate-500">NUPTK Kaprodi</span>
-                        <input name="head_program_nuptk" value="{{ old('head_program_nuptk', $signatory?->head_program_nuptk) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                    </label>
-                    <div class="hidden lg:block"></div>
-
-                    <label class="block">
-                        <span class="text-xs font-black uppercase tracking-widest text-slate-500">Dekan</span>
-                        <input name="dean_name" value="{{ old('dean_name', $signatory?->dean_name) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" required>
-                    </label>
-                    <label class="block">
-                        <span class="text-xs font-black uppercase tracking-widest text-slate-500">NUPTK Dekan</span>
-                        <input name="dean_nuptk" value="{{ old('dean_nuptk', $signatory?->dean_nuptk) }}" class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
                     </label>
                     <div class="flex items-end">
                         <button class="w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">Simpan Pejabat Aktif</button>
                     </div>
                 </form>
+                <script>
+                    document.querySelectorAll('[data-official-select]').forEach((select) => {
+                        select.addEventListener('change', () => {
+                            const key = select.dataset.officialSelect;
+                            const option = select.selectedOptions[0];
+                            if (!option?.value) return;
+                            document.querySelector(`[data-official-name="${key}"]`).value = option.dataset.name || '';
+                            document.querySelector(`[data-official-nuptk="${key}"]`).value = option.dataset.nuptk || '';
+                        });
+                    });
+                </script>
             </details>
         </div>
 

@@ -14,7 +14,10 @@ use Illuminate\Support\Str;
 
 class KpExamInvitationService
 {
-    public function __construct(private readonly KpDocumentSignatureService $signatureService) {}
+    public function __construct(
+        private readonly KpDocumentSignatureService $signatureService,
+        private readonly KpOfficialIdentityResolver $identityResolver,
+    ) {}
 
     public function createOrUpdate(KpExam $exam, User $actor, ?KpExamInvitationSignatory $signatory = null): KpExamInvitation
     {
@@ -27,12 +30,7 @@ class KpExamInvitationService
         }
 
         $invitation->fill([
-            'coordinator_name' => $signatory->coordinator_name,
-            'coordinator_nuptk' => $signatory->coordinator_nuptk,
-            'head_program_name' => $signatory->head_program_name,
-            'head_program_nuptk' => $signatory->head_program_nuptk,
-            'dean_name' => $signatory->dean_name,
-            'dean_nuptk' => $signatory->dean_nuptk,
+            ...$this->resolvedSignatorySnapshot($signatory),
             'status' => 'published',
             'document_version' => (int) ($invitation->document_version ?: 1),
             'generated_by' => $actor->id,
@@ -55,12 +53,7 @@ class KpExamInvitationService
         $signatory = $this->activeSignatory();
         $invitation->fill([
             'verification_code' => Str::upper(Str::random(12)),
-            'coordinator_name' => $signatory->coordinator_name,
-            'coordinator_nuptk' => $signatory->coordinator_nuptk,
-            'head_program_name' => $signatory->head_program_name,
-            'head_program_nuptk' => $signatory->head_program_nuptk,
-            'dean_name' => $signatory->dean_name,
-            'dean_nuptk' => $signatory->dean_nuptk,
+            ...$this->resolvedSignatorySnapshot($signatory),
             'document_version' => ((int) ($invitation->document_version ?: 1)) + 1,
             'last_rebuild_reason' => $reason,
             'rebuilt_by' => $actor->id,
@@ -94,22 +87,60 @@ class KpExamInvitationService
 
     public function saveActiveSignatory(array $data, User $actor): KpExamInvitationSignatory
     {
+        $coordinator = $this->identityResolver->resolve($data['coordinator_lecturer_id'] ?? null, $data['coordinator_name'], $data['coordinator_nuptk'] ?? null);
+        $headProgram = $this->identityResolver->resolve($data['head_program_lecturer_id'] ?? null, $data['head_program_name'], $data['head_program_nuptk'] ?? null);
+        $dean = $this->identityResolver->resolve($data['dean_lecturer_id'] ?? null, $data['dean_name'], $data['dean_nuptk'] ?? null);
+
         KpExamInvitationSignatory::query()->where('is_active', true)->update([
             'is_active' => false,
             'effective_end_date' => now()->toDateString(),
         ]);
 
         return KpExamInvitationSignatory::create([
-            'coordinator_name' => $data['coordinator_name'],
-            'coordinator_nuptk' => $data['coordinator_nuptk'] ?? null,
-            'head_program_name' => $data['head_program_name'],
-            'head_program_nuptk' => $data['head_program_nuptk'] ?? null,
-            'dean_name' => $data['dean_name'],
-            'dean_nuptk' => $data['dean_nuptk'] ?? null,
+            'coordinator_lecturer_id' => $coordinator['lecturer_id'],
+            'coordinator_name' => $coordinator['name'],
+            'coordinator_nuptk' => $coordinator['nuptk'],
+            'head_program_lecturer_id' => $headProgram['lecturer_id'],
+            'head_program_name' => $headProgram['name'],
+            'head_program_nuptk' => $headProgram['nuptk'],
+            'dean_lecturer_id' => $dean['lecturer_id'],
+            'dean_name' => $dean['name'],
+            'dean_nuptk' => $dean['nuptk'],
             'effective_start_date' => $data['effective_start_date'] ?? now()->toDateString(),
             'is_active' => true,
             'updated_by' => $actor->id,
         ]);
+    }
+
+    private function resolvedSignatorySnapshot(KpExamInvitationSignatory $signatory): array
+    {
+        $coordinator = $this->identityResolver->resolve($signatory->coordinator_lecturer_id, $signatory->coordinator_name, $signatory->coordinator_nuptk);
+        $headProgram = $this->identityResolver->resolve($signatory->head_program_lecturer_id, $signatory->head_program_name, $signatory->head_program_nuptk);
+        $dean = $this->identityResolver->resolve($signatory->dean_lecturer_id, $signatory->dean_name, $signatory->dean_nuptk);
+
+        $signatory->forceFill([
+            'coordinator_lecturer_id' => $coordinator['lecturer_id'],
+            'coordinator_name' => $coordinator['name'],
+            'coordinator_nuptk' => $coordinator['nuptk'],
+            'head_program_lecturer_id' => $headProgram['lecturer_id'],
+            'head_program_name' => $headProgram['name'],
+            'head_program_nuptk' => $headProgram['nuptk'],
+            'dean_lecturer_id' => $dean['lecturer_id'],
+            'dean_name' => $dean['name'],
+            'dean_nuptk' => $dean['nuptk'],
+        ]);
+        if ($signatory->isDirty()) {
+            $signatory->save();
+        }
+
+        return [
+            'coordinator_name' => $coordinator['name'],
+            'coordinator_nuptk' => $coordinator['nuptk'],
+            'head_program_name' => $headProgram['name'],
+            'head_program_nuptk' => $headProgram['nuptk'],
+            'dean_name' => $dean['name'],
+            'dean_nuptk' => $dean['nuptk'],
+        ];
     }
 
     public function nextLetterNumber(KpExam $exam): string
