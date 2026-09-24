@@ -58,6 +58,6 @@ class KpDocumentSignatureService
 
     public function dataUri(KpDocumentSignature $signature): string
     {
-        return $this->qrCodeService->dataUri($this->verificationUrl($signature));
+        return $this->qrCodeService->pngDataUri($this->verificationUrl($signature));
     }
 }

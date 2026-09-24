@@ -29,6 +29,11 @@ class QrCodeService
         return 'data:image/svg+xml;base64,'.base64_encode($this->svg($payload));
     }
 
+    public function pngDataUri(string $payload): string
+    {
+        return 'data:image/png;base64,'.base64_encode($this->png($payload));
+    }
+
     private function qrCode(string $payload): QrCode
     {
         return new QrCode(

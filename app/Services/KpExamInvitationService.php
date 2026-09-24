@@ -164,6 +164,7 @@ class KpExamInvitationService
         $html = view('exam-invitations.letter-word', [
             'invitation' => $invitation,
             'verificationUrl' => $this->verificationUrl($invitation),
+            'qrSrc' => $this->qrCodeService->pngDataUri($this->verificationUrl($invitation)),
             'signatureQrSrcs' => $this->signatureQrSources($invitation),
         ])->render();
 
@@ -179,7 +180,7 @@ class KpExamInvitationService
             'invitation' => $invitation,
             'verificationUrl' => $this->verificationUrl($invitation),
             'logoSrc' => $this->fileDataUri(public_path('images/logo-ubp-karawang.png'), 'image/png'),
-            'qrSrc' => $this->qrCodeService->dataUri($this->verificationUrl($invitation)),
+            'qrSrc' => $this->qrCodeService->pngDataUri($this->verificationUrl($invitation)),
             'signatureQrSrcs' => $this->signatureQrSources($invitation),
         ])->setPaper('a4', 'portrait')->setOption([
             'defaultFont' => 'DejaVu Sans',

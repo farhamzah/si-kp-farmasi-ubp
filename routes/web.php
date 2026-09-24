@@ -75,11 +75,14 @@ use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login');
 
-Route::get('/undangan-sidang/verifikasi/{code}', [ExamInvitationLetterController::class, 'verify'])->name('exam-invitations.verify');
+Route::get('/v/u/{code}', [ExamInvitationLetterController::class, 'verify'])->name('exam-invitations.verify');
+Route::get('/undangan-sidang/verifikasi/{code}', [ExamInvitationLetterController::class, 'verify']);
 Route::get('/undangan-sidang/qr/{invitation}', [ExamInvitationLetterController::class, 'qr'])->name('exam-invitations.qr');
-Route::get('/berita-acara-sidang/verifikasi/{code}', [ExamMinuteController::class, 'verify'])->name('exam-minutes.verify');
+Route::get('/v/b/{code}', [ExamMinuteController::class, 'verify'])->name('exam-minutes.verify');
+Route::get('/berita-acara-sidang/verifikasi/{code}', [ExamMinuteController::class, 'verify']);
 Route::get('/berita-acara-sidang/qr/{minute}', [ExamMinuteController::class, 'qr'])->name('exam-minutes.qr');
-Route::get('/dokumen/tanda-tangan/verifikasi/{code}', [DocumentSignatureController::class, 'verify'])->name('document-signatures.verify');
+Route::get('/v/t/{code}', [DocumentSignatureController::class, 'verify'])->name('document-signatures.verify');
+Route::get('/dokumen/tanda-tangan/verifikasi/{code}', [DocumentSignatureController::class, 'verify']);
 Route::get('/dokumen/tanda-tangan/qr/{signature}', [DocumentSignatureController::class, 'qr'])->name('document-signatures.qr');
 Route::get('/api/internal/v1/ta-eligibility/{nim}', TaEligibilityController::class)->name('internal.ta-eligibility');
 

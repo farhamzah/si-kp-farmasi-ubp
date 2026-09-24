@@ -128,7 +128,7 @@ class KpExamMinuteService
             'minute' => $minute,
             'verificationUrl' => $this->verificationUrl($minute),
             'logoSrc' => $this->fileDataUri(public_path('images/logo-ubp-karawang.png'), 'image/png'),
-            'qrSrc' => $this->qrCodeService->dataUri($this->verificationUrl($minute)),
+            'qrSrc' => $this->qrCodeService->pngDataUri($this->verificationUrl($minute)),
             'signatureQrSrcs' => $this->signatureQrSources($minute),
         ])->setPaper('a4', 'portrait')->setOption(['defaultFont' => 'DejaVu Sans', 'dpi' => 120, 'isRemoteEnabled' => false]);
 

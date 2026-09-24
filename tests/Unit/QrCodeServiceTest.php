@@ -19,5 +19,6 @@ class QrCodeServiceTest extends TestCase
         $this->assertStringContainsString('viewBox=', $svg);
         $this->assertStringStartsWith("\x89PNG\r\n\x1a\n", $png);
         $this->assertStringStartsWith('data:image/svg+xml;base64,', $service->dataUri($payload));
+        $this->assertStringStartsWith('data:image/png;base64,', $service->pngDataUri($payload));
     }
 }
