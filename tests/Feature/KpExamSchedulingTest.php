@@ -149,9 +149,13 @@ class KpExamSchedulingTest extends TestCase
             ->assertRedirect();
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->post('/management/exam-requests/'.$request->id.'/schedule', $this->validSchedulePayload())
-            ->assertRedirect();
+            ->assertRedirect('/management/exams?status=belum_dijadwalkan');
 
         $this->assertDatabaseHas('kp_exams', ['kp_exam_request_id' => $request->id]);
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/exams?status=belum_dijadwalkan')
+            ->assertOk()
+            ->assertDontSee($this->mahasiswa->name);
         $report->refresh();
         $this->assertSame('draft', $report->status);
         $this->assertSame('pending', $report->internal_review_status);

@@ -11,8 +11,8 @@
 @endphp
 <div class="space-y-5">
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <a href="{{ route('management.exam-requests.show', $examRequest) }}" class="inline-flex rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">Kembali ke Validasi</a>
-        <a href="{{ route('management.exams.index') }}" class="inline-flex rounded-xl border border-cyan-200 bg-white px-4 py-2 text-sm font-bold text-cyan-700 shadow-sm">Daftar Jadwal</a>
+        <a href="{{ $exam ? route('management.exams.show', $exam) : route('management.exams.index', ['status' => 'belum_dijadwalkan']) }}" class="inline-flex rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">{{ $exam ? 'Kembali ke Detail' : 'Kembali ke Antrean' }}</a>
+        <a href="{{ route('management.exams.index', ['status' => 'dijadwalkan']) }}" class="inline-flex rounded-xl border border-cyan-200 bg-white px-4 py-2 text-sm font-bold text-cyan-700 shadow-sm">Lihat Jadwal Aktif</a>
     </div>
 
     <div class="grid gap-5 xl:grid-cols-[380px_1fr]">

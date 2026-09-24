@@ -123,8 +123,11 @@ class ExamScheduleController extends Controller
 
     public function store(ScheduleExamRequest $request, KpExamRequest $examRequest, KpExamService $service): RedirectResponse
     {
-        $exam = $service->scheduleExam($request->user(), $examRequest, $request->validated());
-        return redirect()->route('management.exams.show', $exam)->with('status', 'Sidang berhasil dijadwalkan.');
+        $service->scheduleExam($request->user(), $examRequest, $request->validated());
+
+        return redirect()
+            ->route('management.exams.index', ['status' => 'belum_dijadwalkan'])
+            ->with('status', 'Sidang berhasil dijadwalkan. Mahasiswa sudah dikeluarkan dari antrean penjadwalan.');
     }
 
     public function edit(KpExam $exam): View

@@ -35,6 +35,28 @@
             @endforeach
         </div>
 
+        @php
+            $navigationFilters = array_filter([
+                'period' => $filters['period'] ?? null,
+                'q' => $filters['q'] ?? null,
+            ], fn ($value) => filled($value));
+            $activeStatus = $filters['status'] ?? '';
+        @endphp
+        <nav class="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4" aria-label="Menu jadwal sidang">
+            <a href="{{ route('management.exams.index', array_merge($navigationFilters, ['status' => 'belum_dijadwalkan'])) }}" class="rounded-xl px-4 py-2 text-sm font-black {{ $activeStatus === 'belum_dijadwalkan' ? 'bg-cyan-700 text-white' : 'border border-cyan-200 bg-white text-cyan-700' }}">
+                Belum Dijadwalkan ({{ $stats['ready_unscheduled'] }})
+            </a>
+            <a href="{{ route('management.exams.index', array_merge($navigationFilters, ['status' => 'dijadwalkan'])) }}" class="rounded-xl px-4 py-2 text-sm font-black {{ $activeStatus === 'dijadwalkan' ? 'bg-cyan-700 text-white' : 'border border-slate-200 bg-white text-slate-700' }}">
+                Jadwal Aktif
+            </a>
+            <a href="{{ route('management.exams.index', array_merge($navigationFilters, ['status' => 'selesai'])) }}" class="rounded-xl px-4 py-2 text-sm font-black {{ $activeStatus === 'selesai' ? 'bg-cyan-700 text-white' : 'border border-slate-200 bg-white text-slate-700' }}">
+                Riwayat Selesai
+            </a>
+            <a href="{{ route('management.exams.index', $navigationFilters) }}" class="rounded-xl px-4 py-2 text-sm font-black {{ $activeStatus === '' ? 'bg-slate-950 text-white' : 'border border-slate-200 bg-white text-slate-700' }}">
+                Semua Jadwal
+            </a>
+        </nav>
+
         <form method="GET" class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_170px_150px_150px_150px_auto]">
             <input name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Cari nama, NIM, judul, tempat, atau ruang" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
             <select name="period" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">

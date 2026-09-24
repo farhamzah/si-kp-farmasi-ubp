@@ -3,6 +3,10 @@
 @section('page_title','Detail Jadwal Sidang')
 @section('content')
 @if($errors->any())<div class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{{ $errors->first() }}</div>@endif
+<div class="mb-5 flex flex-wrap gap-2">
+    <a href="{{ route('management.exams.index', ['status' => 'dijadwalkan']) }}" class="rounded-xl border border-cyan-200 bg-white px-4 py-2 text-sm font-bold text-cyan-700 shadow-sm">Kembali ke Jadwal Aktif</a>
+    <a href="{{ route('management.exams.index', ['status' => 'belum_dijadwalkan']) }}" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">Antrean Penjadwalan</a>
+</div>
 <div class="grid gap-5 lg:grid-cols-[1fr_360px]">
     <x-ui.card>
         <p class="text-sm text-slate-500">{{ $exam->assignment->student->user->name }} | {{ $exam->assignment->student->nim ?: '-' }}</p>
