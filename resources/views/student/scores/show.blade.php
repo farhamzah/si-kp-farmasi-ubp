@@ -36,7 +36,7 @@
 
                 <aside class="rounded-2xl bg-slate-50 p-5">
                     <p class="text-xs font-black uppercase tracking-widest text-slate-500">Informasi</p>
-                    <p class="mt-3 text-sm leading-6 text-slate-600">Nilai hanya tampil setelah dipublish, akses periode dibuka oleh Koordinator KP, dan syarat akhir Anda lengkap.</p>
+                    <p class="mt-3 text-sm leading-6 text-slate-600">Nilai hanya tampil setelah sidang selesai, nilai dipublish, akses periode dibuka, bukti pembayaran dan laporan pascasidang disetujui koordinator, serta kuisioner selesai.</p>
                     <p class="mt-4 text-sm font-bold text-slate-950">{{ $assignment->period?->name }}</p>
                     <p class="text-sm text-slate-500">{{ $assignment->place?->name }}</p>
                 </aside>

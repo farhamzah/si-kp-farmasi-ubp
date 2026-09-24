@@ -368,6 +368,7 @@ class KpAssessmentAndFinalScoreTest extends TestCase
                 'approved_at' => now(),
             ]
         );
+        $this->exam->update(['status' => 'selesai']);
 
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
             ->get('/mahasiswa/nilai')

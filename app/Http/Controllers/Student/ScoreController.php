@@ -12,7 +12,7 @@ class ScoreController extends Controller
     public function show(KpScoreCalculator $calculator, StudentScoreVisibility $visibility): View
     {
         $assignment = request()->user()->student?->assignments()
-            ->with(['period.assessmentComponents', 'place', 'scores.component', 'logbooks', 'finalScore', 'finalReport', 'examRequest'])
+            ->with(['period.assessmentComponents', 'place', 'scores.component', 'logbooks', 'finalScore', 'finalReport', 'examRequest', 'exam', 'postExamReport'])
             ->whereIn('status', ['aktif', 'berjalan', 'selesai'])
             ->latest()
             ->first();

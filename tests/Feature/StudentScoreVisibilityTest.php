@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\KpAssignment;
+use App\Models\KpExam;
 use App\Models\KpExamRequest;
 use App\Models\KpFinalReport;
 use App\Models\KpFinalScore;
@@ -13,6 +14,7 @@ use App\Models\KpQuestionnaire;
 use App\Models\KpQuestionnaireResponse;
 use App\Models\KpRegistration;
 use App\Models\KpScoreVisibilityOverride;
+use App\Models\Lecturer;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\User;
@@ -95,7 +97,7 @@ class StudentScoreVisibilityTest extends TestCase
             'approved_at' => now(),
         ]);
 
-        KpExamRequest::create([
+        $examRequest = KpExamRequest::create([
             'kp_assignment_id' => $this->assignment->id,
             'requested_by' => $this->mahasiswa->id,
             'status' => 'dijadwalkan',
@@ -104,6 +106,26 @@ class StudentScoreVisibilityTest extends TestCase
             'payment_proof_status' => KpExamRequest::PAYMENT_PROOF_APPROVED,
             'payment_proof_reviewed_by' => $this->koordinator->id,
             'payment_proof_reviewed_at' => now(),
+        ]);
+
+        $supervisorUser = $this->makeUser('supervisor-visibility@test.local', ['dosen']);
+        $examinerUser = $this->makeUser('examiner-visibility@test.local', ['penguji']);
+        $supervisor = Lecturer::create(['user_id' => $supervisorUser->id, 'nidn_nip' => '991101', 'status' => 'active']);
+        $examiner = Lecturer::create(['user_id' => $examinerUser->id, 'nidn_nip' => '991102', 'status' => 'active']);
+
+        KpExam::create([
+            'kp_exam_request_id' => $examRequest->id,
+            'kp_assignment_id' => $this->assignment->id,
+            'supervisor_id' => $supervisor->id,
+            'examiner_id' => $examiner->id,
+            'exam_date' => now()->toDateString(),
+            'start_time' => '09:00',
+            'end_time' => '10:00',
+            'mode' => 'offline',
+            'room' => 'Ruang Sidang UAT',
+            'status' => 'selesai',
+            'scheduled_by' => $this->koordinator->id,
+            'scheduled_at' => now(),
         ]);
 
         KpPostExamReport::create([
@@ -197,6 +219,27 @@ class StudentScoreVisibilityTest extends TestCase
             ->get('/mahasiswa/nilai')
             ->assertOk()
             ->assertSee('Nilai Akhir KP');
+    }
+
+    public function test_completed_exam_is_required_to_view_score(): void
+    {
+        $this->period->update(['score_visible_to_students' => true]);
+        $this->assignment->exam->update(['status' => 'dijadwalkan']);
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/nilai')
+            ->assertOk()
+            ->assertSee('Sidang KP sudah selesai')
+            ->assertSee('Nilai baru dapat dibuka setelah Ketua Sidang menyelesaikan sidang.')
+            ->assertDontSee('Nilai Akhir KP');
+
+        $this->assignment->exam->update(['status' => 'selesai']);
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/nilai')
+            ->assertOk()
+            ->assertSee('Nilai Akhir KP')
+            ->assertSee('88');
     }
 
     public function test_approved_payment_proof_is_required_to_view_score(): void

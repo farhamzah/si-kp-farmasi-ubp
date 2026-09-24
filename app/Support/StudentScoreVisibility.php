@@ -11,7 +11,7 @@ class StudentScoreVisibility
 {
     public function resolve(KpAssignment $assignment): array
     {
-        $assignment->loadMissing(['period', 'student.user', 'finalScore', 'finalReport', 'examRequest', 'postExamReport']);
+        $assignment->loadMissing(['period', 'student.user', 'finalScore', 'finalReport', 'examRequest', 'exam', 'postExamReport']);
 
         $override = KpScoreVisibilityOverride::query()
             ->where('kp_period_id', $assignment->kp_period_id)
@@ -45,16 +45,25 @@ class StudentScoreVisibility
 
     public function requirements(KpAssignment $assignment): array
     {
-        $assignment->loadMissing(['finalReport', 'student.user', 'examRequest', 'postExamReport']);
+        $assignment->loadMissing(['finalReport', 'student.user', 'examRequest', 'exam', 'postExamReport']);
 
         $report = $assignment->finalReport;
         $hasFinalDocument = $report ? ($report->files()->exists() || filled($report->final_document_url)) : false;
         $reportApproved = (bool) ($report?->isApproved() && $hasFinalDocument);
+        $examCompleted = $assignment->exam?->status === 'selesai';
         $studentQuestionnaireSubmitted = $this->studentQuestionnaireSubmitted($assignment);
         $paymentProofApproved = (bool) $assignment->examRequest?->paymentProofApproved();
         $postExamReportApproved = (bool) $assignment->postExamReport?->isApproved();
 
         return [
+            [
+                'key' => 'exam_completed',
+                'label' => 'Sidang KP sudah selesai',
+                'ready' => $examCompleted,
+                'description' => $examCompleted
+                    ? 'Sidang sudah ditutup oleh Ketua Sidang.'
+                    : 'Nilai baru dapat dibuka setelah Ketua Sidang menyelesaikan sidang.',
+            ],
             [
                 'key' => 'final_report_approved',
                 'label' => 'Laporan final sudah tersedia dan disetujui pembimbing',

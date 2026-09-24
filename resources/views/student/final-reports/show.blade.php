@@ -88,7 +88,7 @@
                             <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Alur Laporan Akhir</p>
                             <h3 class="mt-1 text-lg font-black text-slate-950">Kerjakan berurutan supaya tidak bingung</h3>
                         </div>
-                        <p class="max-w-2xl text-sm leading-6 text-slate-600">Bimbingan laporan dicatat terpisah dari logbook KP harian. Nilai dibuka setelah laporan final disetujui pembimbing dan kuisioner selesai.</p>
+                        <p class="max-w-2xl text-sm leading-6 text-slate-600">Bimbingan laporan dicatat terpisah dari logbook KP harian. Nilai dibuka setelah sidang selesai, bukti pembayaran dan laporan pascasidang disetujui koordinator, serta kuisioner selesai.</p>
                     </div>
                     <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                         @foreach([
