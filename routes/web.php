@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\UserImportController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DocumentSignatureController;
 use App\Http\Controllers\Examiner\AssessmentController as ExaminerAssessmentController;
 use App\Http\Controllers\Examiner\ExamScheduleController as ExaminerExamScheduleController;
 use App\Http\Controllers\ExamInvitationInboxController;
@@ -78,6 +79,8 @@ Route::get('/undangan-sidang/verifikasi/{code}', [ExamInvitationLetterController
 Route::get('/undangan-sidang/qr/{invitation}', [ExamInvitationLetterController::class, 'qr'])->name('exam-invitations.qr');
 Route::get('/berita-acara-sidang/verifikasi/{code}', [ExamMinuteController::class, 'verify'])->name('exam-minutes.verify');
 Route::get('/berita-acara-sidang/qr/{minute}', [ExamMinuteController::class, 'qr'])->name('exam-minutes.qr');
+Route::get('/dokumen/tanda-tangan/verifikasi/{code}', [DocumentSignatureController::class, 'verify'])->name('document-signatures.verify');
+Route::get('/dokumen/tanda-tangan/qr/{signature}', [DocumentSignatureController::class, 'qr'])->name('document-signatures.qr');
 Route::get('/api/internal/v1/ta-eligibility/{nim}', TaEligibilityController::class)->name('internal.ta-eligibility');
 
 Route::middleware('guest')->group(function () {
@@ -197,6 +200,7 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('exams/report/preview', [ManagementExamScheduleController::class, 'reportPreview'])->name('exams.report.preview');
             Route::get('exams/report/pdf', [ManagementExamScheduleController::class, 'reportPdf'])->name('exams.report.pdf');
             Route::post('exam-minutes/{minute}/publish', [ExamMinuteController::class, 'publish'])->name('exam-minutes.publish');
+            Route::post('exam-minutes/{minute}/rebuild', [ExamMinuteController::class, 'rebuild'])->name('exam-minutes.rebuild');
             Route::get('exams/{exam}', [ManagementExamScheduleController::class, 'show'])->name('exams.show');
             Route::get('exams/{exam}/edit', [ManagementExamScheduleController::class, 'edit'])->name('exams.edit');
             Route::put('exams/{exam}', [ManagementExamScheduleController::class, 'update'])->name('exams.update');
@@ -205,6 +209,7 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::post('exams/invitations/signatory', [ExamInvitationLetterController::class, 'updateSignatory'])->name('exams.invitations.signatory.update');
             Route::post('exams/invitations/bulk', [ExamInvitationLetterController::class, 'bulkStore'])->name('exams.invitations.bulk-store');
             Route::post('exams/{exam}/invitation', [ExamInvitationLetterController::class, 'store'])->name('exams.invitation.store');
+            Route::post('exam-invitations/{invitation}/rebuild', [ExamInvitationLetterController::class, 'rebuild'])->name('exam-invitations.rebuild');
             Route::get('exam-logs', [ExamLogController::class, 'index'])->name('exam-logs.index');
             Route::resource('assessment-components', AssessmentComponentController::class)->except(['show'])->parameters(['assessment-components' => 'component']);
             Route::resource('competencies', KpCompetencyController::class)->except(['show', 'create', 'edit'])->parameters(['competencies' => 'competency']);

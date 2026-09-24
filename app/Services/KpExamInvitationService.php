@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\KpExam;
 use App\Models\KpExamInvitation;
 use App\Models\KpExamInvitationSignatory;
+use App\Models\KpDocumentSignature;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Response;
@@ -13,6 +14,8 @@ use Illuminate\Support\Str;
 
 class KpExamInvitationService
 {
+    public function __construct(private readonly KpDocumentSignatureService $signatureService) {}
+
     public function createOrUpdate(KpExam $exam, User $actor, ?KpExamInvitationSignatory $signatory = null): KpExamInvitation
     {
         $signatory ??= $this->activeSignatory();
@@ -31,11 +34,51 @@ class KpExamInvitationService
             'dean_name' => $signatory->dean_name,
             'dean_nuptk' => $signatory->dean_nuptk,
             'status' => 'published',
+            'document_version' => (int) ($invitation->document_version ?: 1),
             'generated_by' => $actor->id,
             'generated_at' => now(),
         ])->save();
 
-        return $invitation->fresh(['exam.assignment.student.user', 'exam.assignment.period', 'exam.assignment.place', 'exam.supervisor.user', 'exam.examiners.user', 'exam.examiner.user']);
+        $this->signatureService->replace(
+            KpDocumentSignature::DOCUMENT_INVITATION,
+            $invitation->id,
+            (int) $invitation->document_version,
+            $this->signers($invitation, $actor),
+            $actor,
+        );
+
+        return $invitation->fresh(['exam.assignment.student.user', 'exam.assignment.period', 'exam.assignment.place', 'exam.supervisor.user', 'exam.examiners.user', 'exam.examiner.user', 'signatures']);
+    }
+
+    public function rebuild(KpExamInvitation $invitation, User $actor, string $reason): KpExamInvitation
+    {
+        $signatory = $this->activeSignatory();
+        $invitation->fill([
+            'verification_code' => Str::upper(Str::random(12)),
+            'coordinator_name' => $signatory->coordinator_name,
+            'coordinator_nuptk' => $signatory->coordinator_nuptk,
+            'head_program_name' => $signatory->head_program_name,
+            'head_program_nuptk' => $signatory->head_program_nuptk,
+            'dean_name' => $signatory->dean_name,
+            'dean_nuptk' => $signatory->dean_nuptk,
+            'document_version' => ((int) ($invitation->document_version ?: 1)) + 1,
+            'last_rebuild_reason' => $reason,
+            'rebuilt_by' => $actor->id,
+            'rebuilt_at' => now(),
+            'generated_by' => $actor->id,
+            'generated_at' => now(),
+        ])->save();
+
+        $this->signatureService->replace(
+            KpDocumentSignature::DOCUMENT_INVITATION,
+            $invitation->id,
+            (int) $invitation->document_version,
+            $this->signers($invitation, $actor),
+            $actor,
+            $reason,
+        );
+
+        return $invitation->fresh(['signatures']);
     }
 
     public function activeSignatory(): KpExamInvitationSignatory
@@ -89,6 +132,7 @@ class KpExamInvitationService
         $html = view('exam-invitations.letter-word', [
             'invitation' => $invitation,
             'verificationUrl' => $this->verificationUrl($invitation),
+            'signatureQrSrcs' => $this->signatureQrSources($invitation),
         ])->render();
 
         return response($html, 200, [
@@ -104,6 +148,7 @@ class KpExamInvitationService
             'verificationUrl' => $this->verificationUrl($invitation),
             'logoSrc' => $this->fileDataUri(public_path('images/logo-ubp-karawang.png'), 'image/png'),
             'qrSrc' => 'data:image/svg+xml;base64,'.base64_encode($this->qrSvg($invitation)),
+            'signatureQrSrcs' => $this->signatureQrSources($invitation),
         ])->setPaper('a4', 'portrait')->setOption([
             'defaultFont' => 'DejaVu Sans',
             'dpi' => 120,
@@ -165,6 +210,33 @@ class KpExamInvitationService
         }
 
         return 'data:'.$mime.';base64,'.base64_encode((string) file_get_contents($path));
+    }
+
+    private function signers(KpExamInvitation $invitation, User $actor): array
+    {
+        $invitation->loadMissing('exam.assignment.student.user');
+        $metadata = [
+            'document_number' => $invitation->letter_number,
+            'student_name' => $invitation->exam?->assignment?->student?->user?->name,
+            'student_nim' => $invitation->exam?->assignment?->student?->nim,
+        ];
+
+        return [
+            ['key' => 'coordinator', 'user_id' => $actor->id, 'name' => $invitation->coordinator_name, 'identifier' => $invitation->coordinator_nuptk, 'role' => 'Koordinator Sidang', 'metadata' => $metadata],
+            ['key' => 'head_program', 'name' => $invitation->head_program_name, 'identifier' => $invitation->head_program_nuptk, 'role' => 'Ketua Program Studi Farmasi', 'metadata' => $metadata],
+            ['key' => 'dean', 'name' => $invitation->dean_name, 'identifier' => $invitation->dean_nuptk, 'role' => 'Dekan Fakultas Farmasi', 'metadata' => $metadata],
+        ];
+    }
+
+    private function signatureQrSources(KpExamInvitation $invitation): array
+    {
+        $invitation->loadMissing('signatures');
+
+        return $invitation->signatures
+            ->where('status', 'active')
+            ->where('version', (int) $invitation->document_version)
+            ->mapWithKeys(fn ($signature) => [$signature->id => $this->signatureService->dataUri($signature)])
+            ->all();
     }
 
     private function roman(int $month): string

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\FieldSupervisor;
 use App\Models\KpAssignment;
 use App\Models\KpExam;
+use App\Models\KpDocumentSignature;
 use App\Models\KpExamInvitation;
 use App\Models\KpExamInvitationSignatory;
 use App\Models\KpExamRequest;
@@ -155,7 +156,7 @@ class KpExamSchedulingTest extends TestCase
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->get('/management/exams?status=belum_dijadwalkan')
             ->assertOk()
-            ->assertDontSee($this->mahasiswa->name);
+            ->assertDontSee($this->assignment->student->nim);
         $report->refresh();
         $this->assertSame('draft', $report->status);
         $this->assertSame('pending', $report->internal_review_status);
@@ -741,6 +742,19 @@ class KpExamSchedulingTest extends TestCase
             'head_program_name' => 'Kaprodi Farmasi',
             'dean_name' => 'Dekan Fakultas Farmasi',
         ]);
+        $this->assertDatabaseCount('kp_document_signatures', 3);
+        $this->assertDatabaseHas('kp_document_signatures', [
+            'document_type' => KpDocumentSignature::DOCUMENT_INVITATION,
+            'document_id' => $invitation->id,
+            'signer_key' => 'head_program',
+            'status' => 'active',
+        ]);
+
+        $oldSignature = KpDocumentSignature::where('document_type', KpDocumentSignature::DOCUMENT_INVITATION)->firstOrFail();
+        $this->get('/dokumen/tanda-tangan/verifikasi/'.$oldSignature->verification_code)
+            ->assertOk()
+            ->assertSee('Tanda Tangan Terverifikasi')
+            ->assertSee($oldSignature->signer_name);
 
         $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
             ->get('/undangan-sidang/surat/'.$invitation->id)
@@ -756,6 +770,20 @@ class KpExamSchedulingTest extends TestCase
             ->assertDownload('undangan-sidang-kp-'.$exam->id.'.pdf');
 
         $this->assertStringStartsWith('%PDF-', $pdfResponse->getContent());
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/exam-invitations/'.$invitation->id.'/rebuild', [
+                'reason' => 'Menambahkan QR individual penandatangan.',
+            ])->assertRedirect();
+
+        $this->assertSame(2, $invitation->fresh()->document_version);
+        $this->assertDatabaseHas('kp_document_signatures', ['id' => $oldSignature->id, 'status' => 'revoked']);
+        $this->assertSame(3, KpDocumentSignature::where('document_type', KpDocumentSignature::DOCUMENT_INVITATION)
+            ->where('document_id', $invitation->id)->where('status', 'active')->count());
+        $this->get('/dokumen/tanda-tangan/verifikasi/'.$oldSignature->verification_code)
+            ->assertOk()
+            ->assertSee('Tanda Tangan Dicabut')
+            ->assertSee('Menambahkan QR individual penandatangan.');
 
         $otherStudentUser = $this->makeUser('other-letter-exam@test.local', ['mahasiswa']);
         $this->makeStudent($otherStudentUser, '2210631230888');

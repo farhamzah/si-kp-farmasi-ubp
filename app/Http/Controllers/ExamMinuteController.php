@@ -39,11 +39,20 @@ class ExamMinuteController extends Controller
         return back()->with('status', 'Berita acara berhasil diterbitkan.');
     }
 
+    public function rebuild(Request $request, KpExamMinute $minute, KpExamMinuteService $service): RedirectResponse
+    {
+        abort_unless(in_array($request->session()->get('active_role'), ['admin', 'koordinator_kp'], true), 403);
+        $data = $request->validate(['reason' => ['required', 'string', 'max:1000']]);
+        $service->rebuild($minute, $request->user(), $data['reason']);
+
+        return back()->with('status', 'Berita acara berhasil dibangun ulang. QR dokumen dan penandatangan lama telah dicabut.');
+    }
+
     public function preview(Request $request, KpExamMinute $minute, KpExamMinuteService $service): View
     {
         $this->authorizeAccess($request, $minute);
         $minute = $service->syncReadiness($minute);
-        return view('exam-minutes.document', ['minute' => $minute->load(array_merge(['chair.user'], array_map(fn ($r) => 'exam.'.$r, $service->relations()))), 'verificationUrl' => $service->verificationUrl($minute)]);
+        return view('exam-minutes.document', ['minute' => $minute->load(array_merge(['chair.user', 'signatures'], array_map(fn ($r) => 'exam.'.$r, $service->relations()))), 'verificationUrl' => $service->verificationUrl($minute)]);
     }
 
     public function downloadPdf(Request $request, KpExamMinute $minute, KpExamMinuteService $service): Response

@@ -7,6 +7,11 @@
     $location = $exam->room ?: $exam->meeting_link ?: '-';
     $logoSrc = $logoSrc ?? asset('images/logo-ubp-karawang.png');
     $qrSrc = $qrSrc ?? route('exam-invitations.qr', $invitation);
+    $activeSignatures = $invitation->signatures
+        ->where('status', 'active')
+        ->where('version', (int) $invitation->document_version)
+        ->keyBy('signer_key');
+    $signatureQrSrcs = $signatureQrSrcs ?? [];
 @endphp
 
 <style>
@@ -44,7 +49,8 @@
     .signature { width: 100%; margin-top: 16px; border-collapse: collapse; table-layout: fixed; page-break-inside: avoid; }
     .signature td { width: 33.333%; padding: 0 6px; vertical-align: top; text-align: center; font-size: 8.5pt; }
     .signature-role { min-height: 26px; font-weight: 600; }
-    .signature-space { height: 48px; }
+    .signature-space { height: 48px; display: flex; align-items: center; justify-content: center; }
+    .signature-qr { width: 44px; height: 44px; padding: 2px; border: 1px solid #cbd5e1; }
     .signature-name { font-weight: 800; text-decoration: underline; }
     .signature-id { margin-top: 1px; }
 </style>
@@ -107,19 +113,28 @@
         <tr>
             <td>
                 <div class="signature-role">Koordinator Sidang</div>
-                <div class="signature-space"></div>
+                @php
+                    $signature = $activeSignatures->get('coordinator');
+                @endphp
+                <div class="signature-space">@if($signature)<img class="signature-qr" src="{{ $signatureQrSrcs[$signature->id] ?? route('document-signatures.qr', $signature) }}" alt="QR Koordinator">@endif</div>
                 <div class="signature-name">{{ $invitation->coordinator_name }}</div>
                 <div class="signature-id">NUPTK. {{ $invitation->coordinator_nuptk ?: '-' }}</div>
             </td>
             <td>
                 <div class="signature-role">Ketua Program Studi Farmasi</div>
-                <div class="signature-space"></div>
+                @php
+                    $signature = $activeSignatures->get('head_program');
+                @endphp
+                <div class="signature-space">@if($signature)<img class="signature-qr" src="{{ $signatureQrSrcs[$signature->id] ?? route('document-signatures.qr', $signature) }}" alt="QR Kaprodi">@endif</div>
                 <div class="signature-name">{{ $invitation->head_program_name }}</div>
                 <div class="signature-id">NUPTK. {{ $invitation->head_program_nuptk ?: '-' }}</div>
             </td>
             <td>
                 <div class="signature-role">Dekan Fakultas Farmasi</div>
-                <div class="signature-space"></div>
+                @php
+                    $signature = $activeSignatures->get('dean');
+                @endphp
+                <div class="signature-space">@if($signature)<img class="signature-qr" src="{{ $signatureQrSrcs[$signature->id] ?? route('document-signatures.qr', $signature) }}" alt="QR Dekan">@endif</div>
                 <div class="signature-name">{{ $invitation->dean_name }}</div>
                 <div class="signature-id">NUPTK. {{ $invitation->dean_nuptk ?: '-' }}</div>
             </td>

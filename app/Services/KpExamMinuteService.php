@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\KpExam;
 use App\Models\KpExamMinute;
+use App\Models\KpDocumentSignature;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Response;
@@ -14,7 +15,10 @@ use Illuminate\Validation\ValidationException;
 
 class KpExamMinuteService
 {
-    public function __construct(private readonly KpExamService $examService) {}
+    public function __construct(
+        private readonly KpExamService $examService,
+        private readonly KpDocumentSignatureService $signatureService,
+    ) {}
 
     public function close(KpExam $exam, User $actor, array $data): KpExamMinute
     {
@@ -84,7 +88,31 @@ class KpExamMinuteService
             'snapshot' => $this->snapshot($minute),
         ]);
 
+        $this->replaceSignatures($minute, $actor);
+
         return $minute->fresh();
+    }
+
+    public function rebuild(KpExamMinute $minute, User $actor, string $reason): KpExamMinute
+    {
+        if ($minute->status !== 'terbit') {
+            throw ValidationException::withMessages(['minutes' => 'Hanya berita acara yang sudah terbit yang dapat dibangun ulang.']);
+        }
+
+        $minute->exam->load($this->relations());
+        $minute->update([
+            'verification_code' => Str::upper(Str::random(16)),
+            'document_version' => ((int) ($minute->document_version ?: 1)) + 1,
+            'last_rebuild_reason' => $reason,
+            'rebuilt_by' => $actor->id,
+            'rebuilt_at' => now(),
+            'published_by' => $actor->id,
+            'published_at' => now(),
+            'snapshot' => $this->snapshot($minute),
+        ]);
+        $this->replaceSignatures($minute, $actor, $reason);
+
+        return $minute->fresh(['signatures']);
     }
 
     public function verificationUrl(KpExamMinute $minute): string
@@ -100,6 +128,7 @@ class KpExamMinuteService
             'verificationUrl' => $this->verificationUrl($minute),
             'logoSrc' => $this->fileDataUri(public_path('images/logo-ubp-karawang.png'), 'image/png'),
             'qrSrc' => 'data:image/svg+xml;base64,'.base64_encode($this->qrSvg($minute)),
+            'signatureQrSrcs' => $this->signatureQrSources($minute),
         ])->setPaper('a4', 'portrait')->setOption(['defaultFont' => 'DejaVu Sans', 'dpi' => 120, 'isRemoteEnabled' => false]);
 
         return response($pdf->output(), 200, [
@@ -148,6 +177,48 @@ class KpExamMinuteService
             'examiners' => $exam->examinerNamesLabel(),
             'result' => $minute->resultLabel(),
         ];
+    }
+
+    private function replaceSignatures(KpExamMinute $minute, User $actor, ?string $reason = null): void
+    {
+        $exam = $minute->exam;
+        $lecturers = $exam->examiners
+            ->when($exam->chair, fn ($items) => $items->prepend($exam->chair))
+            ->unique('id')
+            ->values();
+        $metadata = [
+            'document_number' => $minute->minutes_number,
+            'student_name' => $exam->assignment?->student?->user?->name,
+            'student_nim' => $exam->assignment?->student?->nim,
+        ];
+        $signers = $lecturers->map(fn ($lecturer) => [
+            'key' => 'lecturer_'.$lecturer->id,
+            'user_id' => $lecturer->user_id,
+            'name' => lecturer_display_name($lecturer),
+            'identifier' => $lecturer->nidn_nip ?: $lecturer->employee_number,
+            'role' => (int) $lecturer->id === (int) $exam->chair_lecturer_id ? 'Ketua Sidang' : 'Anggota Penguji',
+            'metadata' => $metadata,
+        ])->all();
+
+        $this->signatureService->replace(
+            KpDocumentSignature::DOCUMENT_MINUTE,
+            $minute->id,
+            (int) $minute->document_version,
+            $signers,
+            $actor,
+            $reason,
+        );
+    }
+
+    private function signatureQrSources(KpExamMinute $minute): array
+    {
+        $minute->loadMissing('signatures');
+
+        return $minute->signatures
+            ->where('status', 'active')
+            ->where('version', (int) $minute->document_version)
+            ->mapWithKeys(fn ($signature) => [$signature->id => $this->signatureService->dataUri($signature)])
+            ->all();
     }
 
     private function fileDataUri(string $path, string $mime): string

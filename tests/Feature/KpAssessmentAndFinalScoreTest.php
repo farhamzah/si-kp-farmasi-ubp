@@ -6,6 +6,7 @@ use App\Models\FieldSupervisor;
 use App\Models\KpAssessmentComponent;
 use App\Models\KpAssignment;
 use App\Models\KpExam;
+use App\Models\KpDocumentSignature;
 use App\Models\KpExamMinute;
 use App\Models\KpExamRequest;
 use App\Models\KpFinalReport;
@@ -22,6 +23,7 @@ use App\Models\Role;
 use App\Models\Student;
 use App\Models\User;
 use App\Services\KpAssessmentService;
+use App\Services\KpExamMinuteService;
 use App\Support\KpScoreCalculator;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -512,6 +514,49 @@ class KpAssessmentAndFinalScoreTest extends TestCase
         $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
             ->get('/penguji/penilaian/'.$this->exam->id)
             ->assertForbidden();
+    }
+
+    public function test_coordinator_can_rebuild_published_minutes_with_individual_signatures(): void
+    {
+        $this->exam->update([
+            'chair_lecturer_id' => $this->supervisor->id,
+            'minutes_sequence' => 2,
+            'minutes_number' => '002/BA-SKP/FF-UBP/IX/2026',
+            'status' => 'selesai',
+        ]);
+        $this->exam->examiners()->sync([$this->examiner->id => ['sort_order' => 1]]);
+        $minute = KpExamMinute::create([
+            'kp_exam_id' => $this->exam->id,
+            'minutes_number' => $this->exam->minutes_number,
+            'chair_lecturer_id' => $this->supervisor->id,
+            'status' => 'terbit',
+            'result' => 'lulus',
+            'actual_start_time' => '09:00',
+            'actual_end_time' => '10:00',
+            'verification_code' => 'REBUILDMINUTE001',
+            'closed_by' => $this->supervisorUser->id,
+            'closed_at' => now(),
+            'published_by' => $this->koordinator->id,
+            'published_at' => now(),
+        ]);
+
+        app(KpExamMinuteService::class)->rebuild($minute, $this->koordinator, 'Perbaikan QR penandatangan.');
+
+        $this->assertSame(2, $minute->fresh()->document_version);
+        $this->assertDatabaseHas('kp_document_signatures', [
+            'document_type' => KpDocumentSignature::DOCUMENT_MINUTE,
+            'document_id' => $minute->id,
+            'signer_key' => 'lecturer_'.$this->supervisor->id,
+            'role_label' => 'Ketua Sidang',
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseHas('kp_document_signatures', [
+            'document_type' => KpDocumentSignature::DOCUMENT_MINUTE,
+            'document_id' => $minute->id,
+            'signer_key' => 'lecturer_'.$this->examiner->id,
+            'role_label' => 'Anggota Penguji',
+            'status' => 'active',
+        ]);
     }
 
     public function test_management_can_override_scores_before_finalization(): void

@@ -17,6 +17,10 @@ class KpExamInvitation extends Model
         'dean_name',
         'dean_nuptk',
         'status',
+        'document_version',
+        'last_rebuild_reason',
+        'rebuilt_by',
+        'rebuilt_at',
         'generated_by',
         'generated_at',
     ];
@@ -25,6 +29,7 @@ class KpExamInvitation extends Model
     {
         return [
             'generated_at' => 'datetime',
+            'rebuilt_at' => 'datetime',
         ];
     }
 
@@ -36,6 +41,18 @@ class KpExamInvitation extends Model
     public function generatedBy()
     {
         return $this->belongsTo(User::class, 'generated_by');
+    }
+
+    public function signatures()
+    {
+        return $this->hasMany(KpDocumentSignature::class, 'document_id')
+            ->where('document_type', KpDocumentSignature::DOCUMENT_INVITATION)
+            ->orderBy('id');
+    }
+
+    public function activeSignatures()
+    {
+        return $this->signatures()->where('status', 'active')->where('version', $this->document_version);
     }
 
     public function statusLabel(): string

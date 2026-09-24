@@ -5,6 +5,11 @@
     $chairName = $exam->chair ? lecturer_display_name($exam->chair) : '-';
     $attendees = collect($minute->attendance ?? []);
     $isPdf = isset($logoSrc);
+    $activeSignatures = $minute->signatures
+        ->where('status', 'active')
+        ->where('version', (int) $minute->document_version)
+        ->keyBy('signer_key');
+    $signatureQrSrcs = $signatureQrSrcs ?? [];
 @endphp
 <style>
     .ba-doc { font-family: Arial, sans-serif; color: #0f172a; font-size: 11px; line-height: 1.45; }
@@ -25,7 +30,8 @@
     .ba-box { border: 1px solid #cbd5e1; padding: 10px; min-height: 46px; margin-top: 5px; overflow-wrap: anywhere; }
     .ba-signatures { width: 100%; border-collapse: collapse; margin-top: 22px; table-layout: fixed; }
     .ba-signatures td { width: 33.33%; text-align: center; vertical-align: top; padding: 0 8px; }
-    .ba-sign-space { height: 54px; }
+    .ba-sign-space { height: 54px; display: flex; align-items: center; justify-content: center; }
+    .ba-sign-qr { width: 48px; height: 48px; padding: 2px; border: 1px solid #cbd5e1; }
     .ba-verification { margin-top: 20px; border: 1px solid #cbd5e1; padding: 8px; display: table; width: 100%; }
     .ba-verification-text, .ba-verification-qr { display: table-cell; vertical-align: middle; }
     .ba-verification-qr { width: 76px; text-align: right; }
@@ -78,9 +84,15 @@
 
     <table class="ba-signatures">
         <tr>
-            <td>Ketua Sidang<div class="ba-sign-space"></div><strong><u>{{ $chairName }}</u></strong></td>
+            @php
+                $chairSignature = $exam->chair ? $activeSignatures->get('lecturer_'.$exam->chair->id) : null;
+            @endphp
+            <td>Ketua Sidang<div class="ba-sign-space">@if($chairSignature)<img class="ba-sign-qr" src="{{ $signatureQrSrcs[$chairSignature->id] ?? route('document-signatures.qr', $chairSignature) }}" alt="QR Ketua Sidang">@endif</div><strong><u>{{ $chairName }}</u></strong></td>
             @foreach($exam->examiners->reject(fn($lecturer) => $lecturer->id === $exam->chair_lecturer_id)->take(2) as $index => $examiner)
-                <td>Anggota Penguji {{ $index + 1 }}<div class="ba-sign-space"></div><strong><u>{{ lecturer_display_name($examiner) }}</u></strong></td>
+                @php
+                    $examinerSignature = $activeSignatures->get('lecturer_'.$examiner->id);
+                @endphp
+                <td>Anggota Penguji {{ $index + 1 }}<div class="ba-sign-space">@if($examinerSignature)<img class="ba-sign-qr" src="{{ $signatureQrSrcs[$examinerSignature->id] ?? route('document-signatures.qr', $examinerSignature) }}" alt="QR Penguji">@endif</div><strong><u>{{ lecturer_display_name($examiner) }}</u></strong></td>
             @endforeach
         </tr>
     </table>

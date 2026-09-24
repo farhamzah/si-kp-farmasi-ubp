@@ -74,6 +74,20 @@ class ExamInvitationLetterController extends Controller
         return back()->with('status', 'Pejabat penandatangan undangan sidang berhasil disimpan.');
     }
 
+    public function rebuild(Request $request, KpExamInvitation $invitation, KpExamInvitationService $service): RedirectResponse
+    {
+        abort_unless(in_array($request->session()->get('active_role'), ['admin', 'koordinator_kp'], true), 403);
+        $data = $request->validate(['reason' => ['required', 'string', 'max:1000']]);
+
+        try {
+            $service->rebuild($invitation, $request->user(), $data['reason']);
+        } catch (\RuntimeException $exception) {
+            return back()->withErrors(['signatory' => $exception->getMessage()]);
+        }
+
+        return back()->with('status', 'Undangan berhasil dibangun ulang. QR dokumen dan penandatangan lama telah dicabut.');
+    }
+
     public function preview(Request $request, KpExamInvitation $invitation, KpExamInvitationService $service): View
     {
         $this->authorizeInvitationAccess($request, $invitation);
@@ -87,6 +101,7 @@ class ExamInvitationLetterController extends Controller
                 'exam.supervisor.user',
                 'exam.examiner.user',
                 'exam.examiners.user',
+                'signatures',
             ]),
             'verificationUrl' => $service->verificationUrl($invitation),
         ]);
@@ -104,6 +119,7 @@ class ExamInvitationLetterController extends Controller
             'exam.supervisor.user',
             'exam.examiner.user',
             'exam.examiners.user',
+            'signatures',
         ]));
     }
 
@@ -111,7 +127,7 @@ class ExamInvitationLetterController extends Controller
     {
         abort_unless(in_array($request->session()->get('active_role'), ['admin', 'koordinator_kp'], true), 403);
 
-        return $service->wordResponse($invitation->load(['exam.assignment.student.user', 'exam.assignment.period', 'exam.assignment.place', 'exam.assignment.fieldSupervisor.user', 'exam.supervisor.user', 'exam.examiner.user', 'exam.examiners.user']));
+        return $service->wordResponse($invitation->load(['exam.assignment.student.user', 'exam.assignment.period', 'exam.assignment.place', 'exam.assignment.fieldSupervisor.user', 'exam.supervisor.user', 'exam.examiner.user', 'exam.examiners.user', 'signatures']));
     }
 
     public function qr(KpExamInvitation $invitation, KpExamInvitationService $service): Response

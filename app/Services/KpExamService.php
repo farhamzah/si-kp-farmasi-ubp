@@ -336,6 +336,18 @@ class KpExamService
             }
 
             $minuteSnapshot = $exam->minutes?->attributesToArray();
+            if ($exam->minutes) {
+                \App\Models\KpDocumentSignature::query()
+                    ->where('document_type', \App\Models\KpDocumentSignature::DOCUMENT_MINUTE)
+                    ->where('document_id', $exam->minutes->id)
+                    ->where('status', 'active')
+                    ->update([
+                        'status' => 'revoked',
+                        'revoked_at' => now(),
+                        'revoked_by' => $actor->id,
+                        'revocation_reason' => $reason,
+                    ]);
+            }
             $exam->minutes?->delete();
             $oldStatus = $exam->status;
             $chairId = $removedLecturerIds->contains((int) $exam->chair_lecturer_id)
