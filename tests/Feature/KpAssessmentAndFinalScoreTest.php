@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\PendingScoreReminderMail;
 use App\Models\FieldSupervisor;
 use App\Models\KpAssessmentComponent;
 use App\Models\KpAssignment;
@@ -28,6 +29,7 @@ use App\Support\KpScoreCalculator;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class KpAssessmentAndFinalScoreTest extends TestCase
@@ -135,6 +137,51 @@ class KpAssessmentAndFinalScoreTest extends TestCase
             ->assertOk()
             ->assertSee($this->mahasiswa->name)
             ->assertSee('Koreksi Nilai Koordinator');
+    }
+
+    public function test_coordinator_can_list_and_email_assessors_with_pending_scores(): void
+    {
+        config()->set('mail.default', 'smtp');
+        [, , $examinerComponent] = $this->components();
+        $this->exam->update(['exam_date' => now()->toDateString()]);
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/scores?period='.$this->assignment->kp_period_id)
+            ->assertOk()
+            ->assertSee('Penilai Belum Submit')
+            ->assertSee($this->examinerUser->email)
+            ->assertSee($this->mahasiswa->name);
+
+        Mail::fake();
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/score-reminders/'.$this->examinerUser->id, [
+                'period_id' => $this->assignment->kp_period_id,
+                'assessor_type' => 'penguji',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('status');
+
+        Mail::assertSent(PendingScoreReminderMail::class, function (PendingScoreReminderMail $mail): bool {
+            $mail->assertSeeInHtml($this->mahasiswa->name);
+            $mail->assertSeeInHtml('Buka Penilaian');
+
+            return $mail->hasTo($this->examinerUser->email)
+                && $mail->pendingRow['items']->contains('assignment_id', $this->assignment->id);
+        });
+
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->post('/penguji/penilaian/'.$this->exam->id.'/save', [
+                'scores' => [['component_id' => $examinerComponent->id, 'score' => 85]],
+            ])->assertRedirect();
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->post('/penguji/penilaian/'.$this->exam->id.'/submit')
+            ->assertRedirect();
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/scores?period='.$this->assignment->kp_period_id)
+            ->assertOk()
+            ->assertDontSee($this->examinerUser->email);
     }
 
     public function test_each_assessor_can_score_only_their_own_assignment_and_invalid_score_is_rejected(): void

@@ -227,6 +227,8 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('orientation-tests', [OrientationTestResultController::class, 'index'])->name('orientation-tests.index');
             Route::get('orientation-tests/{attempt}', [OrientationTestResultController::class, 'show'])->name('orientation-tests.show');
             Route::get('scores', [ScoreMonitoringController::class, 'index'])->name('scores.index');
+            Route::post('score-reminders/send-all', [ScoreMonitoringController::class, 'sendAllReminders'])->name('score-reminders.send-all');
+            Route::post('score-reminders/{assessor}', [ScoreMonitoringController::class, 'sendReminder'])->name('score-reminders.send');
             Route::patch('scores/periods/{period}/visibility', [ScoreMonitoringController::class, 'updatePeriodVisibility'])->name('scores.period-visibility.update');
             Route::get('scores/{assignment}', [ScoreMonitoringController::class, 'show'])->name('scores.show');
             Route::patch('scores/{assignment}/visibility-override', [ScoreMonitoringController::class, 'updateVisibilityOverride'])->name('scores.visibility-override.update');

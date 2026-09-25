@@ -9,7 +9,9 @@ use App\Models\KpAssignment;
 use App\Models\KpFinalScore;
 use App\Models\KpPeriod;
 use App\Models\KpScoreVisibilityOverride;
+use App\Models\User;
 use App\Services\KpAssessmentService;
+use App\Services\PendingScoreReminderService;
 use App\Support\KpScoreCalculator;
 use App\Support\StudentScoreVisibility;
 use Illuminate\Http\RedirectResponse;
@@ -19,12 +21,16 @@ use Illuminate\View\View;
 
 class ScoreMonitoringController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, KpAssessmentService $assessment, PendingScoreReminderService $reminders): View
     {
         $periods = KpPeriod::latest()->get();
         $selectedPeriod = $request->filled('period')
             ? $periods->firstWhere('id', (int) $request->period)
             : $periods->first();
+
+        if ($selectedPeriod) {
+            $assessment->ensureDefaultComponents($selectedPeriod, $request->user());
+        }
 
         $assignments = KpAssignment::with(['period', 'student.user', 'place', 'internalSupervisor.user', 'fieldSupervisor.user', 'exam.examiner.user', 'exam.examiners.user', 'scores.component', 'finalScore'])
             ->when($request->filled('period'), fn ($q) => $q->where('kp_period_id', $request->period))
@@ -37,7 +43,50 @@ class ScoreMonitoringController extends Controller
             'periods' => $periods,
             'selectedPeriod' => $selectedPeriod,
             'filters' => $request->only(['period', 'q']),
+            'pendingAssessors' => $selectedPeriod ? $reminders->pendingForPeriod($selectedPeriod) : collect(),
+            'mailDeliveryEnabled' => $this->mailDeliveryEnabled(),
         ]);
+    }
+
+    public function sendReminder(Request $request, User $assessor, PendingScoreReminderService $reminders): RedirectResponse
+    {
+        if (! $this->mailDeliveryEnabled()) {
+            return back()->withErrors(['email' => 'Server email belum dikonfigurasi. Atur MAIL_MAILER dan SMTP pada VPS terlebih dahulu.']);
+        }
+
+        $validated = $request->validate([
+            'period_id' => ['required', Rule::exists('kp_periods', 'id')],
+            'assessor_type' => ['required', Rule::in(['pembimbing_dalam', 'pembimbing_lapangan', 'penguji'])],
+        ]);
+        $period = KpPeriod::findOrFail($validated['period_id']);
+        $pending = $reminders->findPending($period, $assessor, $validated['assessor_type']);
+
+        if (! $pending) {
+            return back()->with('status', 'Penilai tersebut sudah melengkapi nilai atau belum memasuki tahap penilaian.');
+        }
+
+        $reminders->send($pending, $period);
+
+        return back()->with('status', 'Pengingat nilai berhasil dikirim ke '.$assessor->email.'.');
+    }
+
+    public function sendAllReminders(Request $request, PendingScoreReminderService $reminders): RedirectResponse
+    {
+        if (! $this->mailDeliveryEnabled()) {
+            return back()->withErrors(['email' => 'Server email belum dikonfigurasi. Atur MAIL_MAILER dan SMTP pada VPS terlebih dahulu.']);
+        }
+
+        $validated = $request->validate(['period_id' => ['required', Rule::exists('kp_periods', 'id')]]);
+        $period = KpPeriod::findOrFail($validated['period_id']);
+        $pending = $reminders->pendingForPeriod($period);
+
+        foreach ($pending as $row) {
+            $reminders->send($row, $period);
+        }
+
+        return back()->with('status', $pending->isEmpty()
+            ? 'Tidak ada penilai yang perlu diingatkan.'
+            : 'Pengingat berhasil dikirim kepada '.$pending->count().' penilai.');
     }
 
     public function show(KpAssignment $assignment, KpAssessmentService $service, KpScoreCalculator $calculator, StudentScoreVisibility $visibility): View
@@ -157,5 +206,10 @@ class ScoreMonitoringController extends Controller
     {
         $service->unlockScore($request->user(), $finalScore, $request->reason);
         return back()->with('status', 'Nilai akhir berhasil dibuka kembali.');
+    }
+
+    private function mailDeliveryEnabled(): bool
+    {
+        return ! in_array(config('mail.default'), ['log', 'array'], true);
     }
 }
