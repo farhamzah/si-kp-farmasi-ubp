@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\KpAssignment;
 use App\Models\KpPostExamReport;
+use App\Support\KpReportFilename;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -25,7 +26,6 @@ class PostExamReportController extends Controller
         $request->merge(['document_url' => $this->normalizeDocumentUrl($request->input('document_url'))]);
         $data = $request->validate([
             'document_url' => ['required', 'url:http,https', 'max:2048'],
-            'document_label' => ['nullable', 'string', 'max:255'],
         ]);
         $this->ensureDocumentUrlIsGoogleFile($data['document_url']);
 
@@ -37,7 +37,7 @@ class PostExamReportController extends Controller
             'version' => $nextVersion,
             'status' => KpPostExamReport::STATUS_WAITING,
             'document_url' => $data['document_url'],
-            'document_label' => $data['document_label'] ?? null,
+            'document_label' => KpReportFilename::postExam($assignment),
             'original_filename' => null,
             'file_path' => null,
             'file_disk' => 'local',

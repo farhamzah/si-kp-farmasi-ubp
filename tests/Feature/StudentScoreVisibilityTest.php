@@ -332,6 +332,7 @@ class StudentScoreVisibilityTest extends TestCase
             'kp_assignment_id' => $this->assignment->id,
             'status' => KpPostExamReport::STATUS_WAITING,
             'document_url' => 'https://drive.google.com/file/d/final-post-exam-report/view',
+            'document_label' => '2441624820199_USER_VISIBILITY_LAPORAN_FINAL_PASCASIDANG_KP_KP_TA_2026_2027.pdf',
             'file_path' => null,
         ]);
     }

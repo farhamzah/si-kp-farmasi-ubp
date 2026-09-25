@@ -381,15 +381,27 @@
                             <form method="POST" action="{{ route('student.post-exam-reports.store') }}" class="mt-5 space-y-4">
                                 @csrf
                                 <div class="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
-                                    <p class="text-sm font-black text-slate-950">1. Upload PDF ke folder Laporan Final Pascasidang</p>
-                                    <p class="mt-1 text-sm leading-6 text-slate-600">Gunakan nama file <strong>NIM_NAMA_LAPORAN_FINAL_KP.pdf</strong>. Setelah upload, buka file dan salin link berbagi file.</p>
-                                    <a href="{{ config('kp_final_report.post_exam_drive_folder_url') }}" target="_blank" rel="noopener" class="mt-3 inline-flex rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white">Buka Folder Drive Fakultas</a>
+                                    <p class="text-sm font-black text-slate-950">Panduan upload ke Drive Fakultas</p>
+                                    <ol class="mt-3 grid gap-2 text-sm leading-6 text-slate-700 md:grid-cols-2">
+                                        <li><strong>1.</strong> Ubah nama PDF sesuai nama resmi di bawah.</li>
+                                        <li><strong>2.</strong> Buka folder Laporan Final Pascasidang.</li>
+                                        <li><strong>3.</strong> Upload satu file PDF yang sudah disahkan.</li>
+                                        <li><strong>4.</strong> Buka file, salin link file, lalu tempel pada kolom berikutnya.</li>
+                                    </ol>
+                                    <div class="mt-4 rounded-xl border border-emerald-200 bg-white p-3">
+                                        <p class="text-xs font-black uppercase tracking-widest text-emerald-700">Nama file wajib</p>
+                                        <p class="mt-2 break-all text-sm font-black text-slate-950">{{ $suggestedPostExamFilename }}</p>
+                                        <button type="button" onclick="navigator.clipboard.writeText(@js($suggestedPostExamFilename)); this.textContent='Nama File Tersalin'" class="mt-3 rounded-lg border border-emerald-300 px-3 py-2 text-xs font-bold text-emerald-700">Salin Nama File</button>
+                                    </div>
+                                    <a href="{{ config('kp_final_report.post_exam_drive_folder_url') }}" target="_blank" rel="noopener" class="mt-4 inline-flex rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white">Buka Folder Drive Fakultas</a>
                                 </div>
                                 <label class="block text-sm font-bold text-slate-700">2. Tempel link file PDF
                                     <input name="document_url" value="{{ old('document_url', $postExamReport?->document_url) }}" required placeholder="https://drive.google.com/file/d/..." class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
                                     <span class="mt-1 block text-xs font-normal text-slate-500">Pastikan link dapat dibuka oleh pihak yang memiliki link. Jangan menempelkan link folder.</span>
                                 </label>
-                                <input name="document_label" value="{{ old('document_label', $postExamReport?->document_label) }}" placeholder="Nama dokumen (opsional)" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                <label class="block text-sm font-bold text-slate-700">Nama dokumen
+                                    <input value="{{ $suggestedPostExamFilename }}" readonly class="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                                </label>
                                 <button class="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white">{{ $postExamReport?->hasDocument() ? 'Kirim Ulang Dokumen' : 'Kirim untuk Validasi Koordinator' }}</button>
                             </form>
                         @else

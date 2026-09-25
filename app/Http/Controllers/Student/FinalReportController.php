@@ -8,6 +8,7 @@ use App\Http\Requests\Student\UploadFinalReportRequest;
 use App\Models\KpAssignment;
 use App\Models\KpFinalReportFile;
 use App\Services\KpFinalReportService;
+use App\Support\KpReportFilename;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -27,7 +28,8 @@ class FinalReportController extends Controller
             'report' => $report,
             'examEligibility' => $assignment?->examEligibility(),
             'driveFolderUrl' => config('kp_final_report.drive_folder_url'),
-            'suggestedFinalFilename' => $assignment ? $this->suggestedFinalReportFilename($assignment) : null,
+            'suggestedFinalFilename' => $assignment ? KpReportFilename::final($assignment) : null,
+            'suggestedPostExamFilename' => $assignment ? KpReportFilename::postExam($assignment) : null,
         ]);
     }
 
@@ -173,23 +175,4 @@ class FinalReportController extends Controller
         return $value === '' ? null : $value;
     }
 
-    private function suggestedFinalReportFilename(KpAssignment $assignment): string
-    {
-        $assignment->loadMissing(['student.user', 'period']);
-
-        $parts = [
-            $assignment->student?->nim,
-            $assignment->student?->user?->name,
-            'LAPORAN AKHIR KP',
-            $assignment->period?->name,
-        ];
-
-        $filename = collect($parts)
-            ->filter()
-            ->map(fn (mixed $part): string => preg_replace('/[^A-Za-z0-9]+/', '_', strtoupper(trim((string) $part))) ?: '')
-            ->filter()
-            ->implode('_');
-
-        return $filename.'.pdf';
-    }
 }
