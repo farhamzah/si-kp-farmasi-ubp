@@ -8,7 +8,7 @@
     <section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-cyan-100">
         <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Validasi Koordinator</p>
         <h2 class="mt-1 text-2xl font-black text-slate-950">Dokumen hasil revisi dan pengesahan</h2>
-        <p class="mt-2 text-sm text-slate-600">Setujui PDF final yang sudah direvisi, ditandatangani, dan disahkan. Persetujuan membuka salah satu syarat melihat nilai serta menjadi syarat awal pendaftaran TA.</p>
+        <p class="mt-2 text-sm text-slate-600">Periksa link PDF final di Drive Fakultas, lalu setujui dokumen yang sudah direvisi, ditandatangani, dan disahkan. Persetujuan membuka salah satu syarat melihat nilai serta menjadi syarat awal pendaftaran TA.</p>
         <form method="GET" class="mt-5 grid gap-3 md:grid-cols-[1fr_260px_auto]">
             <input name="q" value="{{ request('q') }}" placeholder="Cari nama atau NIM mahasiswa" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
             <select name="status" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
@@ -38,7 +38,7 @@
                         <a target="_blank" rel="noopener" href="{{ route('management.post-exam-reports.preview', $report) }}" class="rounded-xl border border-cyan-200 px-4 py-2 text-sm font-bold text-cyan-700">Preview</a>
                         <a href="{{ route('management.post-exam-reports.download', $report) }}" class="rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white">Download</a>
                     @endif
-                    @if($report->document_url)<a target="_blank" rel="noopener" href="{{ $report->document_url }}" class="rounded-xl border border-emerald-200 px-4 py-2 text-sm font-bold text-emerald-700">Buka Link</a>@endif
+                    @if($report->document_url)<a target="_blank" rel="noopener" href="{{ $report->document_url }}" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white">Preview di Google Drive</a>@endif
                 </div>
             </div>
             @if($report->status !== 'disetujui')
@@ -57,7 +57,7 @@
             @endif
         </section>
     @empty
-        <x-ui.empty-state title="Belum ada dokumen pascasidang." description="Dokumen akan muncul setelah mahasiswa selesai sidang dan mengirim PDF final." />
+        <x-ui.empty-state title="Belum ada dokumen pascasidang." description="Dokumen akan muncul setelah mahasiswa selesai sidang dan mengirim link PDF final dari Drive Fakultas." />
     @endforelse
 
     {{ $reports->links() }}

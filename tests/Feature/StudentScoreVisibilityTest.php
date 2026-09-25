@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\KpAssignment;
 use App\Models\KpExam;
+use App\Models\KpExamMinute;
 use App\Models\KpExamRequest;
 use App\Models\KpFinalReport;
 use App\Models\KpFinalScore;
@@ -113,7 +114,7 @@ class StudentScoreVisibilityTest extends TestCase
         $supervisor = Lecturer::create(['user_id' => $supervisorUser->id, 'nidn_nip' => '991101', 'status' => 'active']);
         $examiner = Lecturer::create(['user_id' => $examinerUser->id, 'nidn_nip' => '991102', 'status' => 'active']);
 
-        KpExam::create([
+        $exam = KpExam::create([
             'kp_exam_request_id' => $examRequest->id,
             'kp_assignment_id' => $this->assignment->id,
             'supervisor_id' => $supervisor->id,
@@ -126,6 +127,19 @@ class StudentScoreVisibilityTest extends TestCase
             'status' => 'selesai',
             'scheduled_by' => $this->koordinator->id,
             'scheduled_at' => now(),
+        ]);
+
+        KpExamMinute::create([
+            'kp_exam_id' => $exam->id,
+            'minutes_number' => '001/BA-SKP/FF-UBP/IX/2026',
+            'chair_lecturer_id' => $supervisor->id,
+            'status' => 'terbit',
+            'result' => 'lulus_revisi',
+            'verification_code' => 'VISIBILITYTEST01',
+            'closed_by' => $supervisorUser->id,
+            'closed_at' => now(),
+            'published_by' => $supervisorUser->id,
+            'published_at' => now(),
         ]);
 
         KpPostExamReport::create([
@@ -297,6 +311,53 @@ class StudentScoreVisibilityTest extends TestCase
             ->get('/mahasiswa/nilai')
             ->assertOk()
             ->assertSee('Nilai Akhir KP');
+    }
+
+    public function test_student_submits_post_exam_report_as_google_drive_file_link(): void
+    {
+        $this->assignment->postExamReport->update([
+            'status' => KpPostExamReport::STATUS_REVISION,
+            'approved_at' => null,
+        ]);
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->post('/mahasiswa/laporan-akhir/dokumen-pascasidang', [
+                'document_url' => ' drive.google.com/file/d/final-post-exam-report/view ',
+                'document_label' => 'Laporan final pascasidang',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('kp_post_exam_reports', [
+            'kp_assignment_id' => $this->assignment->id,
+            'status' => KpPostExamReport::STATUS_WAITING,
+            'document_url' => 'https://drive.google.com/file/d/final-post-exam-report/view',
+            'file_path' => null,
+        ]);
+    }
+
+    public function test_post_exam_report_rejects_folder_and_non_google_links(): void
+    {
+        $this->assignment->postExamReport->update([
+            'status' => KpPostExamReport::STATUS_REVISION,
+            'approved_at' => null,
+        ]);
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->from('/mahasiswa/laporan-akhir')
+            ->post('/mahasiswa/laporan-akhir/dokumen-pascasidang', [
+                'document_url' => config('kp_final_report.post_exam_drive_folder_url'),
+            ])
+            ->assertRedirect('/mahasiswa/laporan-akhir')
+            ->assertSessionHasErrors('document_url');
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->from('/mahasiswa/laporan-akhir')
+            ->post('/mahasiswa/laporan-akhir/dokumen-pascasidang', [
+                'document_url' => 'https://example.com/laporan-final.pdf',
+            ])
+            ->assertRedirect('/mahasiswa/laporan-akhir')
+            ->assertSessionHasErrors('document_url');
     }
 
     public function test_koordinator_can_update_period_visibility_and_student_override(): void

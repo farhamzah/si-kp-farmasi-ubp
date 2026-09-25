@@ -22,40 +22,33 @@ class PostExamReportController extends Controller
             throw ValidationException::withMessages(['document' => 'Dokumen sedang divalidasi atau sudah disetujui koordinator.']);
         }
 
+        $request->merge(['document_url' => $this->normalizeDocumentUrl($request->input('document_url'))]);
         $data = $request->validate([
-            'document_file' => ['nullable', 'file', 'mimes:pdf', 'max:20480', 'required_without:document_url'],
-            'document_url' => ['nullable', 'url:http,https', 'max:2048', 'required_without:document_file'],
+            'document_url' => ['required', 'url:http,https', 'max:2048'],
             'document_label' => ['nullable', 'string', 'max:255'],
         ]);
+        $this->ensureDocumentUrlIsGoogleFile($data['document_url']);
 
         $oldPath = $report->file_path;
         $oldDisk = $report->file_disk ?: 'local';
-        $file = $request->file('document_file');
         $nextVersion = $report->exists && $report->hasDocument() ? $report->version + 1 : max(1, (int) $report->version);
 
         $payload = [
             'version' => $nextVersion,
             'status' => KpPostExamReport::STATUS_WAITING,
-            'document_url' => $file ? null : ($data['document_url'] ?? null),
-            'document_label' => $data['document_label'] ?? ($file?->getClientOriginalName()),
+            'document_url' => $data['document_url'],
+            'document_label' => $data['document_label'] ?? null,
+            'original_filename' => null,
+            'file_path' => null,
+            'file_disk' => 'local',
+            'file_mime' => null,
+            'file_size' => null,
             'submitted_at' => now(),
             'reviewed_by' => null,
             'reviewed_at' => null,
             'review_note' => null,
             'approved_at' => null,
         ];
-
-        if ($file) {
-            $payload += [
-                'original_filename' => $file->getClientOriginalName(),
-                'file_path' => $file->store('post-exam-reports/'.$assignment->id, 'local'),
-                'file_disk' => 'local',
-                'file_mime' => $file->getMimeType(),
-                'file_size' => $file->getSize(),
-            ];
-        } else {
-            $payload += ['original_filename' => null, 'file_path' => null, 'file_mime' => null, 'file_size' => null];
-        }
 
         $report->fill($payload)->save();
 
@@ -64,6 +57,43 @@ class PostExamReportController extends Controller
         }
 
         return back()->with('status', 'Dokumen final pascasidang berhasil dikirim untuk validasi koordinator.');
+    }
+
+    private function ensureDocumentUrlIsGoogleFile(string $url): void
+    {
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        $path = strtolower((string) parse_url($url, PHP_URL_PATH));
+        parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
+
+        $isFolder = str_contains($path, '/drive/folders/') || str_contains($path, '/folders/');
+        $isDriveFile = $host === 'drive.google.com' && (
+            str_starts_with($path, '/file/d/')
+            || (in_array($path, ['/open', '/uc'], true) && filled($query['id'] ?? null))
+        );
+        $isDocsFile = $host === 'docs.google.com'
+            && preg_match('~^/(document|spreadsheets|presentation)/d/[^/]+~', $path) === 1;
+
+        if ((! $isDriveFile && ! $isDocsFile) || $isFolder) {
+            throw ValidationException::withMessages([
+                'document_url' => $isFolder
+                    ? 'Tempel link file PDF yang sudah diupload, bukan link folder Google Drive.'
+                    : 'Link dokumen harus berupa link file dari Google Drive.',
+            ]);
+        }
+    }
+
+    private function normalizeDocumentUrl(mixed $value): mixed
+    {
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        $url = preg_replace('/\s+/', '', trim($value, " \t\n\r\0\x0B\"'<>")) ?? trim($value);
+        if (! preg_match('~^[a-z][a-z0-9+.-]*://~i', $url) && preg_match('~^(drive\.google\.com/|docs\.google\.com/)~i', $url)) {
+            $url = 'https://'.$url;
+        }
+
+        return $url;
     }
 
     public function preview(Request $request): StreamedResponse

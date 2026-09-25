@@ -353,7 +353,7 @@
                             <div>
                                 <p class="text-xs font-black uppercase tracking-widest text-emerald-700">Sesudah Sidang</p>
                                 <h3 class="mt-1 text-xl font-black text-slate-950">Dokumen Final Pascasidang</h3>
-                                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Upload satu PDF laporan yang sudah diperbaiki setelah sidang, ditandatangani, dan disahkan. Dokumen ini berbeda dari laporan yang dipakai untuk mendaftar sidang.</p>
+                                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Simpan satu PDF laporan yang sudah diperbaiki, ditandatangani, dan disahkan ke folder Drive Fakultas. Dokumen tidak disimpan di server aplikasi.</p>
                             </div>
                             <span class="inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold ring-1 {{ $postExamReport?->statusBadgeClass() ?? 'bg-slate-100 text-slate-700 ring-slate-200' }}">{{ $postExamReport?->statusLabel() ?? 'Belum Upload' }}</span>
                         </div>
@@ -378,17 +378,18 @@
                         @if($assignment->exam->minutes->result === 'belum_lulus')
                             <p class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">Upload dibuka setelah hasil sidang dinyatakan lulus atau lulus dengan revisi.</p>
                         @elseif(! $postExamReport || $postExamReport->canBeEditedByStudent())
-                            <form method="POST" action="{{ route('student.post-exam-reports.store') }}" enctype="multipart/form-data" class="mt-5 space-y-4">
+                            <form method="POST" action="{{ route('student.post-exam-reports.store') }}" class="mt-5 space-y-4">
                                 @csrf
-                                <div class="grid gap-4 md:grid-cols-2">
-                                    <label class="text-sm font-bold text-slate-700">PDF final pascasidang
-                                        <input type="file" name="document_file" accept="application/pdf,.pdf" class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm">
-                                    </label>
-                                    <label class="text-sm font-bold text-slate-700">Atau link file Drive
-                                        <input name="document_url" value="{{ old('document_url') }}" placeholder="https://drive.google.com/file/d/..." class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
-                                    </label>
+                                <div class="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
+                                    <p class="text-sm font-black text-slate-950">1. Upload PDF ke folder Laporan Final Pascasidang</p>
+                                    <p class="mt-1 text-sm leading-6 text-slate-600">Gunakan nama file <strong>NIM_NAMA_LAPORAN_FINAL_KP.pdf</strong>. Setelah upload, buka file dan salin link berbagi file.</p>
+                                    <a href="{{ config('kp_final_report.post_exam_drive_folder_url') }}" target="_blank" rel="noopener" class="mt-3 inline-flex rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white">Buka Folder Drive Fakultas</a>
                                 </div>
-                                <input name="document_label" value="{{ old('document_label') }}" placeholder="Nama dokumen (opsional)" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                <label class="block text-sm font-bold text-slate-700">2. Tempel link file PDF
+                                    <input name="document_url" value="{{ old('document_url', $postExamReport?->document_url) }}" required placeholder="https://drive.google.com/file/d/..." class="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
+                                    <span class="mt-1 block text-xs font-normal text-slate-500">Pastikan link dapat dibuka oleh pihak yang memiliki link. Jangan menempelkan link folder.</span>
+                                </label>
+                                <input name="document_label" value="{{ old('document_label', $postExamReport?->document_label) }}" placeholder="Nama dokumen (opsional)" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm">
                                 <button class="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white">{{ $postExamReport?->hasDocument() ? 'Kirim Ulang Dokumen' : 'Kirim untuk Validasi Koordinator' }}</button>
                             </form>
                         @else
