@@ -148,9 +148,16 @@ class KpAssessmentAndFinalScoreTest extends TestCase
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->get('/management/scores?period='.$this->assignment->kp_period_id)
             ->assertOk()
+            ->assertSee('Nilai Mahasiswa')
             ->assertSee('Penilai Belum Submit')
+            ->assertDontSee($this->examinerUser->email);
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/scores?period='.$this->assignment->kp_period_id.'&section=pending')
+            ->assertOk()
             ->assertSee($this->examinerUser->email)
-            ->assertSee($this->mahasiswa->name);
+            ->assertSee($this->mahasiswa->name)
+            ->assertDontSee('Kelengkapan');
 
         Mail::fake();
 
@@ -179,7 +186,7 @@ class KpAssessmentAndFinalScoreTest extends TestCase
             ->assertRedirect();
 
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
-            ->get('/management/scores?period='.$this->assignment->kp_period_id)
+            ->get('/management/scores?period='.$this->assignment->kp_period_id.'&section=pending')
             ->assertOk()
             ->assertDontSee($this->examinerUser->email);
     }

@@ -23,6 +23,9 @@ class ScoreMonitoringController extends Controller
 {
     public function index(Request $request, KpAssessmentService $assessment, PendingScoreReminderService $reminders): View
     {
+        $section = in_array($request->input('section'), ['students', 'pending'], true)
+            ? $request->input('section')
+            : 'students';
         $periods = KpPeriod::latest()->get();
         $selectedPeriod = $request->filled('period')
             ? $periods->firstWhere('id', (int) $request->period)
@@ -32,18 +35,36 @@ class ScoreMonitoringController extends Controller
             $assessment->ensureDefaultComponents($selectedPeriod, $request->user());
         }
 
-        $assignments = KpAssignment::with(['period', 'student.user', 'place', 'internalSupervisor.user', 'fieldSupervisor.user', 'exam.examiner.user', 'exam.examiners.user', 'scores.component', 'finalScore'])
-            ->when($request->filled('period'), fn ($q) => $q->where('kp_period_id', $request->period))
-            ->when($request->filled('q'), fn ($q) => $q->whereHas('student', fn ($s) => $s->where('nim', 'like', "%{$request->q}%")->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$request->q}%"))))
+        $assignmentQuery = KpAssignment::with(['period', 'student.user', 'place', 'internalSupervisor.user', 'fieldSupervisor.user', 'exam.examiner.user', 'exam.examiners.user', 'scores.component', 'finalScore'])
+            ->when($selectedPeriod, fn ($q) => $q->where('kp_period_id', $selectedPeriod->id));
+
+        $studentCount = (clone $assignmentQuery)->count();
+        $assignmentQuery->when($section === 'students' && $request->filled('q'), fn ($q) => $q->whereHas('student', fn ($s) => $s->where('nim', 'like', "%{$request->q}%")->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$request->q}%"))));
+        $assignments = $assignmentQuery
             ->latest()
             ->paginate(10)->withQueryString();
+
+        $allPendingAssessors = $selectedPeriod ? $reminders->pendingForPeriod($selectedPeriod) : collect();
+        $pendingAssessorCount = $allPendingAssessors->count();
+        $pendingAssessors = $allPendingAssessors;
+        if ($section === 'pending' && $request->filled('q')) {
+            $keyword = str($request->q)->squish()->lower()->toString();
+            $pendingAssessors = $allPendingAssessors->filter(function (array $row) use ($keyword): bool {
+                $assessorMatches = str($row['assessor']->name.' '.$row['assessor']->email)->lower()->contains($keyword);
+                $studentMatches = $row['items']->contains(fn (array $item): bool => str($item['student_name'].' '.$item['student_number'])->lower()->contains($keyword));
+
+                return $assessorMatches || $studentMatches;
+            })->values();
+        }
 
         return view('management.scores.index', [
             'assignments' => $assignments,
             'periods' => $periods,
             'selectedPeriod' => $selectedPeriod,
-            'filters' => $request->only(['period', 'q']),
-            'pendingAssessors' => $selectedPeriod ? $reminders->pendingForPeriod($selectedPeriod) : collect(),
+            'filters' => [...$request->only(['period', 'q']), 'section' => $section],
+            'studentCount' => $studentCount,
+            'pendingAssessors' => $pendingAssessors,
+            'pendingAssessorCount' => $pendingAssessorCount,
             'mailDeliveryEnabled' => $this->mailDeliveryEnabled(),
         ]);
     }
