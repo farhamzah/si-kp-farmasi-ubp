@@ -4,6 +4,7 @@ namespace App\Http\Controllers\FieldSupervisor;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Assessment\SaveScoreRequest;
+use App\Http\Requests\Assessment\SubmitScoreRequest;
 use App\Models\KpAssignment;
 use App\Models\KpAssessmentComponent;
 use App\Services\KpAssessmentService;
@@ -44,9 +45,12 @@ class AssessmentController extends Controller
         return back()->with('status', 'Nilai lapangan berhasil disimpan.');
     }
 
-    public function submit(KpAssignment $assignment, KpAssessmentService $service): RedirectResponse
+    public function submit(SubmitScoreRequest $request, KpAssignment $assignment, KpAssessmentService $service): RedirectResponse
     {
-        $service->submitScores(request()->user(), $assignment, 'pembimbing_lapangan');
+        $rows = $request->validated('scores', []);
+        $rows === []
+            ? $service->submitScores($request->user(), $assignment, 'pembimbing_lapangan')
+            : $service->saveAndSubmitScores($request->user(), $assignment, 'pembimbing_lapangan', $rows);
         return back()->with('status', 'Nilai lapangan berhasil disubmit.');
     }
 }

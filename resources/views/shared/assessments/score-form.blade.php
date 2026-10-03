@@ -94,7 +94,12 @@
                                 <textarea name="scores[{{ $index }}][note]" rows="2" class="w-72 rounded-2xl border-slate-200 text-sm" placeholder="Catatan opsional" @disabled($scoreLocked)>{{ $oldNote }}</textarea>
                             </td>
                             <td class="px-4 py-4 align-top">
-                                <span class="rounded-full {{ $score?->statusBadgeClass() ?? 'bg-slate-100 text-slate-700' }} px-3 py-1 text-xs font-bold">{{ $score?->statusLabel() ?? 'Belum diisi' }}</span>
+                                <span
+                                    data-score-status
+                                    data-original-score="{{ $score?->score }}"
+                                    data-original-label="{{ $score?->statusLabel() ?? 'Belum diisi' }}"
+                                    class="rounded-full {{ $score?->statusBadgeClass() ?? 'bg-slate-100 text-slate-700' }} px-3 py-1 text-xs font-bold"
+                                >{{ $score?->statusLabel() ?? 'Belum diisi' }}</span>
                             </td>
                         </tr>
                     @empty
@@ -104,9 +109,11 @@
             </table>
         </div>
         @if($errors->any())<div class="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{{ $errors->first() }}</div>@endif
-        <div class="mt-6 flex justify-end gap-2"><button class="rounded-2xl border border-cyan-200 px-4 py-2 text-sm font-bold text-cyan-700 disabled:cursor-not-allowed disabled:opacity-50" @disabled($scoreLocked)>Simpan Draft</button></div>
+        <div class="mt-6 flex flex-wrap justify-end gap-2">
+            <button class="rounded-2xl border border-cyan-200 px-4 py-2 text-sm font-bold text-cyan-700 disabled:cursor-not-allowed disabled:opacity-50" @disabled($scoreLocked)>Simpan Draft</button>
+            <button formaction="{{ $submitRoute }}" onclick="return confirm('Simpan dan submit nilai sekarang? Nilai tidak dapat diubah setelah nilai akhir dikunci.')" class="rounded-2xl bg-cyan-700 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50" @disabled($scoreLocked)>{{ $submitLabel ?? 'Submit Nilai' }}</button>
+        </div>
     </form>
-    <form method="POST" action="{{ $submitRoute }}" onsubmit="return confirm('Submit nilai? Nilai tidak dapat diubah setelah nilai akhir dikunci.')" class="flex justify-end">@csrf<button class="rounded-2xl bg-cyan-700 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50" @disabled($scoreLocked)>{{ $submitLabel ?? 'Submit Nilai' }}</button></form>
 </div>
 
 @push('scripts')
@@ -115,10 +122,17 @@ document.querySelectorAll('.score-input').forEach(function (input) {
     var updatePreview = function () {
         var row = input.closest('tr');
         var target = row ? row.querySelector('.score-preview') : null;
+        var status = row ? row.querySelector('[data-score-status]') : null;
         var value = parseFloat(input.value || '0');
         var weight = parseFloat(input.dataset.weight || '0');
         if (target) {
             target.textContent = ((value * weight) / 100).toFixed(2);
+        }
+        if (status) {
+            var originalScore = status.dataset.originalScore;
+            var hasValue = input.value.trim() !== '';
+            var isChanged = originalScore === '' || Number(originalScore) !== Number(input.value);
+            status.textContent = !hasValue ? 'Belum diisi' : (isChanged ? 'Siap disubmit' : status.dataset.originalLabel);
         }
     };
     input.addEventListener('input', updatePreview);

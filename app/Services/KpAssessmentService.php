@@ -135,6 +135,22 @@ class KpAssessmentService
         $this->syncExamMinutesReadiness($assignment);
     }
 
+    public function saveAndSubmitScores(User $assessor, KpAssignment $assignment, string $assessorType, array $rows): void
+    {
+        DB::transaction(function () use ($assessor, $assignment, $assessorType, $rows): void {
+            foreach ($rows as $row) {
+                $component = KpAssessmentComponent::findOrFail($row['component_id']);
+                if ($component->assessor_type !== $assessorType) {
+                    throw ValidationException::withMessages(['scores' => 'Komponen penilaian tidak sesuai dengan peran penilai.']);
+                }
+
+                $this->saveScore($assessor, $assignment, $component, (float) $row['score'], $row['note'] ?? null);
+            }
+
+            $this->submitScores($assessor, $assignment, $assessorType);
+        });
+    }
+
     public function calculateFinalScore(KpAssignment $assignment): KpFinalScore
     {
         $score = $this->calculator->breakdown($assignment)['final_score'];

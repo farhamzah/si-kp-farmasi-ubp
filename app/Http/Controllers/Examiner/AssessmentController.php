@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Examiner;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Assessment\SaveScoreRequest;
+use App\Http\Requests\Assessment\SubmitScoreRequest;
 use App\Models\KpAssessmentComponent;
 use App\Models\KpExam;
 use App\Services\KpAssessmentService;
@@ -65,14 +66,17 @@ class AssessmentController extends Controller
         return back()->with('status', 'Nilai sidang berhasil disimpan.');
     }
 
-    public function submit(KpExam $exam, KpAssessmentService $service): RedirectResponse
+    public function submit(SubmitScoreRequest $request, KpExam $exam, KpAssessmentService $service): RedirectResponse
     {
-        $service->submitScores(request()->user(), $exam->assignment, 'penguji');
+        $rows = $request->validated('scores', []);
+        $rows === []
+            ? $service->submitScores($request->user(), $exam->assignment, 'penguji')
+            : $service->saveAndSubmitScores($request->user(), $exam->assignment, 'penguji', $rows);
 
         $response = redirect()->route('examiner.assessments.show', $exam)
             ->with('status', 'Nilai sidang berhasil disubmit.');
 
-        return (int) $exam->chair_lecturer_id === (int) (request()->user()->lecturer?->id ?: 0)
+        return (int) $exam->chair_lecturer_id === (int) ($request->user()->lecturer?->id ?: 0)
             ? $response->withFragment('berita-acara')
             : $response;
     }

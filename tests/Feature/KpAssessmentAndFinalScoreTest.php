@@ -266,14 +266,19 @@ class KpAssessmentAndFinalScoreTest extends TestCase
             ->assertSee('Submit nilai terlebih dahulu');
 
         $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
-            ->post('/penguji/penilaian/'.$this->exam->id.'/save', [
-                'scores' => [['component_id' => $examinerComponent->id, 'score' => 88]],
+            ->post('/penguji/penilaian/'.$this->exam->id.'/submit', [
+                'scores' => [['component_id' => $examinerComponent->id, 'score' => 88, 'note' => 'Baik']],
             ])
-            ->assertRedirect();
-
-        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
-            ->post('/penguji/penilaian/'.$this->exam->id.'/submit')
             ->assertRedirect('/penguji/penilaian/'.$this->exam->id.'#berita-acara');
+
+        $this->assertDatabaseHas('kp_scores', [
+            'kp_assignment_id' => $this->assignment->id,
+            'kp_assessment_component_id' => $examinerComponent->id,
+            'assessor_user_id' => $this->examinerUser->id,
+            'score' => 88,
+            'note' => 'Baik',
+            'status' => 'submitted',
+        ]);
 
         $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
             ->get('/penguji/penilaian/'.$this->exam->id)
@@ -682,10 +687,9 @@ class KpAssessmentAndFinalScoreTest extends TestCase
         }
 
         $this->actingAs($user)->withSession(['active_role' => $role])
-            ->post("/{$prefix}/penilaian/{$assignmentId}/save", ['scores' => [['component_id' => $component->id, 'score' => $score]]])
-            ->assertRedirect();
-        $this->actingAs($user)->withSession(['active_role' => $role])
-            ->post("/{$prefix}/penilaian/{$assignmentId}/submit")
+            ->post("/{$prefix}/penilaian/{$assignmentId}/submit", [
+                'scores' => [['component_id' => $component->id, 'score' => $score]],
+            ])
             ->assertRedirect();
     }
 
