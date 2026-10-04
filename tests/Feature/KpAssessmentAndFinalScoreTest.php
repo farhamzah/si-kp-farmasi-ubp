@@ -157,7 +157,22 @@ class KpAssessmentAndFinalScoreTest extends TestCase
             ->assertOk()
             ->assertSee($this->examinerUser->email)
             ->assertSee($this->mahasiswa->name)
+            ->assertSee('Preview')
+            ->assertSee('Download PDF')
             ->assertDontSee('Kelengkapan');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/scores/pending/preview?period='.$this->assignment->kp_period_id)
+            ->assertOk()
+            ->assertSee('DAFTAR PENILAI BELUM SUBMIT NILAI KP')
+            ->assertSee($this->examinerUser->email)
+            ->assertSee($this->mahasiswa->name);
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/scores/pending/pdf?period='.$this->assignment->kp_period_id)
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf')
+            ->assertDownload();
 
         Mail::fake();
 

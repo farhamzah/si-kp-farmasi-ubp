@@ -83,13 +83,21 @@
                         <p class="mt-2 text-sm font-bold text-amber-700">Pengiriman dinonaktifkan karena SMTP server belum dikonfigurasi.</p>
                     @endunless
                 </div>
-                @if($pendingAssessors->isNotEmpty() && $mailDeliveryEnabled)
-                    <form method="POST" action="{{ route('management.score-reminders.send-all') }}" onsubmit="return confirm('Kirim pengingat email kepada seluruh penilai tertunda pada periode ini?')">
-                        @csrf
-                        <input type="hidden" name="period_id" value="{{ $selectedPeriod->id }}">
-                        <button class="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white">Kirim Semua Periode Ini</button>
-                    </form>
-                @endif
+                <div class="flex flex-wrap gap-2">
+                    @php
+                        $pendingReportQuery = array_filter(['period' => $selectedPeriod->id, 'q' => $filters['q'] ?? null]);
+                    @endphp
+                    <a target="_blank" href="{{ route('management.scores.pending.preview', $pendingReportQuery) }}" class="inline-flex min-h-11 items-center rounded-xl border border-cyan-200 px-4 py-2 text-sm font-black text-cyan-700">Preview</a>
+                    <a href="{{ route('management.scores.pending.pdf', $pendingReportQuery) }}" class="inline-flex min-h-11 items-center rounded-xl border border-rose-200 px-4 py-2 text-sm font-black text-rose-700">Download PDF</a>
+                    <a target="_blank" href="{{ route('management.scores.pending.preview', ['print' => 1] + $pendingReportQuery) }}" class="inline-flex min-h-11 items-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-black text-slate-700">Print</a>
+                    @if($pendingAssessors->isNotEmpty() && $mailDeliveryEnabled)
+                        <form method="POST" action="{{ route('management.score-reminders.send-all') }}" onsubmit="return confirm('Kirim pengingat email kepada seluruh penilai tertunda pada periode ini?')">
+                            @csrf
+                            <input type="hidden" name="period_id" value="{{ $selectedPeriod->id }}">
+                            <button class="min-h-11 rounded-xl bg-slate-950 px-4 py-2 text-sm font-black text-white">Kirim Semua</button>
+                        </form>
+                    @endif
+                </div>
             </div>
 
             <div class="overflow-x-auto">

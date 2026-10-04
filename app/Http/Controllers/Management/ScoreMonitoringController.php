@@ -14,8 +14,10 @@ use App\Services\KpAssessmentService;
 use App\Services\PendingScoreReminderService;
 use App\Support\KpScoreCalculator;
 use App\Support\StudentScoreVisibility;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -66,6 +68,27 @@ class ScoreMonitoringController extends Controller
             'pendingAssessors' => $pendingAssessors,
             'pendingAssessorCount' => $pendingAssessorCount,
             'mailDeliveryEnabled' => $this->mailDeliveryEnabled(),
+        ]);
+    }
+
+    public function pendingPreview(Request $request, KpAssessmentService $assessment, PendingScoreReminderService $reminders): View
+    {
+        return view('management.scores.pending-preview', $this->pendingReportData($request, $assessment, $reminders) + [
+            'printMode' => $request->boolean('print'),
+        ]);
+    }
+
+    public function pendingPdf(Request $request, KpAssessmentService $assessment, PendingScoreReminderService $reminders): Response
+    {
+        $data = $this->pendingReportData($request, $assessment, $reminders);
+        $filename = 'penilai-belum-submit-'.str($data['period']?->name ?? 'semua-periode')->slug().'-'.now()->format('Ymd-His').'.pdf';
+        $pdf = Pdf::loadView('management.scores.pending-pdf', $data)
+            ->setPaper('a4', 'landscape')
+            ->setOption(['defaultFont' => 'DejaVu Sans', 'dpi' => 120, 'isRemoteEnabled' => false]);
+
+        return response($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 
@@ -274,5 +297,47 @@ class ScoreMonitoringController extends Controller
     private function mailDeliveryEnabled(): bool
     {
         return ! in_array(config('mail.default'), ['log', 'array'], true);
+    }
+
+    private function pendingReportData(Request $request, KpAssessmentService $assessment, PendingScoreReminderService $reminders): array
+    {
+        $period = $request->filled('period')
+            ? KpPeriod::find($request->integer('period'))
+            : KpPeriod::latest()->first();
+
+        if ($period) {
+            $assessment->ensureDefaultComponents($period, $request->user());
+        }
+
+        $pendingAssessors = $period ? $reminders->pendingForPeriod($period) : collect();
+        if ($request->filled('q')) {
+            $keyword = $request->string('q')->squish()->lower()->toString();
+            $pendingAssessors = $pendingAssessors->filter(function (array $row) use ($keyword): bool {
+                return str($row['assessor']->name.' '.$row['assessor']->email)->lower()->contains($keyword)
+                    || $row['items']->contains(fn (array $item): bool => str($item['student_name'].' '.$item['student_number'].' '.$item['place_name'])->lower()->contains($keyword));
+            })->values();
+        }
+
+        return [
+            'period' => $period,
+            'pendingAssessors' => $pendingAssessors,
+            'pendingAssignmentCount' => $pendingAssessors->sum('pending_count'),
+            'uniqueStudentCount' => $pendingAssessors->flatMap(fn (array $row) => $row['items']->pluck('assignment_id'))->unique()->count(),
+            'query' => array_filter($request->only(['period', 'q'])),
+            'filters' => [
+                'Periode' => $period?->name ?? 'Belum ada periode',
+                'Pencarian' => $request->filled('q') ? $request->string('q')->toString() : 'Semua penilai',
+            ],
+            'logoSrc' => $this->fileDataUri(public_path('images/logo-ubp-karawang.png'), 'image/png'),
+        ];
+    }
+
+    private function fileDataUri(string $path, string $mime): ?string
+    {
+        if (! is_file($path)) {
+            return null;
+        }
+
+        return 'data:'.$mime.';base64,'.base64_encode((string) file_get_contents($path));
     }
 }
