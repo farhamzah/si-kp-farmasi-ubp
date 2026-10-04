@@ -32,9 +32,10 @@ class KpAssessmentService
         ],
     ];
 
-    public function __construct(private readonly KpScoreCalculator $calculator)
-    {
-    }
+    public function __construct(
+        private readonly KpScoreCalculator $calculator,
+        private readonly KpExamMinuteService $examMinuteService,
+    ) {}
 
     public function ensureDefaultComponents(KpPeriod $period, ?User $actor = null): void
     {
@@ -263,7 +264,7 @@ class KpAssessmentService
         $minute = $assignment?->exam?->minutes;
 
         if ($minute && $minute->status !== 'terbit') {
-            $minute->update(['status' => $assignment->areAllRequiredExaminerScoresSubmitted() ? 'siap_terbit' : 'menunggu_nilai']);
+            $this->examMinuteService->autoPublishIfReady($minute);
         }
     }
 

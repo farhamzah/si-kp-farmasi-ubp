@@ -61,7 +61,7 @@ class KpExamMinuteService
             $this->examService->completeExam($actor, $exam, $data['notes'] ?? null);
         }
 
-        return $minute->fresh();
+        return $this->autoPublishIfReady($minute);
     }
 
     public function syncReadiness(KpExamMinute $minute): KpExamMinute
@@ -92,6 +92,22 @@ class KpExamMinuteService
         $this->replaceSignatures($minute, $actor);
 
         return $minute->fresh();
+    }
+
+    public function autoPublishIfReady(KpExamMinute $minute): KpExamMinute
+    {
+        $minute = $this->syncReadiness($minute);
+        if ($minute->status !== 'siap_terbit') {
+            return $minute;
+        }
+
+        $minute->loadMissing('closedBy');
+        $actor = $minute->closedBy ?: auth()->user();
+        if (! $actor) {
+            return $minute;
+        }
+
+        return $this->publish($minute, $actor);
     }
 
     public function rebuild(KpExamMinute $minute, User $actor, string $reason): KpExamMinute

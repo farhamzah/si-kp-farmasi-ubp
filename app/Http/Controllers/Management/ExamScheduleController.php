@@ -99,7 +99,7 @@ class ExamScheduleController extends Controller
     {
         $exam->load(['request.logs.user', 'assignment.student.user', 'assignment.period', 'assignment.place', 'assignment.scores', 'supervisor.user', 'examiner.user', 'examiners.user', 'chair.user', 'minutes']);
         if ($exam->minutes) {
-            $minuteService->syncReadiness($exam->minutes);
+            $minuteService->autoPublishIfReady($exam->minutes);
             $exam->load('minutes');
         }
         return view('management.exams.show', ['exam' => $exam, 'examiners' => $this->examiners()]);

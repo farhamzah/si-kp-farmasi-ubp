@@ -51,7 +51,7 @@ class ExamMinuteController extends Controller
     public function preview(Request $request, KpExamMinute $minute, KpExamMinuteService $service): View
     {
         $this->authorizeAccess($request, $minute);
-        $minute = $service->syncReadiness($minute);
+        $minute = $service->autoPublishIfReady($minute);
         return view('exam-minutes.document', [
             'minute' => $minute->load(array_merge(['chair.user', 'signatures'], array_map(fn ($r) => 'exam.'.$r, $service->relations()))),
             'verificationUrl' => $service->verificationUrl($minute),
@@ -62,7 +62,7 @@ class ExamMinuteController extends Controller
     public function downloadPdf(Request $request, KpExamMinute $minute, KpExamMinuteService $service): Response
     {
         $this->authorizeAccess($request, $minute);
-        return $service->pdfResponse($service->syncReadiness($minute));
+        return $service->pdfResponse($service->autoPublishIfReady($minute));
     }
 
     public function verify(string $code): View

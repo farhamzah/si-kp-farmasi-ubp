@@ -314,6 +314,7 @@ class KpAssessmentAndFinalScoreTest extends TestCase
             'kp_exam_id' => $this->exam->id,
             'chair_lecturer_id' => $this->examiner->id,
             'result' => 'lulus_revisi',
+            'status' => 'terbit',
         ]);
     }
 
@@ -337,14 +338,6 @@ class KpAssessmentAndFinalScoreTest extends TestCase
             ->post('/penguji/penilaian/'.$this->exam->id.'/submit', [
                 'scores' => [['component_id' => $examinerComponent->id, 'score' => 82]],
             ])->assertRedirect();
-        $this->actingAs($secondExaminerUser)->withSession(['active_role' => 'penguji'])
-            ->post('/penguji/penilaian/'.$this->exam->id.'/submit', [
-                'scores' => [['component_id' => $examinerComponent->id, 'score' => 92]],
-            ])->assertRedirect();
-
-        $this->assertFalse($this->assignment->fresh()->isAllRequiredScoresSubmitted());
-        $this->assertTrue($this->assignment->fresh()->areAllRequiredExaminerScoresSubmitted());
-
         $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
             ->post('/penguji/jadwal-sidang/'.$this->exam->id.'/tutup', [
                 'result' => 'lulus',
@@ -355,15 +348,33 @@ class KpAssessmentAndFinalScoreTest extends TestCase
             ])->assertRedirect();
 
         $minute = KpExamMinute::where('kp_exam_id', $this->exam->id)->firstOrFail();
-        $this->assertSame('siap_terbit', $minute->status);
+        $this->assertSame('menunggu_nilai', $minute->status);
+
+        $this->actingAs($secondExaminerUser)->withSession(['active_role' => 'penguji'])
+            ->post('/penguji/penilaian/'.$this->exam->id.'/submit', [
+                'scores' => [['component_id' => $examinerComponent->id, 'score' => 92]],
+            ])->assertRedirect();
+
+        $this->assertFalse($this->assignment->fresh()->isAllRequiredScoresSubmitted());
+        $this->assertTrue($this->assignment->fresh()->areAllRequiredExaminerScoresSubmitted());
+
+        $minute->refresh();
+        $this->assertSame('terbit', $minute->status);
+        $this->assertNotNull($minute->published_at);
 
         $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
             ->get('/berita-acara-sidang/'.$minute->id)
             ->assertOk()
-            ->assertSee('DRAFT - SIAP DITERBITKAN')
+            ->assertDontSee('DRAFT - SIAP DITERBITKAN')
             ->assertSee('Seluruh nilai penguji telah disubmit')
             ->assertSee('Kembali ke Penilaian')
             ->assertSee(route('examiner.assessments.show', $this->exam), false);
+
+        $this->assertDatabaseHas('kp_document_signatures', [
+            'document_type' => KpDocumentSignature::DOCUMENT_MINUTE,
+            'document_id' => $minute->id,
+            'status' => 'active',
+        ]);
     }
 
     public function test_chair_without_examiner_assignment_can_open_minutes_section_without_score_form(): void
