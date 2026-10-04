@@ -52,7 +52,11 @@ class ExamMinuteController extends Controller
     {
         $this->authorizeAccess($request, $minute);
         $minute = $service->syncReadiness($minute);
-        return view('exam-minutes.document', ['minute' => $minute->load(array_merge(['chair.user', 'signatures'], array_map(fn ($r) => 'exam.'.$r, $service->relations()))), 'verificationUrl' => $service->verificationUrl($minute)]);
+        return view('exam-minutes.document', [
+            'minute' => $minute->load(array_merge(['chair.user', 'signatures'], array_map(fn ($r) => 'exam.'.$r, $service->relations()))),
+            'verificationUrl' => $service->verificationUrl($minute),
+            'backUrl' => $this->backUrl($request, $minute),
+        ]);
     }
 
     public function downloadPdf(Request $request, KpExamMinute $minute, KpExamMinuteService $service): Response
@@ -95,5 +99,16 @@ class ExamMinuteController extends Controller
             default => false,
         };
         abort_unless($allowed, 403);
+    }
+
+    private function backUrl(Request $request, KpExamMinute $minute): string
+    {
+        return match ((string) $request->session()->get('active_role')) {
+            'admin', 'koordinator_kp' => route('management.exams.show', $minute->exam),
+            'penguji' => route('examiner.assessments.show', $minute->exam),
+            'pembimbing_dalam' => route('internal-supervisor.exams.show', $minute->exam),
+            'mahasiswa' => route('student.exams.index'),
+            default => route('exam-invitations.index'),
+        };
     }
 }

@@ -38,7 +38,7 @@ class KpExamMinuteService
 
         $minute = DB::transaction(function () use ($exam, $actor, $data): KpExamMinute {
             $exam = KpExam::query()->lockForUpdate()->findOrFail($exam->id);
-            $ready = $exam->assignment->isAllRequiredScoresSubmitted();
+            $ready = $exam->assignment->areAllRequiredExaminerScoresSubmitted();
 
             return KpExamMinute::create([
                 'kp_exam_id' => $exam->id,
@@ -67,7 +67,7 @@ class KpExamMinuteService
     public function syncReadiness(KpExamMinute $minute): KpExamMinute
     {
         if ($minute->status !== 'terbit') {
-            $ready = $minute->exam->assignment->isAllRequiredScoresSubmitted();
+            $ready = $minute->exam->assignment->areAllRequiredExaminerScoresSubmitted();
             $minute->update(['status' => $ready ? 'siap_terbit' : 'menunggu_nilai']);
         }
 

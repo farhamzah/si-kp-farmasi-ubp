@@ -70,6 +70,7 @@ class KpAssessmentService
         $this->ensureCanAssess($assessor, $assignment, $component->assessor_type);
         $this->ensureAssessmentPrerequisitesMet($assignment, $component->assessor_type);
         $this->ensureFinalScoreEditable($assignment);
+        $this->ensureAssessorScoresEditable($assessor, $assignment, $component->assessor_type);
 
         if ($component->kp_period_id !== $assignment->kp_period_id || $component->status !== 'aktif') {
             throw ValidationException::withMessages(['component' => 'Komponen penilaian tidak sesuai periode penempatan.']);
@@ -109,6 +110,7 @@ class KpAssessmentService
         $this->ensureCanAssess($assessor, $assignment, $assessorType);
         $this->ensureAssessmentPrerequisitesMet($assignment, $assessorType);
         $this->ensureFinalScoreEditable($assignment);
+        $this->ensureAssessorScoresEditable($assessor, $assignment, $assessorType);
 
         $components = $assignment->period->assessmentComponents()
             ->where('status', 'aktif')
@@ -261,7 +263,22 @@ class KpAssessmentService
         $minute = $assignment?->exam?->minutes;
 
         if ($minute && $minute->status !== 'terbit') {
-            $minute->update(['status' => $assignment->isAllRequiredScoresSubmitted() ? 'siap_terbit' : 'menunggu_nilai']);
+            $minute->update(['status' => $assignment->areAllRequiredExaminerScoresSubmitted() ? 'siap_terbit' : 'menunggu_nilai']);
+        }
+    }
+
+    private function ensureAssessorScoresEditable(User $assessor, KpAssignment $assignment, string $assessorType): void
+    {
+        $hasSubmittedScores = $assignment->scores()
+            ->where('assessor_type', $assessorType)
+            ->where('assessor_user_id', $assessor->id)
+            ->whereIn('status', ['submitted', 'locked'])
+            ->exists();
+
+        if ($hasSubmittedScores) {
+            throw ValidationException::withMessages([
+                'scores' => 'Nilai sudah disubmit dan tidak dapat diubah kembali. Hubungi Koordinator KP jika diperlukan koreksi.',
+            ]);
         }
     }
 

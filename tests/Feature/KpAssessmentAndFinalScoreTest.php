@@ -283,8 +283,21 @@ class KpAssessmentAndFinalScoreTest extends TestCase
         $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
             ->get('/penguji/penilaian/'.$this->exam->id)
             ->assertOk()
+            ->assertSee('Nilai sudah disubmit dan dikunci')
             ->assertSee('Tutup Sidang dan Buat Berita Acara')
             ->assertDontSee('Submit nilai terlebih dahulu');
+
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->post('/penguji/penilaian/'.$this->exam->id.'/save', [
+                'scores' => [['component_id' => $examinerComponent->id, 'score' => 95]],
+            ])
+            ->assertSessionHasErrors('scores');
+
+        $this->assertDatabaseHas('kp_scores', [
+            'assessor_user_id' => $this->examinerUser->id,
+            'score' => 88,
+            'status' => 'submitted',
+        ]);
 
         $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
             ->post('/penguji/jadwal-sidang/'.$this->exam->id.'/tutup', [
@@ -302,6 +315,55 @@ class KpAssessmentAndFinalScoreTest extends TestCase
             'chair_lecturer_id' => $this->examiner->id,
             'result' => 'lulus_revisi',
         ]);
+    }
+
+    public function test_exam_minutes_wait_only_for_all_assigned_examiner_scores(): void
+    {
+        [, , $examinerComponent] = $this->components();
+        $secondExaminerUser = $this->makeUser('minute-second-examiner@test.local', ['penguji']);
+        $secondExaminerUser->update(['name' => 'Penguji Berita Acara Kedua']);
+        $secondExaminer = Lecturer::create(['user_id' => $secondExaminerUser->id, 'nidn_nip' => '881106', 'status' => 'active']);
+        $this->exam->update([
+            'chair_lecturer_id' => $this->examiner->id,
+            'minutes_sequence' => 3,
+            'minutes_number' => '003/BA-SKP/FF-UBP/IX/2026',
+        ]);
+        $this->exam->examiners()->sync([
+            $this->examiner->id => ['sort_order' => 1],
+            $secondExaminer->id => ['sort_order' => 2],
+        ]);
+
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->post('/penguji/penilaian/'.$this->exam->id.'/submit', [
+                'scores' => [['component_id' => $examinerComponent->id, 'score' => 82]],
+            ])->assertRedirect();
+        $this->actingAs($secondExaminerUser)->withSession(['active_role' => 'penguji'])
+            ->post('/penguji/penilaian/'.$this->exam->id.'/submit', [
+                'scores' => [['component_id' => $examinerComponent->id, 'score' => 92]],
+            ])->assertRedirect();
+
+        $this->assertFalse($this->assignment->fresh()->isAllRequiredScoresSubmitted());
+        $this->assertTrue($this->assignment->fresh()->areAllRequiredExaminerScoresSubmitted());
+
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->post('/penguji/jadwal-sidang/'.$this->exam->id.'/tutup', [
+                'result' => 'lulus',
+                'actual_start_time' => '09:00',
+                'actual_end_time' => '10:00',
+                'notes' => 'Sidang selesai.',
+                'attendance' => ['mahasiswa', 'ketua_sidang', 'tim_penguji'],
+            ])->assertRedirect();
+
+        $minute = KpExamMinute::where('kp_exam_id', $this->exam->id)->firstOrFail();
+        $this->assertSame('siap_terbit', $minute->status);
+
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->get('/berita-acara-sidang/'.$minute->id)
+            ->assertOk()
+            ->assertSee('DRAFT - SIAP DITERBITKAN')
+            ->assertSee('Seluruh nilai penguji telah disubmit')
+            ->assertSee('Kembali ke Penilaian')
+            ->assertSee(route('examiner.assessments.show', $this->exam), false);
     }
 
     public function test_chair_without_examiner_assignment_can_open_minutes_section_without_score_form(): void

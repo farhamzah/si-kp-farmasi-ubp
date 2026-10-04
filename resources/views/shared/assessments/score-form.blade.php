@@ -3,7 +3,16 @@
     $activeUserId = auth()->id();
     $assessmentEligibility = $assessmentEligibility ?? ['ready' => true, 'items' => [], 'pending' => []];
     $assessmentLocked = ! $assessmentEligibility['ready'];
-    $scoreLocked = $assignment->finalScore?->isLocked() || $assessmentLocked;
+    $requiredComponentIds = $components->where('is_required', true)->pluck('id');
+    $assessorScores = $assignment->scores
+        ->whereIn('kp_assessment_component_id', $requiredComponentIds)
+        ->where('assessor_user_id', $activeUserId);
+    $assessorSubmitted = $requiredComponentIds->isNotEmpty()
+        && $requiredComponentIds->every(fn ($componentId) => $assessorScores
+            ->where('kp_assessment_component_id', $componentId)
+            ->whereIn('status', ['submitted', 'locked'])
+            ->isNotEmpty());
+    $scoreLocked = $assignment->finalScore?->isLocked() || $assessmentLocked || $assessorSubmitted;
 @endphp
 <div class="space-y-6">
     @if(session('status'))
@@ -21,6 +30,8 @@
         </div>
         @if($assignment->finalScore?->isLocked())
             <div class="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">Nilai sudah dikunci/dipublish dan tidak dapat diubah.</div>
+        @elseif($assessorSubmitted)
+            <div class="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">Nilai sudah disubmit dan dikunci. Koreksi hanya dapat dilakukan oleh Koordinator KP.</div>
         @endif
         @if($assessmentLocked)
             <div class="mt-4 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-100">
@@ -111,7 +122,7 @@
         @if($errors->any())<div class="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{{ $errors->first() }}</div>@endif
         <div class="mt-6 flex flex-wrap justify-end gap-2">
             <button class="rounded-2xl border border-cyan-200 px-4 py-2 text-sm font-bold text-cyan-700 disabled:cursor-not-allowed disabled:opacity-50" @disabled($scoreLocked)>Simpan Draft</button>
-            <button formaction="{{ $submitRoute }}" onclick="return confirm('Simpan dan submit nilai sekarang? Nilai tidak dapat diubah setelah nilai akhir dikunci.')" class="rounded-2xl bg-cyan-700 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50" @disabled($scoreLocked)>{{ $submitLabel ?? 'Submit Nilai' }}</button>
+            <button formaction="{{ $submitRoute }}" onclick="return confirm('Simpan dan submit nilai sekarang? Setelah disubmit, nilai hanya dapat dikoreksi oleh Koordinator KP.')" class="rounded-2xl bg-cyan-700 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50" @disabled($scoreLocked)>{{ $submitLabel ?? 'Submit Nilai' }}</button>
         </div>
     </form>
 </div>

@@ -76,7 +76,7 @@
     <table class="ba-table">
         <tr><td width="22%" style="width:22%">Hasil</td><td width="3%" style="width:3%" class="ba-colon">:</td><td width="75%" style="width:75%" class="ba-value"><strong>{{ $minute->resultLabel() }}</strong></td></tr>
         @if($minute->revision_deadline)<tr><td width="22%">Batas Revisi</td><td width="3%" class="ba-colon">:</td><td width="75%" class="ba-value">{{ $minute->revision_deadline->format('d M Y') }}</td></tr>@endif
-        <tr><td width="22%">Status Nilai</td><td width="3%" class="ba-colon">:</td><td width="75%" class="ba-value">{{ $assignment->isAllRequiredScoresSubmitted() ? 'Seluruh nilai wajib telah disubmit' : 'Masih menunggu nilai wajib' }}</td></tr>
+        <tr><td width="22%">Status Nilai Penguji</td><td width="3%" class="ba-colon">:</td><td width="75%" class="ba-value">{{ $assignment->areAllRequiredExaminerScoresSubmitted() ? 'Seluruh nilai penguji telah disubmit' : 'Masih menunggu nilai penguji' }}</td></tr>
     </table>
 
     <p class="ba-section">Catatan Sidang</p>

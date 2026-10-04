@@ -9,7 +9,7 @@
 </style>
 <div class="mx-auto space-y-4">
     <div class="flex flex-wrap justify-end gap-2 print:hidden">
-        @if(in_array(session('active_role'), ['admin', 'koordinator_kp'], true))<a href="{{ route('management.exams.show', $minute->exam) }}" class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-black text-slate-700">Kembali</a>@endif
+        <a href="{{ $backUrl }}" class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-black text-slate-700">Kembali ke Penilaian</a>
         <a href="{{ route('exam-minutes.pdf', $minute) }}" class="rounded-xl bg-cyan-700 px-4 py-2 text-sm font-black text-white">Download PDF</a>
         <button onclick="window.print()" class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-black text-slate-700">Print</button>
     </div>

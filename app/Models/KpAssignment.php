@@ -284,6 +284,34 @@ class KpAssignment extends Model
         });
     }
 
+    public function areAllRequiredExaminerScoresSubmitted(): bool
+    {
+        $this->loadMissing(['scores', 'exam.examiners.user', 'exam.examiner.user']);
+        $components = $this->period?->assessmentComponents()
+            ->where('status', 'aktif')
+            ->where('is_required', true)
+            ->where('assessor_type', 'penguji')
+            ->get() ?? collect();
+        $examinerUserIds = $this->exam
+            ? $this->exam->examiners
+                ->when($this->exam->examiner, fn ($examiners) => $examiners->prepend($this->exam->examiner))
+                ->unique('id')
+                ->pluck('user_id')
+                ->filter()
+                ->values()
+            : collect();
+
+        if ($components->isEmpty() || $examinerUserIds->isEmpty()) {
+            return false;
+        }
+
+        return $components->every(fn ($component): bool => $examinerUserIds->every(fn (int $userId): bool => $this->scores
+            ->where('kp_assessment_component_id', $component->id)
+            ->where('assessor_user_id', $userId)
+            ->whereIn('status', ['submitted', 'locked'])
+            ->isNotEmpty()));
+    }
+
     public function calculateFinalScore(): float
     {
         return app(KpScoreCalculator::class)->breakdown($this)['final_score'];
