@@ -312,6 +312,23 @@ class KpAssignment extends Model
             ->isNotEmpty()));
     }
 
+    public function areRequiredScoresSubmittedBy(int $assessorUserId, string $assessorType): bool
+    {
+        $this->loadMissing(['scores', 'period.assessmentComponents']);
+        $componentIds = $this->period?->assessmentComponents
+            ->where('status', 'aktif')
+            ->where('is_required', true)
+            ->where('assessor_type', $assessorType)
+            ->pluck('id') ?? collect();
+
+        return $componentIds->isNotEmpty()
+            && $componentIds->every(fn (int $componentId): bool => $this->scores
+                ->where('kp_assessment_component_id', $componentId)
+                ->where('assessor_user_id', $assessorUserId)
+                ->whereIn('status', ['submitted', 'locked'])
+                ->isNotEmpty());
+    }
+
     public function calculateFinalScore(): float
     {
         return app(KpScoreCalculator::class)->breakdown($this)['final_score'];

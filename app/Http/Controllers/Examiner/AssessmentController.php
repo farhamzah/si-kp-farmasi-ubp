@@ -17,7 +17,7 @@ class AssessmentController extends Controller
     public function index(): View
     {
         $lecturer = request()->user()->lecturer;
-        $exams = KpExam::with(['assignment.student.user', 'assignment.period', 'assignment.place', 'assignment.scores'])
+        $exams = KpExam::with(['assignment.student.user', 'assignment.period.assessmentComponents', 'assignment.place', 'assignment.scores'])
             ->where(function (Builder $query) use ($lecturer): void {
                 $query->forExaminer($lecturer?->id)
                     ->orWhere('chair_lecturer_id', $lecturer?->id);

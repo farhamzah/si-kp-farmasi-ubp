@@ -762,6 +762,38 @@ class KpAssessmentAndFinalScoreTest extends TestCase
             ->assertRedirect();
     }
 
+    public function test_assessment_lists_show_submitted_scores_as_completed_for_each_assessor(): void
+    {
+        [$internal, $field, $examiner] = $this->components();
+
+        $this->saveAndSubmit($this->supervisorUser, 'pembimbing-dalam', $this->assignment->id, $internal, 90);
+        $this->saveAndSubmit($this->fieldUser, 'pembimbing-lapangan', $this->assignment->id, $field, 85);
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->post('/penguji/penilaian/'.$this->exam->id.'/submit', [
+                'scores' => [['component_id' => $examiner->id, 'score' => 88]],
+            ])->assertRedirect();
+
+        $this->actingAs($this->supervisorUser)->withSession(['active_role' => 'pembimbing_dalam'])
+            ->get('/pembimbing-dalam/penilaian')
+            ->assertOk()
+            ->assertSee('Sudah dinilai')
+            ->assertSee('Lihat Nilai')
+            ->assertDontSee('Siap dinilai');
+
+        $this->actingAs($this->fieldUser)->withSession(['active_role' => 'pembimbing_lapangan'])
+            ->get('/pembimbing-lapangan/penilaian')
+            ->assertOk()
+            ->assertSee('Sudah dinilai')
+            ->assertSee('Lihat Nilai')
+            ->assertDontSee('Siap dinilai');
+
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->get('/penguji/penilaian')
+            ->assertOk()
+            ->assertSee('Sudah dinilai')
+            ->assertSee('Lihat Nilai');
+    }
+
     private function components(): array
     {
         return [

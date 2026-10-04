@@ -3,15 +3,7 @@
     $activeUserId = auth()->id();
     $assessmentEligibility = $assessmentEligibility ?? ['ready' => true, 'items' => [], 'pending' => []];
     $assessmentLocked = ! $assessmentEligibility['ready'];
-    $requiredComponentIds = $components->where('is_required', true)->pluck('id');
-    $assessorScores = $assignment->scores
-        ->whereIn('kp_assessment_component_id', $requiredComponentIds)
-        ->where('assessor_user_id', $activeUserId);
-    $assessorSubmitted = $requiredComponentIds->isNotEmpty()
-        && $requiredComponentIds->every(fn ($componentId) => $assessorScores
-            ->where('kp_assessment_component_id', $componentId)
-            ->whereIn('status', ['submitted', 'locked'])
-            ->isNotEmpty());
+    $assessorSubmitted = $assignment->areRequiredScoresSubmittedBy($activeUserId, $assessorType);
     $scoreLocked = $assignment->finalScore?->isLocked() || $assessmentLocked || $assessorSubmitted;
 @endphp
 <div class="space-y-6">

@@ -15,6 +15,7 @@
                     @php
                         $studentDisplay = app(\App\Services\KpMasterDataReadService::class)->getStudentDisplayData($assignment->student);
                         $eligibility = isset($assessorType) ? $assignment->assessmentEligibility($assessorType) : ['ready' => true, 'pending' => []];
+                        $assessmentSubmitted = isset($assessorType) && $assignment->areRequiredScoresSubmittedBy(auth()->id(), $assessorType);
                         $firstPending = collect($eligibility['pending'] ?? [])->first();
                     @endphp
                     <tr>
@@ -24,7 +25,10 @@
                         </td>
                         <td class="px-5 py-4">{{ $assignment->place->name }}</td>
                         <td class="px-5 py-4">
-                            @if($eligibility['ready'])
+                            @if($assessmentSubmitted)
+                                <span class="rounded-full bg-cyan-50 px-3 py-1 text-xs font-bold text-cyan-700">Sudah dinilai</span>
+                                <p class="mt-2 text-xs leading-5 text-slate-500">Nilai sudah disubmit dan dikunci.</p>
+                            @elseif($eligibility['ready'])
                                 <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">Siap dinilai</span>
                             @else
                                 <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">Belum siap</span>
@@ -35,7 +39,7 @@
                         </td>
                         <td class="px-5 py-4 text-right">
                             <a href="{{ route($routeName,$assignment) }}" class="inline-flex rounded-2xl border border-cyan-200 px-4 py-2 text-xs font-bold text-cyan-700">
-                                {{ $eligibility['ready'] ? 'Input Nilai' : 'Lihat Syarat' }}
+                                {{ $assessmentSubmitted ? 'Lihat Nilai' : ($eligibility['ready'] ? 'Input Nilai' : 'Lihat Syarat') }}
                             </a>
                         </td>
                     </tr>
