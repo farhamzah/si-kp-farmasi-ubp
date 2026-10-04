@@ -188,7 +188,11 @@ class KpAssessmentService
 
             foreach ($rows as $row) {
                 $component = KpAssessmentComponent::findOrFail($row['component_id']);
-                $assessor = $this->defaultAssessorFor($assignment, $component->assessor_type);
+                $assessor = $this->assessorForManagementOverride(
+                    $assignment,
+                    $component->assessor_type,
+                    isset($row['assessor_user_id']) ? (int) $row['assessor_user_id'] : null
+                );
 
                 if (! $assessor) {
                     continue;
@@ -338,5 +342,29 @@ class KpAssessmentService
             'penguji' => $assignment->exam?->examiner?->user,
             default => null,
         };
+    }
+
+    private function assessorForManagementOverride(KpAssignment $assignment, string $assessorType, ?int $assessorUserId): ?User
+    {
+        if (! $assessorUserId) {
+            return $this->defaultAssessorFor($assignment, $assessorType);
+        }
+
+        $assignment->loadMissing(['internalSupervisor.user', 'fieldSupervisor.user', 'exam.examiner.user', 'exam.examiners.user']);
+        $assessor = User::with(['lecturer', 'fieldSupervisor'])->find($assessorUserId);
+        $isAssigned = match ($assessorType) {
+            'pembimbing_dalam' => (int) $assignment->internalSupervisor?->user_id === $assessorUserId,
+            'pembimbing_lapangan' => (int) $assignment->fieldSupervisor?->user_id === $assessorUserId,
+            'penguji' => $assessor?->lecturer && $assignment->exam?->hasExaminer($assessor->lecturer),
+            default => false,
+        };
+
+        if (! $assessor || ! $isAssigned) {
+            throw ValidationException::withMessages([
+                'scores' => 'Penilai yang dipilih tidak sesuai dengan penugasan sidang mahasiswa.',
+            ]);
+        }
+
+        return $assessor;
     }
 }

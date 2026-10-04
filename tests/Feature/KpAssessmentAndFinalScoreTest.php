@@ -326,7 +326,9 @@ class KpAssessmentAndFinalScoreTest extends TestCase
     public function test_multiple_assigned_examiners_can_score_and_finalization_waits_for_each_examiner(): void
     {
         [, $field, $examiner] = $this->components();
+        $this->examinerUser->update(['name' => 'Penguji Pertama']);
         $secondExaminerUser = $this->makeUser('second-examiner-score@test.local', ['penguji']);
+        $secondExaminerUser->update(['name' => 'Penguji Kedua']);
         $secondExaminer = Lecturer::create(['user_id' => $secondExaminerUser->id, 'nidn_nip' => '881105', 'status' => 'active']);
         $this->exam->examiners()->sync([
             $this->examiner->id => ['sort_order' => 1],
@@ -366,6 +368,29 @@ class KpAssessmentAndFinalScoreTest extends TestCase
 
         $this->assertDatabaseHas('kp_scores', ['assessor_type' => 'penguji', 'assessor_user_id' => $this->examinerUser->id, 'score' => 80]);
         $this->assertDatabaseHas('kp_scores', ['assessor_type' => 'penguji', 'assessor_user_id' => $secondExaminerUser->id, 'score' => 100]);
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/scores/'.$this->assignment->id)
+            ->assertOk()
+            ->assertSee('Rata-rata 2 penguji yang sudah submit')
+            ->assertSee('Penguji Pertama')
+            ->assertSee('Penguji Kedua')
+            ->assertSee('value="80.00"', false)
+            ->assertSee('value="100.00"', false);
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/scores/'.$this->assignment->id.'/override', [
+                'scores' => [[
+                    'component_id' => $examiner->id,
+                    'assessor_user_id' => $secondExaminerUser->id,
+                    'score' => 92,
+                    'note' => 'Koreksi penguji kedua.',
+                ]],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('kp_scores', ['assessor_user_id' => $this->examinerUser->id, 'score' => 80]);
+        $this->assertDatabaseHas('kp_scores', ['assessor_user_id' => $secondExaminerUser->id, 'score' => 92, 'note' => 'Koreksi penguji kedua.']);
 
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->post('/management/scores/'.$this->assignment->id.'/finalize')

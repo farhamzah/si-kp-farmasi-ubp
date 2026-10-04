@@ -117,10 +117,51 @@ class ScoreMonitoringController extends Controller
         $assignment->refresh();
         $assignmentForView = $assignment->load(['period.assessmentComponents', 'student.user', 'place', 'internalSupervisor.user', 'fieldSupervisor.user', 'exam.examiner.user', 'exam.examiners.user', 'scores.component', 'scores.assessor', 'logbooks', 'finalScore', 'finalReport']);
 
+        $examinerUsers = collect($assignmentForView->exam?->examiners ?? [])
+            ->pluck('user')
+            ->filter();
+        if ($assignmentForView->exam?->examiner?->user) {
+            $examinerUsers->prepend($assignmentForView->exam->examiner->user);
+        }
+        $examinerUsers = $examinerUsers->unique('id')->values();
+
+        $assessors = [
+            'pembimbing_dalam' => collect([$assignmentForView->internalSupervisor?->user])->filter()->values(),
+            'pembimbing_lapangan' => collect([$assignmentForView->fieldSupervisor?->user])->filter()->values(),
+            'penguji' => $examinerUsers,
+        ];
+        $scoreRows = $assignmentForView->period->assessmentComponents
+            ->where('status', 'aktif')
+            ->sortBy([['assessor_type', 'asc'], ['sort_order', 'asc']])
+            ->flatMap(function ($component) use ($assignmentForView, $assessors) {
+                $componentAssessors = $assessors[$component->assessor_type] ?? collect();
+                if ($componentAssessors->isEmpty()) {
+                    $componentAssessors = collect([null]);
+                }
+
+                return $componentAssessors->map(function (?User $assessor, int $assessorIndex) use ($assignmentForView, $component) {
+                    $score = $assessor
+                        ? $assignmentForView->scores->first(fn ($item) => (int) $item->kp_assessment_component_id === (int) $component->id
+                            && (int) $item->assessor_user_id === (int) $assessor->id)
+                        : null;
+
+                    return [
+                        'component' => $component,
+                        'assessor' => $assessor,
+                        'assessor_label' => $component->assessor_type === 'penguji'
+                            ? 'Penguji '.($assessorIndex + 1)
+                            : $component->assessorTypeLabel(),
+                        'score' => $score,
+                    ];
+                });
+            })
+            ->values();
+
         return view('management.scores.show', [
             'assignment' => $assignmentForView,
             'breakdown' => $calculator->breakdown($assignmentForView),
             'scoreVisibility' => $visibility->resolve($assignmentForView),
+            'scoreRows' => $scoreRows,
         ]);
     }
 
@@ -189,6 +230,7 @@ class ScoreMonitoringController extends Controller
             'attendance_note' => ['nullable', 'string', 'max:2000'],
             'scores' => ['nullable', 'array'],
             'scores.*.component_id' => ['required', Rule::exists('kp_assessment_components', 'id')],
+            'scores.*.assessor_user_id' => ['nullable', Rule::exists('users', 'id')],
             'scores.*.score' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'scores.*.note' => ['nullable', 'string', 'max:2000'],
         ]);

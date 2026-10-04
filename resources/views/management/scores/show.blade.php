@@ -34,6 +34,8 @@
                     <p class="mt-2 text-xs font-semibold text-slate-500">{{ $section['meta']['approved_logbook_days'] }} logbook disetujui / {{ $section['meta']['workdays'] }} hari kerja</p>
                 @elseif(($section['meta']['source'] ?? null) === 'override')
                     <p class="mt-2 text-xs font-semibold text-amber-700">Override koordinator</p>
+                @elseif($section['key'] === 'penguji' && ($section['meta']['assessors'] ?? 0) > 0)
+                    <p class="mt-2 text-xs font-semibold text-slate-500">Rata-rata {{ $section['meta']['assessors'] }} penguji yang sudah submit</p>
                 @endif
             </div>
         @endforeach
@@ -119,16 +121,22 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                    @foreach($assignment->period->assessmentComponents->where('status','aktif')->sortBy([['assessor_type','asc'], ['sort_order','asc']])->values() as $index => $component)
+                    @foreach($scoreRows as $index => $row)
                         @php
-                            $score = $assignment->scores->where('kp_assessment_component_id', $component->id)->first();
+                            $component = $row['component'];
+                            $assessor = $row['assessor'];
+                            $score = $row['score'];
                             $total = $componentWeightTotals[$component->assessor_type] ?? 100;
                             $normalizedWeight = ((float) $component->weight / $total) * 100;
                         @endphp
                         <tr>
-                            <td class="px-4 py-4 align-top font-semibold text-slate-700">{{ $component->assessorTypeLabel() }}</td>
+                            <td class="px-4 py-4 align-top">
+                                <p class="font-bold text-slate-800">{{ $row['assessor_label'] }}</p>
+                                <p class="mt-1 max-w-56 text-xs leading-5 text-slate-500">{{ $assessor?->name ?? 'Belum ditetapkan' }}</p>
+                            </td>
                             <td class="px-4 py-4 align-top">
                                 <input type="hidden" name="scores[{{ $index }}][component_id]" value="{{ $component->id }}">
+                                @if($assessor)<input type="hidden" name="scores[{{ $index }}][assessor_user_id]" value="{{ $assessor->id }}">@endif
                                 <p class="font-black text-slate-950">{{ $component->component_name }}</p>
                                 <p class="text-xs text-slate-500">{{ $component->description }}</p>
                             </td>
@@ -137,10 +145,10 @@
                                 <p class="text-xs text-slate-500">Normalisasi {{ number_format($normalizedWeight, 2) }}%</p>
                             </td>
                             <td class="px-4 py-4 align-top">
-                                <input type="number" name="scores[{{ $index }}][score]" min="0" max="100" step="0.01" value="{{ old("scores.$index.score", $score?->score) }}" class="w-28 rounded-2xl border-slate-200 text-sm font-bold" @disabled($assignment->finalScore?->isLocked())>
+                                <input type="number" name="scores[{{ $index }}][score]" min="0" max="100" step="0.01" value="{{ old("scores.$index.score", $score?->score) }}" class="w-28 rounded-2xl border-slate-200 text-sm font-bold" @disabled($assignment->finalScore?->isLocked() || ! $assessor)>
                             </td>
                             <td class="px-4 py-4 align-top">
-                                <input name="scores[{{ $index }}][note]" value="{{ old("scores.$index.note", $score?->note) }}" class="w-72 rounded-2xl border-slate-200 text-sm" placeholder="Catatan koreksi" @disabled($assignment->finalScore?->isLocked())>
+                                <input name="scores[{{ $index }}][note]" value="{{ old("scores.$index.note", $score?->note) }}" class="w-72 rounded-2xl border-slate-200 text-sm" placeholder="Catatan koreksi" @disabled($assignment->finalScore?->isLocked() || ! $assessor)>
                             </td>
                             <td class="px-4 py-4 align-top">
                                 <span class="rounded-full {{ $score?->statusBadgeClass() ?? 'bg-slate-100 text-slate-700' }} px-3 py-1 text-xs font-bold">{{ $score?->statusLabel() ?? 'Belum diisi' }}</span>
