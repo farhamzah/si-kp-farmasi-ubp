@@ -35,7 +35,7 @@ class ScoreMonitoringController extends Controller
             $assessment->ensureDefaultComponents($selectedPeriod, $request->user());
         }
 
-        $assignmentQuery = KpAssignment::with(['period', 'student.user', 'place', 'internalSupervisor.user', 'fieldSupervisor.user', 'exam.examiner.user', 'exam.examiners.user', 'scores.component', 'finalScore'])
+        $assignmentQuery = KpAssignment::with(['period.assessmentComponents', 'student.user', 'place', 'internalSupervisor.user', 'fieldSupervisor.user', 'exam.examiner.user', 'exam.examiners.user', 'scores.component', 'finalScore'])
             ->when($selectedPeriod, fn ($q) => $q->where('kp_period_id', $selectedPeriod->id));
 
         $studentCount = (clone $assignmentQuery)->count();

@@ -428,6 +428,15 @@ class KpAssessmentAndFinalScoreTest extends TestCase
             ->post('/penguji/penilaian/'.$this->exam->id.'/submit')
             ->assertRedirect();
 
+        $this->assertSame(75, $this->assignment->fresh()->scoresCompletionPercentage());
+        $this->assertFalse($this->assignment->fresh()->isAllRequiredScoresSubmitted());
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/scores?period='.$this->assignment->kp_period_id)
+            ->assertOk()
+            ->assertSee('75%')
+            ->assertSee('Belum lengkap');
+
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->post('/management/scores/'.$this->assignment->id.'/finalize')
             ->assertSessionHasErrors('final_score');
@@ -441,6 +450,8 @@ class KpAssessmentAndFinalScoreTest extends TestCase
 
         $this->assertDatabaseHas('kp_scores', ['assessor_type' => 'penguji', 'assessor_user_id' => $this->examinerUser->id, 'score' => 80]);
         $this->assertDatabaseHas('kp_scores', ['assessor_type' => 'penguji', 'assessor_user_id' => $secondExaminerUser->id, 'score' => 100]);
+        $this->assertSame(100, $this->assignment->fresh()->scoresCompletionPercentage());
+        $this->assertTrue($this->assignment->fresh()->isAllRequiredScoresSubmitted());
 
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->get('/management/scores/'.$this->assignment->id)

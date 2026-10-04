@@ -2,7 +2,9 @@
 @section('title','Monitoring Nilai - '.config('app.name'))
 @section('page_title','Monitoring Nilai')
 @section('content')
-@php($activeSection = $filters['section'] ?? 'students')
+@php
+    $activeSection = $filters['section'] ?? 'students';
+@endphp
 <div class="space-y-6">
     <section class="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -141,13 +143,21 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @forelse($assignments as $assignment)
+                        @php
+                            $scoreCompletion = $assignment->scoresCompletionPercentage();
+                            $allRequiredScoresSubmitted = $assignment->isAllRequiredScoresSubmitted();
+                        @endphp
                         <tr>
                             <td class="px-5 py-4">
                                 <p class="font-bold text-slate-950">{{ $assignment->student->user->name }}</p>
                                 <p class="text-xs text-slate-500">{{ $assignment->student->nim }}</p>
                             </td>
                             <td class="px-5 py-4">{{ $assignment->place->name }}</td>
-                            <td class="px-5 py-4">{{ $assignment->scoresCompletionPercentage() }}%</td>
+                            <td class="px-5 py-4">
+                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-bold {{ $allRequiredScoresSubmitted ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700' }}">
+                                    {{ $scoreCompletion }}% · {{ $allRequiredScoresSubmitted ? 'Lengkap' : 'Belum lengkap' }}
+                                </span>
+                            </td>
                             <td class="px-5 py-4 font-bold text-slate-950">{{ $assignment->finalScore?->final_score ?? '-' }}</td>
                             <td class="px-5 py-4">
                                 @if($assignment->finalScore)
