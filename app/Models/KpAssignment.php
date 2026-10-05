@@ -262,7 +262,8 @@ class KpAssignment extends Model
 
         foreach ($components as $component) {
             $assessorUserIds = $this->requiredAssessorUserIds($component->assessor_type);
-            $expected += max(count($assessorUserIds), 1);
+            $minimumAssessors = $component->assessor_type === 'penguji' ? 2 : 1;
+            $expected += max(count($assessorUserIds), $minimumAssessors);
 
             foreach ($assessorUserIds as $assessorUserId) {
                 $submitted += $this->scores
@@ -287,6 +288,10 @@ class KpAssignment extends Model
         ]);
         $components = $this->period?->assessmentComponents()->where('status', 'aktif')->where('is_required', true)->get() ?? collect();
 
+        if ($components->contains('assessor_type', 'penguji') && ! $this->exam?->hasCompleteExamTeam()) {
+            return false;
+        }
+
         return $components->isNotEmpty() && $components->every(function ($component): bool {
             $assessorUserIds = $this->requiredAssessorUserIds($component->assessor_type);
             if ($assessorUserIds === []) {
@@ -304,6 +309,9 @@ class KpAssignment extends Model
     public function areAllRequiredExaminerScoresSubmitted(): bool
     {
         $this->loadMissing(['scores', 'exam.examiners.user', 'exam.examiner.user']);
+        if (! $this->exam?->hasCompleteExamTeam()) {
+            return false;
+        }
         $components = $this->period?->assessmentComponents()
             ->where('status', 'aktif')
             ->where('is_required', true)

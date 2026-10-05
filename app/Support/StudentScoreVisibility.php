@@ -28,6 +28,10 @@ class StudentScoreVisibility
             return $this->result(false, 'not_published', $override, $requirements, 'Nilai akhir belum dipublish oleh Koordinator KP.');
         }
 
+        if (! $assignment->isAllRequiredScoresSubmitted()) {
+            return $this->result(false, 'scores_incomplete', $override, $requirements, 'Nilai seluruh pembimbing dan tim penguji belum lengkap.');
+        }
+
         if ($override && ! $override->can_view) {
             return $this->result(false, 'student_blocked', $override, $requirements, 'Akses nilai Anda ditahan oleh Koordinator KP.');
         }

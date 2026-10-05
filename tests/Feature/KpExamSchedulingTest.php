@@ -1040,6 +1040,19 @@ class KpExamSchedulingTest extends TestCase
 
     }
 
+    public function test_legacy_schedule_with_one_examiner_is_flagged_for_coordinator(): void
+    {
+        $exam = $this->scheduledExam();
+
+        $this->assertFalse($exam->hasCompleteExamTeam());
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/exams?period='.$this->assignment->kp_period_id)
+            ->assertOk()
+            ->assertSee('Perlu koreksi tim sidang')
+            ->assertSee('Penguji 2 belum ditetapkan')
+            ->assertSee('Lengkapi Tim');
+    }
+
     private function validSchedulePayload(array $overrides = []): array
     {
         return array_merge([

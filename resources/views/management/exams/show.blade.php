@@ -2,6 +2,13 @@
 @section('title','Detail Jadwal Sidang - '.config('app.name'))
 @section('page_title','Detail Jadwal Sidang')
 @section('content')
+@unless($exam->hasCompleteExamTeam())
+    <div class="mb-5 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-800">
+        <p class="font-black">Tim sidang belum lengkap</p>
+        <p class="mt-1">{{ $exam->examTeamIssueLabel() }}. Jadwal baru wajib memiliki Ketua Sidang, Penguji 1, dan Penguji 2.</p>
+        @if($exam->canBeRescheduled())<a href="{{ route('management.exams.edit', $exam) }}" class="mt-3 inline-flex rounded-xl bg-red-700 px-4 py-2 text-xs font-black text-white">Lengkapi Tim Sidang</a>@endif
+    </div>
+@endunless
 @if($errors->any())<div class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{{ $errors->first() }}</div>@endif
 <div class="mb-5 flex flex-wrap gap-2">
     <a href="{{ route('management.exams.index', ['status' => 'dijadwalkan']) }}" class="rounded-xl border border-cyan-200 bg-white px-4 py-2 text-sm font-bold text-cyan-700 shadow-sm">Kembali ke Jadwal Aktif</a>

@@ -9,6 +9,18 @@
         ->map(fn ($items) => max(0.01, (float) $items->sum('weight')));
 @endphp
 <div class="space-y-6">
+    @if(! $assignment->exam)
+        <section class="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+            <p class="font-black">Sidang belum dijadwalkan</p>
+            <p class="mt-1">Penguji 1 dan Penguji 2 baru ditetapkan oleh koordinator pada saat penjadwalan sidang.</p>
+        </section>
+    @elseif(! $assignment->exam->hasCompleteExamTeam())
+        <section class="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-800">
+            <p class="font-black">Tim sidang belum lengkap</p>
+            <p class="mt-1">{{ $assignment->exam->examTeamIssueLabel() }}. Lengkapi tim pada menu Jadwal Sidang sebelum nilai difinalisasi.</p>
+            <a href="{{ route('management.exams.show', $assignment->exam) }}" class="mt-3 inline-flex rounded-xl bg-red-700 px-4 py-2 text-xs font-black text-white">Buka Detail Sidang</a>
+        </section>
+    @endif
     <section class="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
         <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>

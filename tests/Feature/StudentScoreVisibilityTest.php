@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\KpAssignment;
+use App\Models\KpAssessmentComponent;
 use App\Models\KpExam;
 use App\Models\KpExamMinute;
 use App\Models\KpExamRequest;
@@ -15,6 +16,8 @@ use App\Models\KpQuestionnaire;
 use App\Models\KpQuestionnaireResponse;
 use App\Models\KpRegistration;
 use App\Models\KpScoreVisibilityOverride;
+use App\Models\KpScore;
+use App\Models\FieldSupervisor;
 use App\Models\Lecturer;
 use App\Models\Role;
 use App\Models\Student;
@@ -111,14 +114,20 @@ class StudentScoreVisibilityTest extends TestCase
 
         $supervisorUser = $this->makeUser('supervisor-visibility@test.local', ['dosen']);
         $examinerUser = $this->makeUser('examiner-visibility@test.local', ['penguji']);
+        $secondExaminerUser = $this->makeUser('second-examiner-visibility@test.local', ['penguji']);
+        $fieldUser = $this->makeUser('field-visibility@test.local', ['pembimbing_lapangan']);
         $supervisor = Lecturer::create(['user_id' => $supervisorUser->id, 'nidn_nip' => '991101', 'status' => 'active']);
         $examiner = Lecturer::create(['user_id' => $examinerUser->id, 'nidn_nip' => '991102', 'status' => 'active']);
+        $secondExaminer = Lecturer::create(['user_id' => $secondExaminerUser->id, 'nidn_nip' => '991103', 'status' => 'active']);
+        $field = FieldSupervisor::create(['user_id' => $fieldUser->id, 'institution_name' => 'RS UAT', 'position' => 'Pembimbing', 'status' => 'active']);
+        $this->assignment->update(['internal_supervisor_id' => $supervisor->id, 'field_supervisor_id' => $field->id]);
 
         $exam = KpExam::create([
             'kp_exam_request_id' => $examRequest->id,
             'kp_assignment_id' => $this->assignment->id,
             'supervisor_id' => $supervisor->id,
             'examiner_id' => $examiner->id,
+            'chair_lecturer_id' => $supervisor->id,
             'exam_date' => now()->toDateString(),
             'start_time' => '09:00',
             'end_time' => '10:00',
@@ -128,6 +137,34 @@ class StudentScoreVisibilityTest extends TestCase
             'scheduled_by' => $this->koordinator->id,
             'scheduled_at' => now(),
         ]);
+        $exam->examiners()->sync([
+            $examiner->id => ['sort_order' => 1],
+            $secondExaminer->id => ['sort_order' => 2],
+        ]);
+
+        foreach ([
+            ['pembimbing_dalam', $supervisorUser],
+            ['pembimbing_lapangan', $fieldUser],
+            ['penguji', $examinerUser],
+            ['penguji', $secondExaminerUser],
+        ] as [$type, $assessor]) {
+            $component = KpAssessmentComponent::firstOrCreate(
+                ['kp_period_id' => $this->period->id, 'assessor_type' => $type, 'component_name' => $type],
+                ['weight' => 100, 'max_score' => 100, 'status' => 'aktif', 'is_required' => true]
+            );
+            KpScore::create([
+                'kp_assignment_id' => $this->assignment->id,
+                'kp_exam_id' => $type === 'penguji' ? $exam->id : null,
+                'kp_assessment_component_id' => $component->id,
+                'assessor_user_id' => $assessor->id,
+                'assessor_type' => $type,
+                'score' => 88,
+                'weighted_score' => 88,
+                'status' => 'locked',
+                'submitted_at' => now(),
+                'locked_at' => now(),
+            ]);
+        }
 
         KpExamMinute::create([
             'kp_exam_id' => $exam->id,
@@ -171,6 +208,19 @@ class StudentScoreVisibilityTest extends TestCase
             ->assertSee('Nilai Akhir KP')
             ->assertSee('88')
             ->assertSee('A');
+    }
+
+    public function test_published_score_stays_hidden_when_second_examiner_is_missing(): void
+    {
+        $this->period->update(['score_visible_to_students' => true]);
+        $this->assignment->exam->examiners()->detach($this->assignment->exam->examiners->last()->id);
+
+        $this->assertFalse($this->assignment->fresh()->isAllRequiredScoresSubmitted());
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/nilai')
+            ->assertOk()
+            ->assertSee('Nilai seluruh pembimbing dan tim penguji belum lengkap.')
+            ->assertDontSee('Nilai Akhir KP');
     }
 
     public function test_student_specific_override_can_allow_or_block_score_visibility(): void

@@ -81,6 +81,25 @@
         </form>
     </section>
 
+    @if($incompleteTeamExams->isNotEmpty())
+        <section class="rounded-2xl border border-red-200 bg-red-50 p-5 shadow-sm">
+            <p class="text-xs font-black uppercase tracking-widest text-red-700">Perlu koreksi tim sidang</p>
+            <h2 class="mt-1 text-lg font-black text-red-950">{{ $incompleteTeamExams->count() }} jadwal belum memiliki Ketua Sidang dan minimal 2 penguji secara lengkap</h2>
+            <p class="mt-1 text-sm leading-6 text-red-800">Jadwal baru sudah mewajibkan Penguji 1 dan Penguji 2. Daftar berikut berasal dari data jadwal lama atau tim yang belum lengkap.</p>
+            <div class="mt-4 divide-y divide-red-200/70 border-t border-red-200/70">
+                @foreach($incompleteTeamExams as $incompleteExam)
+                    <div class="flex flex-col gap-3 py-3 md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <p class="font-black text-red-950">{{ $incompleteExam->assignment?->student?->user?->name ?? '-' }} <span class="font-normal text-red-700">· {{ $incompleteExam->assignment?->student?->nim ?? '-' }}</span></p>
+                            <p class="mt-1 text-xs font-bold text-red-800">{{ $incompleteExam->scheduleLabel() }} · {{ $incompleteExam->examTeamIssueLabel() }}</p>
+                        </div>
+                        <a href="{{ $incompleteExam->canBeRescheduled() ? route('management.exams.edit', $incompleteExam) : route('management.exams.show', $incompleteExam) }}" class="rounded-xl bg-red-700 px-4 py-2 text-center text-xs font-black text-white">{{ $incompleteExam->canBeRescheduled() ? 'Lengkapi Tim' : 'Lihat Detail' }}</a>
+                    </div>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
     @if(! ($filters['status'] ?? null) || $filters['status'] === 'belum_dijadwalkan')
         <section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-emerald-200">
             <div class="flex flex-wrap items-baseline justify-between gap-2">
@@ -240,6 +259,7 @@
                 @php
                     $isUpcoming = $exam->exam_date && $exam->exam_date->toDateString() >= now()->toDateString() && in_array($exam->status, ['dijadwalkan', 'ditunda'], true);
                     $invitation = $exam->invitation;
+                    $examinerLecturers = $exam->examinerLecturers();
                 @endphp
                 <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                     <div class="grid xl:grid-cols-[140px_minmax(220px,1.15fr)_minmax(250px,1fr)_minmax(250px,1fr)_auto]">
@@ -269,6 +289,9 @@
                                 @if($exam->backdate_reason)
                                     <span class="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-black text-amber-700 ring-1 ring-amber-200">Kasus backdate</span>
                                 @endif
+                                @unless($exam->hasCompleteExamTeam())
+                                    <span class="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-black text-red-700 ring-1 ring-red-200">Tim belum lengkap</span>
+                                @endunless
                             </div>
                             <h3 class="mt-3 text-base font-black text-slate-950">{{ $exam->assignment->student->user->name }}</h3>
                             <p class="mt-1 text-xs font-semibold text-cyan-700">{{ $exam->assignment->student->nim ?: '-' }} · {{ $exam->assignment->period?->name ?? '-' }}</p>
@@ -289,9 +312,11 @@
 
                         <div class="border-b border-slate-100 p-4 text-xs leading-5 text-slate-700 xl:border-b-0 xl:border-r">
                             <p class="text-[11px] font-black uppercase tracking-widest text-slate-400">Tim Sidang</p>
-                            <p class="mt-2"><strong class="text-slate-950">Ketua:</strong><br>{{ $exam->chair ? lecturer_display_name($exam->chair) : '-' }}</p>
+                            <p class="mt-2"><strong class="text-slate-950">Ketua:</strong><br>{{ $exam->chair ? lecturer_display_name($exam->chair) : 'Belum ditetapkan' }}</p>
                             <p class="mt-2"><strong class="text-slate-950">Pembimbing:</strong><br>{{ $exam->supervisor ? lecturer_display_name($exam->supervisor) : '-' }}</p>
-                            <p class="mt-2"><strong class="text-slate-950">Penguji:</strong><br>{{ $exam->examinerNamesLabel() }}</p>
+                            @for($examinerIndex = 0; $examinerIndex < max(2, $examinerLecturers->count()); $examinerIndex++)
+                                <p class="mt-2 {{ $examinerLecturers->get($examinerIndex) ? '' : 'text-red-700' }}"><strong class="text-slate-950">Penguji {{ $examinerIndex + 1 }}:</strong><br>{{ $examinerLecturers->get($examinerIndex) ? lecturer_display_name($examinerLecturers->get($examinerIndex)) : 'Belum ditetapkan' }}</p>
+                            @endfor
                         </div>
 
                         <div class="flex flex-wrap content-start gap-2 p-4 xl:w-44 xl:flex-col">

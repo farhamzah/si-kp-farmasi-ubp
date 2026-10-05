@@ -131,11 +131,15 @@ class KpAssessmentAndFinalScoreTest extends TestCase
 
     public function test_coordinator_can_open_score_monitoring_detail(): void
     {
+        $this->components();
         $this->actingAs($this->koordinator)
             ->withSession(['active_role' => 'koordinator_kp'])
             ->get('/management/scores/'.$this->assignment->id)
             ->assertOk()
             ->assertSee($this->mahasiswa->name)
+            ->assertSee('Penguji 1')
+            ->assertSee('Penguji 2')
+            ->assertSee('Belum ditetapkan')
             ->assertSee('Koreksi Nilai Koordinator');
     }
 
@@ -329,7 +333,7 @@ class KpAssessmentAndFinalScoreTest extends TestCase
             'kp_exam_id' => $this->exam->id,
             'chair_lecturer_id' => $this->examiner->id,
             'result' => 'lulus_revisi',
-            'status' => 'terbit',
+            'status' => 'menunggu_nilai',
         ]);
     }
 
@@ -348,7 +352,6 @@ class KpAssessmentAndFinalScoreTest extends TestCase
             $this->examiner->id => ['sort_order' => 1],
             $secondExaminer->id => ['sort_order' => 2],
         ]);
-
         $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
             ->post('/penguji/penilaian/'.$this->exam->id.'/submit', [
                 'scores' => [['component_id' => $examinerComponent->id, 'score' => 82]],
@@ -422,6 +425,7 @@ class KpAssessmentAndFinalScoreTest extends TestCase
             $this->examiner->id => ['sort_order' => 1],
             $secondExaminer->id => ['sort_order' => 2],
         ]);
+        $this->exam->update(['chair_lecturer_id' => $this->supervisor->id]);
 
         $this->saveAndSubmit($this->supervisorUser, 'pembimbing-dalam', $this->assignment->id, $this->components()[0], 90);
         $this->saveAndSubmit($this->fieldUser, 'pembimbing-lapangan', $this->assignment->id, $field, 80);
@@ -499,6 +503,13 @@ class KpAssessmentAndFinalScoreTest extends TestCase
     public function test_final_score_requires_complete_submitted_scores_then_can_be_finalized_and_published(): void
     {
         [$internal, $field, $examiner] = $this->components();
+        $secondExaminerUser = $this->makeUser('second-final-score@test.local', ['penguji']);
+        $secondExaminer = Lecturer::create(['user_id' => $secondExaminerUser->id, 'nidn_nip' => '881107', 'status' => 'active']);
+        $this->exam->update(['chair_lecturer_id' => $this->supervisor->id]);
+        $this->exam->examiners()->sync([
+            $this->examiner->id => ['sort_order' => 1],
+            $secondExaminer->id => ['sort_order' => 2],
+        ]);
 
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->post('/management/scores/'.$this->assignment->id.'/finalize')
@@ -522,6 +533,14 @@ class KpAssessmentAndFinalScoreTest extends TestCase
         $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
             ->post('/penguji/penilaian/'.$this->exam->id.'/submit')
             ->assertRedirect();
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/scores/'.$this->assignment->id.'/finalize')
+            ->assertSessionHasErrors('final_score');
+        $this->actingAs($secondExaminerUser)->withSession(['active_role' => 'penguji'])
+            ->post('/penguji/penilaian/'.$this->exam->id.'/submit', [
+                'scores' => [['component_id' => $examiner->id, 'score' => 85]],
+            ])->assertRedirect();
 
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->post('/management/scores/'.$this->assignment->id.'/finalize', ['note' => 'Final.'])

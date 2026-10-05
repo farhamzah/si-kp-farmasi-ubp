@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class KpExam extends Model
 {
@@ -46,34 +47,50 @@ class KpExam extends Model
             return false;
         }
 
-        if ((int) $this->examiner_id === (int) $lecturerId) {
-            return true;
-        }
-
-        $this->loadMissing('examiners');
-
-        return $this->examiners->contains('id', $lecturerId);
+        return $this->examinerLecturers()->contains('id', $lecturerId);
     }
 
     public function examinerIds(): array
     {
-        $this->loadMissing('examiners');
+        return $this->examinerLecturers()->pluck('id')->all();
+    }
 
-        return $this->examiners->pluck('id')
-            ->when($this->examiner_id, fn ($ids) => $ids->prepend($this->examiner_id))
-            ->unique()
-            ->values()
-            ->all();
+    public function examinerLecturers(): Collection
+    {
+        $this->loadMissing(['examiners.user', 'examiner.user']);
+
+        return collect([$this->examiner])
+            ->filter()
+            ->concat($this->examiners)
+            ->unique('id')
+            ->values();
+    }
+
+    public function hasCompleteExamTeam(): bool
+    {
+        return filled($this->chair_lecturer_id) && $this->examinerLecturers()->count() >= 2;
+    }
+
+    public function examTeamIssueLabel(): ?string
+    {
+        $issues = collect();
+        if (blank($this->chair_lecturer_id)) {
+            $issues->push('Ketua Sidang belum ditetapkan');
+        }
+        if ($this->examinerLecturers()->count() < 2) {
+            $issues->push($this->examinerLecturers()->isEmpty()
+                ? 'Penguji 1 dan Penguji 2 belum ditetapkan'
+                : 'Penguji 2 belum ditetapkan');
+        }
+
+        return $issues->isEmpty() ? null : $issues->implode(' · ');
     }
 
     public function examinerNamesLabel(): string
     {
-        $this->loadMissing(['examiners.user', 'examiner.user']);
-        $examiners = $this->examiners->isNotEmpty()
-            ? $this->examiners
-            : collect([$this->examiner])->filter();
-
-        return $examiners->map(fn (Lecturer $lecturer): string => lecturer_display_name($lecturer))->implode(', ') ?: '-';
+        return $this->examinerLecturers()
+            ->map(fn (Lecturer $lecturer): string => lecturer_display_name($lecturer))
+            ->implode(', ') ?: '-';
     }
 
     public function statusLabel(): string

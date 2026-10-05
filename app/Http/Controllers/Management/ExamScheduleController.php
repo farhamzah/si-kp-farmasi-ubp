@@ -51,6 +51,12 @@ class ExamScheduleController extends Controller
         $unscheduled = $reportAssignments->filter(fn (KpAssignment $assignment) => ! $assignment->exam);
         $readyCandidates = $unscheduled->filter(fn (KpAssignment $assignment) => $assignment->isEligibleForExamRequest())->values();
         $blockedCandidates = $unscheduled->reject(fn (KpAssignment $assignment) => $assignment->isEligibleForExamRequest())->values();
+        $incompleteTeamExams = (clone $filteredQuery)
+            ->where('status', '!=', 'dibatalkan')
+            ->orderBy('exam_date')
+            ->get()
+            ->reject(fn (KpExam $exam): bool => $exam->hasCompleteExamTeam())
+            ->values();
         $exams = (clone $filteredQuery)
             ->orderByRaw("CASE WHEN exam_date >= ? AND status IN ('dijadwalkan', 'ditunda') THEN 0 ELSE 1 END", [$today])
             ->orderByRaw("CASE WHEN exam_date >= ? AND status IN ('dijadwalkan', 'ditunda') THEN exam_date END ASC", [$today])
@@ -67,11 +73,13 @@ class ExamScheduleController extends Controller
             'officialLecturers' => $identityResolver->options(),
             'readyCandidates' => $readyCandidates,
             'blockedCandidates' => $blockedCandidates,
+            'incompleteTeamExams' => $incompleteTeamExams,
             'stats' => [
                 'reports_available' => $reportAssignments->count(),
                 'scheduled' => $reportAssignments->filter(fn (KpAssignment $assignment) => (bool) $assignment->exam)->count(),
                 'ready_unscheduled' => $readyCandidates->count(),
                 'blocked' => $blockedCandidates->count(),
+                'incomplete_team' => $incompleteTeamExams->count(),
             ],
         ]);
     }

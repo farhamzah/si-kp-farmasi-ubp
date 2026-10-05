@@ -140,13 +140,12 @@ class ScoreMonitoringController extends Controller
         $assignment->refresh();
         $assignmentForView = $assignment->load(['period.assessmentComponents', 'student.user', 'place', 'internalSupervisor.user', 'fieldSupervisor.user', 'exam.examiner.user', 'exam.examiners.user', 'scores.component', 'scores.assessor', 'logbooks', 'finalScore', 'finalReport']);
 
-        $examinerUsers = collect($assignmentForView->exam?->examiners ?? [])
-            ->pluck('user')
-            ->filter();
-        if ($assignmentForView->exam?->examiner?->user) {
-            $examinerUsers->prepend($assignmentForView->exam->examiner->user);
+        $examinerUsers = $assignmentForView->exam
+            ? $assignmentForView->exam->examinerLecturers()->pluck('user')->filter()->values()
+            : collect();
+        while ($examinerUsers->count() < 2) {
+            $examinerUsers->push(null);
         }
-        $examinerUsers = $examinerUsers->unique('id')->values();
 
         $assessors = [
             'pembimbing_dalam' => collect([$assignmentForView->internalSupervisor?->user])->filter()->values(),
