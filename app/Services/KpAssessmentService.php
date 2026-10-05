@@ -156,6 +156,7 @@ class KpAssessmentService
 
     public function calculateFinalScore(KpAssignment $assignment): KpFinalScore
     {
+        $this->ensureActiveAssignment($assignment);
         $score = $this->calculator->breakdown($assignment)['final_score'];
         $final = KpFinalScore::updateOrCreate(
             ['kp_assignment_id' => $assignment->id],
@@ -173,6 +174,7 @@ class KpAssessmentService
 
     public function overrideScores(User $actor, KpAssignment $assignment, array $rows, ?float $attendanceScore = null, ?string $attendanceNote = null): void
     {
+        $this->ensureActiveAssignment($assignment);
         $this->ensureFinalScoreEditable($assignment);
 
         DB::transaction(function () use ($actor, $assignment, $rows, $attendanceScore, $attendanceNote): void {
@@ -225,6 +227,7 @@ class KpAssessmentService
 
     public function finalizeScore(User $actor, KpAssignment $assignment, ?string $note = null): KpFinalScore
     {
+        $this->ensureActiveAssignment($assignment);
         $assignment->loadMissing(['scores', 'period.assessmentComponents']);
         if (! $assignment->isAllRequiredScoresSubmitted()) {
             throw ValidationException::withMessages(['final_score' => 'Nilai belum bisa difinalisasi karena komponen wajib belum lengkap.']);
@@ -241,6 +244,7 @@ class KpAssessmentService
 
     public function publishScore(User $actor, KpFinalScore $finalScore): KpFinalScore
     {
+        $this->ensureActiveAssignment($finalScore->assignment);
         $old = $finalScore->status;
         $finalScore->update(['status' => 'published', 'published_at' => now()]);
         $this->logActivity($actor, $finalScore->assignment, 'final_score_published', null, $old, 'published', null, null, $finalScore->fresh());
@@ -250,6 +254,7 @@ class KpAssessmentService
 
     public function unlockScore(User $actor, KpFinalScore $finalScore, string $reason): KpFinalScore
     {
+        $this->ensureActiveAssignment($finalScore->assignment);
         $old = $finalScore->status;
         $finalScore->update(['status' => 'calculated', 'note' => $reason]);
         $finalScore->assignment->scores()->where('status', 'locked')->update(['status' => 'submitted', 'locked_at' => null]);
@@ -300,7 +305,11 @@ class KpAssessmentService
 
     private function ensureCanAssess(User $assessor, KpAssignment $assignment, string $assessorType): void
     {
+        $this->ensureActiveAssignment($assignment);
         $assignment->loadMissing(['internalSupervisor.user', 'fieldSupervisor.user', 'exam.examiner.user', 'exam.examiners.user']);
+        if ($assessorType === 'penguji') {
+            abort_if($assignment->exam?->status === 'dibatalkan', 404);
+        }
 
         $allowed = match ($assessorType) {
             'pembimbing_dalam' => $assessor->lecturer && $assignment->internal_supervisor_id === $assessor->lecturer->id,
@@ -318,6 +327,11 @@ class KpAssessmentService
         if ($final?->isLocked()) {
             throw ValidationException::withMessages(['final_score' => 'Nilai sudah dikunci/dipublikasikan dan tidak bisa diubah.']);
         }
+    }
+
+    private function ensureActiveAssignment(KpAssignment $assignment): void
+    {
+        abort_unless(in_array($assignment->status, ['aktif', 'berjalan', 'selesai'], true), 404);
     }
 
     private function ensureAssessmentPrerequisitesMet(KpAssignment $assignment, string $assessorType): void

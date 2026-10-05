@@ -1037,6 +1037,10 @@ class KpExamSchedulingTest extends TestCase
 
         $this->assertSame('dibatalkan', $exam->fresh()->status);
         $this->assertDatabaseHas('kp_exam_logs', ['action' => 'exam_cancelled']);
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->get('/penguji/penilaian/'.$exam->id)->assertNotFound();
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->post('/penguji/penilaian/'.$exam->id.'/submit')->assertNotFound();
 
     }
 

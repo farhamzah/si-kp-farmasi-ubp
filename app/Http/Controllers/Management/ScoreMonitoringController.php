@@ -38,6 +38,7 @@ class ScoreMonitoringController extends Controller
         }
 
         $assignmentQuery = KpAssignment::with(['period.assessmentComponents', 'student.user', 'place', 'internalSupervisor.user', 'fieldSupervisor.user', 'exam.examiner.user', 'exam.examiners.user', 'scores.component', 'finalScore'])
+            ->whereIn('status', ['aktif', 'berjalan', 'selesai'])
             ->when($selectedPeriod, fn ($q) => $q->where('kp_period_id', $selectedPeriod->id));
 
         $studentCount = (clone $assignmentQuery)->count();
@@ -135,6 +136,7 @@ class ScoreMonitoringController extends Controller
 
     public function show(KpAssignment $assignment, KpAssessmentService $service, KpScoreCalculator $calculator, StudentScoreVisibility $visibility): View
     {
+        $this->ensureActiveAssignment($assignment);
         $assignment->loadMissing('period');
         $service->ensureDefaultComponents($assignment->period, request()->user());
         $assignment->refresh();
@@ -205,6 +207,7 @@ class ScoreMonitoringController extends Controller
 
     public function updateVisibilityOverride(Request $request, KpAssignment $assignment): RedirectResponse
     {
+        $this->ensureActiveAssignment($assignment);
         $validated = $request->validate([
             'visibility_override' => ['required', Rule::in(['inherit', 'allow', 'deny'])],
             'visibility_note' => ['nullable', 'string', 'max:2000'],
@@ -241,12 +244,14 @@ class ScoreMonitoringController extends Controller
 
     public function calculate(KpAssignment $assignment, KpAssessmentService $service): RedirectResponse
     {
+        $this->ensureActiveAssignment($assignment);
         $service->calculateFinalScore($assignment);
         return back()->with('status', 'Nilai akhir berhasil dihitung.');
     }
 
     public function override(Request $request, KpAssignment $assignment, KpAssessmentService $service): RedirectResponse
     {
+        $this->ensureActiveAssignment($assignment);
         $validated = $request->validate([
             'attendance_score' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'attendance_note' => ['nullable', 'string', 'max:2000'],
@@ -277,20 +282,28 @@ class ScoreMonitoringController extends Controller
 
     public function finalize(FinalizeScoreRequest $request, KpAssignment $assignment, KpAssessmentService $service): RedirectResponse
     {
+        $this->ensureActiveAssignment($assignment);
         $service->finalizeScore($request->user(), $assignment, $request->note);
         return back()->with('status', 'Nilai akhir berhasil dikunci.');
     }
 
     public function publish(KpFinalScore $finalScore, KpAssessmentService $service): RedirectResponse
     {
+        $this->ensureActiveAssignment($finalScore->assignment);
         $service->publishScore(request()->user(), $finalScore);
         return back()->with('status', 'Nilai akhir berhasil dipublish.');
     }
 
     public function unlock(UnlockScoreRequest $request, KpFinalScore $finalScore, KpAssessmentService $service): RedirectResponse
     {
+        $this->ensureActiveAssignment($finalScore->assignment);
         $service->unlockScore($request->user(), $finalScore, $request->reason);
         return back()->with('status', 'Nilai akhir berhasil dibuka kembali.');
+    }
+
+    private function ensureActiveAssignment(KpAssignment $assignment): void
+    {
+        abort_unless(in_array($assignment->status, ['aktif', 'berjalan', 'selesai'], true), 404);
     }
 
     private function mailDeliveryEnabled(): bool

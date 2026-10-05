@@ -24,6 +24,7 @@ use App\Models\Role;
 use App\Models\Student;
 use App\Models\User;
 use App\Services\KpAssessmentService;
+use App\Services\KpAssignmentService;
 use App\Services\KpExamMinuteService;
 use App\Support\KpScoreCalculator;
 use Database\Seeders\RoleSeeder;
@@ -141,6 +142,65 @@ class KpAssessmentAndFinalScoreTest extends TestCase
             ->assertSee('Penguji 2')
             ->assertSee('Belum ditetapkan')
             ->assertSee('Koreksi Nilai Koordinator');
+    }
+
+    public function test_cancelled_placement_is_hidden_and_cannot_be_assessed_or_finalized(): void
+    {
+        [, , $examinerComponent] = $this->components();
+        $oldPlaceName = $this->assignment->place->name;
+        app(KpAssignmentService::class)->cancelAssignment($this->koordinator, $this->assignment, 'Penempatan salah.');
+
+        $newPlace = KpPlace::create(['name' => 'Apotek Pengganti', 'type' => 'apotek', 'status' => 'aktif']);
+        $replacement = KpAssignment::create([
+            'kp_period_id' => $this->assignment->kp_period_id,
+            'kp_registration_id' => $this->assignment->kp_registration_id,
+            'student_id' => $this->assignment->student_id,
+            'kp_place_id' => $newPlace->id,
+            'status' => 'aktif',
+            'assigned_by' => $this->koordinator->id,
+            'assigned_at' => now(),
+            'active_key' => $this->assignment->kp_period_id.'-'.$this->assignment->student_id,
+        ]);
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/scores?period='.$this->assignment->kp_period_id.'&q='.$this->mahasiswa->name)
+            ->assertOk()
+            ->assertViewHas('studentCount', 1)
+            ->assertSee($newPlace->name)
+            ->assertDontSee($oldPlaceName);
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/scores/'.$this->assignment->id)->assertNotFound();
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/scores/'.$this->assignment->id.'/calculate')->assertNotFound();
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/scores/'.$this->assignment->id.'/override', ['attendance_score' => 90])->assertNotFound();
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/scores/'.$this->assignment->id.'/finalize')->assertNotFound();
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->patch('/management/scores/'.$this->assignment->id.'/visibility-override', [
+                'visibility_override' => 'allow',
+            ])->assertNotFound();
+        $final = KpFinalScore::create([
+            'kp_assignment_id' => $this->assignment->id,
+            'final_score' => 90,
+            'final_grade' => 'A',
+            'status' => 'locked',
+            'calculated_at' => now(),
+        ]);
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/final-scores/'.$final->id.'/publish')->assertNotFound();
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/final-scores/'.$final->id.'/unlock', ['reason' => 'Koreksi.'])->assertNotFound();
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->get('/penguji/penilaian/'.$this->exam->id)->assertNotFound();
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->post('/penguji/penilaian/'.$this->exam->id.'/submit', [
+                'scores' => [['component_id' => $examinerComponent->id, 'score' => 90]],
+            ])->assertNotFound();
+
+        $this->assertDatabaseMissing('kp_scores', ['kp_assignment_id' => $this->assignment->id]);
+        $this->assertDatabaseHas('kp_assignments', ['id' => $this->assignment->id, 'status' => 'dibatalkan']);
+        $this->assertDatabaseHas('kp_assignments', ['id' => $replacement->id, 'status' => 'aktif']);
     }
 
     public function test_coordinator_can_list_and_email_assessors_with_pending_scores(): void

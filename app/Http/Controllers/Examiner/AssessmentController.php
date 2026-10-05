@@ -18,6 +18,8 @@ class AssessmentController extends Controller
     {
         $lecturer = request()->user()->lecturer;
         $exams = KpExam::with(['assignment.student.user', 'assignment.period.assessmentComponents', 'assignment.place', 'assignment.scores'])
+            ->whereHas('assignment', fn (Builder $query) => $query->whereIn('status', ['aktif', 'berjalan', 'selesai']))
+            ->where('status', '!=', 'dibatalkan')
             ->where(function (Builder $query) use ($lecturer): void {
                 $query->forExaminer($lecturer?->id)
                     ->orWhere('chair_lecturer_id', $lecturer?->id);
@@ -29,6 +31,7 @@ class AssessmentController extends Controller
 
     public function show(KpExam $exam): View
     {
+        abort_unless(in_array($exam->assignment?->status, ['aktif', 'berjalan', 'selesai'], true) && $exam->status !== 'dibatalkan', 404);
         $lecturerId = request()->user()->lecturer?->id;
         $isExaminer = $exam->hasExaminer($lecturerId);
         $isChair = (int) $exam->chair_lecturer_id === (int) ($lecturerId ?: 0);
