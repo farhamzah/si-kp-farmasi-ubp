@@ -9,6 +9,7 @@ use App\Models\KpAssessmentComponent;
 use App\Models\KpExam;
 use App\Services\KpAssessmentService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -17,16 +18,41 @@ class AssessmentController extends Controller
     public function index(): View
     {
         $lecturer = request()->user()->lecturer;
-        $exams = KpExam::with(['assignment.student.user', 'assignment.period.assessmentComponents', 'assignment.place', 'assignment.scores'])
+        $tab = in_array(request()->query('tab'), ['queue', 'minutes', 'completed'], true) ? request()->query('tab') : 'queue';
+        $exams = KpExam::with(['assignment.student.user', 'assignment.period.assessmentComponents', 'assignment.place', 'assignment.scores', 'assignment.finalScore', 'examiner', 'examiners', 'minutes'])
             ->whereHas('assignment', fn (Builder $query) => $query->whereIn('status', ['aktif', 'berjalan', 'selesai']))
             ->where('status', '!=', 'dibatalkan')
             ->where(function (Builder $query) use ($lecturer): void {
-                $query->forExaminer($lecturer?->id)
-                    ->orWhere('chair_lecturer_id', $lecturer?->id);
+                $query->forExaminer($lecturer?->id);
+                if ($lecturer) {
+                    $query->orWhere('chair_lecturer_id', $lecturer->id);
+                }
             })
-            ->latest('exam_date')->paginate(10);
+            ->latest('exam_date')->get();
 
-        return view('examiner.assessments.index', ['exams' => $exams]);
+        $groups = ['queue' => collect(), 'minutes' => collect(), 'completed' => collect()];
+        foreach ($exams as $exam) {
+            $isExaminer = $exam->hasExaminer($lecturer?->id);
+            $isChair = $lecturer && (int) $exam->chair_lecturer_id === (int) $lecturer->id;
+            $submitted = $isExaminer && $exam->assignment->areRequiredScoresSubmittedBy(request()->user()->id, 'penguji');
+            $group = $isExaminer && ! $submitted && ! $exam->assignment->finalScore?->isLocked()
+                ? 'queue'
+                : ($isChair && $exam->minutes?->status !== 'terbit' ? 'minutes' : 'completed');
+            $groups[$group]->push($exam);
+        }
+
+        $page = LengthAwarePaginator::resolveCurrentPage();
+        $selected = $groups[$tab];
+        $paginated = new LengthAwarePaginator($selected->forPage($page, 10)->values(), $selected->count(), 10, $page, [
+            'path' => LengthAwarePaginator::resolveCurrentPath(),
+            'query' => ['tab' => $tab],
+        ]);
+
+        return view('examiner.assessments.index', [
+            'exams' => $paginated,
+            'tab' => $tab,
+            'counts' => collect($groups)->map(fn ($items) => $items->count()),
+        ]);
     }
 
     public function show(KpExam $exam): View
@@ -34,7 +60,7 @@ class AssessmentController extends Controller
         abort_unless(in_array($exam->assignment?->status, ['aktif', 'berjalan', 'selesai'], true) && $exam->status !== 'dibatalkan', 404);
         $lecturerId = request()->user()->lecturer?->id;
         $isExaminer = $exam->hasExaminer($lecturerId);
-        $isChair = (int) $exam->chair_lecturer_id === (int) ($lecturerId ?: 0);
+        $isChair = $lecturerId && (int) $exam->chair_lecturer_id === (int) $lecturerId;
         abort_unless($isExaminer || $isChair, 403);
 
         app(KpAssessmentService::class)->ensureDefaultComponents($exam->assignment->period, request()->user());

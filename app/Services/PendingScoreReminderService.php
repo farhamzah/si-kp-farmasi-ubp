@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Mail\PendingScoreReminderMail;
 use App\Models\KpAssignment;
+use App\Models\KpExam;
 use App\Models\KpPeriod;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
 
@@ -45,7 +47,8 @@ class PendingScoreReminderService
 
             $exam = $assignment->exam;
             $examComponents = $componentsByType->get('penguji', collect());
-            if (! $exam || $examComponents->isEmpty() || $exam->status === 'dibatalkan' || $exam->exam_date?->isFuture()) {
+            if (! $exam || $examComponents->isEmpty() || in_array($exam->status, ['dibatalkan', 'ditunda'], true)
+                || ($exam->status !== 'selesai' && $exam->exam_date?->isFuture())) {
                 continue;
             }
 
@@ -75,6 +78,26 @@ class PendingScoreReminderService
         return $this->pendingForPeriod($period)->first(
             fn (array $row): bool => $row['assessor']->is($assessor) && $row['assessor_type'] === $assessorType
         );
+    }
+
+    public function filterPending(Collection $pending, ?string $assessorType = null, ?string $examStage = null, ?string $keyword = null): Collection
+    {
+        $keyword = str($keyword)->squish()->lower()->toString();
+
+        return $pending
+            ->filter(fn (array $row): bool => ! $assessorType || $row['assessor_type'] === $assessorType)
+            ->map(function (array $row) use ($examStage, $keyword): array {
+                $assessorMatches = $keyword !== '' && str($row['assessor']->name.' '.$row['assessor']->email)->lower()->contains($keyword);
+                $row['items'] = $row['items']->filter(function (array $item) use ($examStage, $keyword, $assessorMatches): bool {
+                    return (! $examStage || $item['exam_stage'] === $examStage)
+                        && ($keyword === '' || $assessorMatches || str($item['student_name'].' '.$item['student_number'].' '.$item['place_name'])->lower()->contains($keyword));
+                })->values();
+                $row['pending_count'] = $row['items']->count();
+
+                return $row;
+            })
+            ->filter(fn (array $row): bool => $row['pending_count'] > 0)
+            ->values();
     }
 
     public function send(array $pendingRow, KpPeriod $period): void
@@ -132,8 +155,33 @@ class PendingScoreReminderService
             'student_name' => $assignment->student?->user?->name ?? '-',
             'student_number' => $assignment->student?->nim ?? '-',
             'place_name' => $assignment->place?->name ?? '-',
+            ...$this->examStage($assignment->exam),
             'url' => $url,
         ]);
         $pending->put($key, $row);
+    }
+
+    private function examStage(?KpExam $exam): array
+    {
+        if (! $exam || $exam->status === 'dibatalkan') {
+            return ['exam_stage' => 'unscheduled', 'exam_stage_label' => 'Belum dijadwalkan'];
+        }
+        if ($exam->status === 'selesai') {
+            return ['exam_stage' => 'completed', 'exam_stage_label' => 'Sidang selesai'];
+        }
+        if ($exam->status === 'ditunda') {
+            return ['exam_stage' => 'postponed', 'exam_stage_label' => 'Sidang ditunda'];
+        }
+        if (! $exam->exam_date) {
+            return ['exam_stage' => 'unscheduled', 'exam_stage_label' => 'Belum dijadwalkan'];
+        }
+
+        $end = $exam->exam_date
+            ? Carbon::parse($exam->exam_date->format('Y-m-d').' '.($exam->end_time ?: '23:59:59'), config('app.timezone'))
+            : null;
+
+        return $end?->isPast()
+            ? ['exam_stage' => 'elapsed', 'exam_stage_label' => 'Jadwal lewat, belum ditandai selesai']
+            : ['exam_stage' => 'scheduled', 'exam_stage_label' => 'Akan sidang'];
     }
 }

@@ -270,6 +270,52 @@ class KpAssessmentAndFinalScoreTest extends TestCase
             ->assertDontSee($this->examinerUser->email);
     }
 
+    public function test_pending_score_filters_distinguish_roles_and_exam_progress_in_screen_and_report(): void
+    {
+        $this->components();
+        $this->makeReadyForInternalAssessment($this->assignment);
+        $this->makeReadyForFieldAssessment($this->assignment);
+        $this->exam->update(['exam_date' => now()->subDay()->toDateString()]);
+
+        $base = '/management/scores?section=pending&period='.$this->assignment->kp_period_id;
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get($base.'&role=penguji&stage=elapsed')
+            ->assertOk()
+            ->assertSee($this->examinerUser->email)
+            ->assertSee('Jadwal lewat, belum ditandai selesai')
+            ->assertDontSee($this->supervisorUser->email)
+            ->assertDontSee($this->fieldUser->email);
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/scores/pending/preview?period='.$this->assignment->kp_period_id.'&role=penguji&stage=elapsed')
+            ->assertOk()
+            ->assertSee($this->examinerUser->email)
+            ->assertDontSee($this->supervisorUser->email)
+            ->assertSee('Jadwal lewat, belum ditandai selesai');
+
+        $this->exam->update(['status' => 'selesai']);
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get($base.'&role=penguji&stage=completed')
+            ->assertOk()
+            ->assertSee($this->examinerUser->email)
+            ->assertSee('Sidang selesai');
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get($base.'&role=penguji&stage=elapsed')
+            ->assertOk()
+            ->assertDontSee($this->examinerUser->email);
+
+        config()->set('mail.default', 'smtp');
+        Mail::fake();
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post('/management/score-reminders/send-all', [
+                'period_id' => $this->assignment->kp_period_id,
+                'role' => 'penguji',
+                'stage' => 'completed',
+            ])->assertRedirect();
+        Mail::assertSentCount(1);
+        Mail::assertSent(PendingScoreReminderMail::class, fn (PendingScoreReminderMail $mail) => $mail->hasTo($this->examinerUser->email));
+    }
+
     public function test_each_assessor_can_score_only_their_own_assignment_and_invalid_score_is_rejected(): void
     {
         [$internal] = $this->components();
@@ -462,6 +508,10 @@ class KpAssessmentAndFinalScoreTest extends TestCase
 
         $this->actingAs($this->supervisorUser)->withSession(['active_role' => 'penguji'])
             ->get('/penguji/penilaian')
+            ->assertOk()
+            ->assertViewHas('exams', fn ($exams) => $exams->isEmpty());
+        $this->actingAs($this->supervisorUser)->withSession(['active_role' => 'penguji'])
+            ->get('/penguji/penilaian?tab=minutes')
             ->assertOk()
             ->assertSee($this->mahasiswa->name)
             ->assertSee('Ketua Sidang');
@@ -895,8 +945,45 @@ class KpAssessmentAndFinalScoreTest extends TestCase
         $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
             ->get('/penguji/penilaian')
             ->assertOk()
+            ->assertViewHas('exams', fn ($exams) => $exams->isEmpty())
+            ->assertSee('Tidak ada nilai sidang yang menunggu Anda.');
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->get('/penguji/penilaian?tab=completed')
+            ->assertOk()
+            ->assertSee($this->mahasiswa->name)
             ->assertSee('Sudah dinilai')
             ->assertSee('Lihat Nilai');
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->get('/penguji/penilaian/'.$this->exam->id)
+            ->assertOk()
+            ->assertSee('Kembali ke Antrian');
+    }
+
+    public function test_chair_with_submitted_score_finds_unpublished_minutes_in_separate_tab(): void
+    {
+        [, , $examiner] = $this->components();
+        $this->exam->update(['chair_lecturer_id' => $this->examiner->id]);
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->post('/penguji/penilaian/'.$this->exam->id.'/submit', [
+                'scores' => [['component_id' => $examiner->id, 'score' => 88]],
+            ])->assertRedirect();
+
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->get('/penguji/penilaian')->assertOk()->assertViewHas('exams', fn ($exams) => $exams->isEmpty());
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->get('/penguji/penilaian?tab=minutes')->assertOk()->assertSee($this->mahasiswa->name)->assertSee('Buka Berita Acara');
+    }
+
+    public function test_examiner_role_without_lecturer_profile_cannot_see_unassigned_exams(): void
+    {
+        $user = $this->makeUser('examiner-no-profile@test.local', ['penguji']);
+        $this->actingAs($user)->withSession(['active_role' => 'penguji'])
+            ->get('/penguji/penilaian')
+            ->assertOk()
+            ->assertViewHas('exams', fn ($exams) => $exams->isEmpty());
+        $this->actingAs($user)->withSession(['active_role' => 'penguji'])
+            ->get('/penguji/penilaian/'.$this->exam->id)
+            ->assertForbidden();
     }
 
     private function components(): array

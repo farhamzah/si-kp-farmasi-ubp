@@ -2,6 +2,7 @@
 @section('title','Input Nilai Sidang - '.config('app.name'))
 @section('page_title','Input Nilai Sidang')
 @section('content')
+<div class="mb-4"><a href="{{ route('examiner.assessments.index') }}" class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">&larr; Kembali ke Antrian</a></div>
 @if($isExaminer)
     @include('shared.assessments.score-form', [
         'assignment' => $assignment,

@@ -49,22 +49,17 @@ class ScoreMonitoringController extends Controller
 
         $allPendingAssessors = $selectedPeriod ? $reminders->pendingForPeriod($selectedPeriod) : collect();
         $pendingAssessorCount = $allPendingAssessors->count();
-        $pendingAssessors = $allPendingAssessors;
-        if ($section === 'pending' && $request->filled('q')) {
-            $keyword = str($request->q)->squish()->lower()->toString();
-            $pendingAssessors = $allPendingAssessors->filter(function (array $row) use ($keyword): bool {
-                $assessorMatches = str($row['assessor']->name.' '.$row['assessor']->email)->lower()->contains($keyword);
-                $studentMatches = $row['items']->contains(fn (array $item): bool => str($item['student_name'].' '.$item['student_number'])->lower()->contains($keyword));
-
-                return $assessorMatches || $studentMatches;
-            })->values();
-        }
+        $pendingAssessors = $reminders->filterPending($allPendingAssessors,
+            $section === 'pending' ? $this->pendingRole($request) : null,
+            $section === 'pending' ? $this->pendingStage($request) : null,
+            $section === 'pending' ? $request->input('q') : null,
+        );
 
         return view('management.scores.index', [
             'assignments' => $assignments,
             'periods' => $periods,
             'selectedPeriod' => $selectedPeriod,
-            'filters' => [...$request->only(['period', 'q']), 'section' => $section],
+            'filters' => [...$request->only(['period', 'q']), 'role' => $this->pendingRole($request), 'stage' => $this->pendingStage($request), 'section' => $section],
             'studentCount' => $studentCount,
             'pendingAssessors' => $pendingAssessors,
             'pendingAssessorCount' => $pendingAssessorCount,
@@ -102,9 +97,12 @@ class ScoreMonitoringController extends Controller
         $validated = $request->validate([
             'period_id' => ['required', Rule::exists('kp_periods', 'id')],
             'assessor_type' => ['required', Rule::in(['pembimbing_dalam', 'pembimbing_lapangan', 'penguji'])],
+            'stage' => ['nullable', Rule::in(['completed', 'elapsed', 'scheduled', 'unscheduled', 'postponed'])],
+            'q' => ['nullable', 'string', 'max:255'],
         ]);
         $period = KpPeriod::findOrFail($validated['period_id']);
-        $pending = $reminders->findPending($period, $assessor, $validated['assessor_type']);
+        $pending = $reminders->filterPending($reminders->pendingForPeriod($period), $validated['assessor_type'], $validated['stage'] ?? null, $validated['q'] ?? null)
+            ->first(fn (array $row): bool => $row['assessor']->is($assessor));
 
         if (! $pending) {
             return back()->with('status', 'Penilai tersebut sudah melengkapi nilai atau belum memasuki tahap penilaian.');
@@ -121,9 +119,14 @@ class ScoreMonitoringController extends Controller
             return back()->withErrors(['email' => 'Server email belum dikonfigurasi. Atur MAIL_MAILER dan SMTP pada VPS terlebih dahulu.']);
         }
 
-        $validated = $request->validate(['period_id' => ['required', Rule::exists('kp_periods', 'id')]]);
+        $validated = $request->validate([
+            'period_id' => ['required', Rule::exists('kp_periods', 'id')],
+            'role' => ['nullable', Rule::in(['pembimbing_dalam', 'pembimbing_lapangan', 'penguji'])],
+            'stage' => ['nullable', Rule::in(['completed', 'elapsed', 'scheduled', 'unscheduled', 'postponed'])],
+            'q' => ['nullable', 'string', 'max:255'],
+        ]);
         $period = KpPeriod::findOrFail($validated['period_id']);
-        $pending = $reminders->pendingForPeriod($period);
+        $pending = $reminders->filterPending($reminders->pendingForPeriod($period), $validated['role'] ?? null, $validated['stage'] ?? null, $validated['q'] ?? null);
 
         foreach ($pending as $row) {
             $reminders->send($row, $period);
@@ -321,27 +324,59 @@ class ScoreMonitoringController extends Controller
             $assessment->ensureDefaultComponents($period, $request->user());
         }
 
-        $pendingAssessors = $period ? $reminders->pendingForPeriod($period) : collect();
-        if ($request->filled('q')) {
-            $keyword = $request->string('q')->squish()->lower()->toString();
-            $pendingAssessors = $pendingAssessors->filter(function (array $row) use ($keyword): bool {
-                return str($row['assessor']->name.' '.$row['assessor']->email)->lower()->contains($keyword)
-                    || $row['items']->contains(fn (array $item): bool => str($item['student_name'].' '.$item['student_number'].' '.$item['place_name'])->lower()->contains($keyword));
-            })->values();
-        }
+        $pendingAssessors = $reminders->filterPending($period ? $reminders->pendingForPeriod($period) : collect(),
+            $this->pendingRole($request), $this->pendingStage($request), $request->input('q'));
 
         return [
             'period' => $period,
             'pendingAssessors' => $pendingAssessors,
             'pendingAssignmentCount' => $pendingAssessors->sum('pending_count'),
             'uniqueStudentCount' => $pendingAssessors->flatMap(fn (array $row) => $row['items']->pluck('assignment_id'))->unique()->count(),
-            'query' => array_filter($request->only(['period', 'q'])),
+            'query' => array_filter(['period' => $period?->id, 'q' => $request->input('q'), 'role' => $this->pendingRole($request), 'stage' => $this->pendingStage($request)]),
             'filters' => [
                 'Periode' => $period?->name ?? 'Belum ada periode',
                 'Pencarian' => $request->filled('q') ? $request->string('q')->toString() : 'Semua penilai',
+                'Peran' => $this->pendingRoleLabel($this->pendingRole($request)),
+                'Tahap sidang' => $this->pendingStageLabel($this->pendingStage($request)),
             ],
             'logoSrc' => $this->fileDataUri(public_path('images/logo-ubp-karawang.png'), 'image/png'),
         ];
+    }
+
+    private function pendingRole(Request $request): ?string
+    {
+        $role = $request->input('role');
+
+        return in_array($role, ['pembimbing_dalam', 'pembimbing_lapangan', 'penguji'], true) ? $role : null;
+    }
+
+    private function pendingStage(Request $request): ?string
+    {
+        $stage = $request->input('stage');
+
+        return in_array($stage, ['completed', 'elapsed', 'scheduled', 'unscheduled', 'postponed'], true) ? $stage : null;
+    }
+
+    private function pendingRoleLabel(?string $role): string
+    {
+        return match ($role) {
+            'pembimbing_dalam' => 'Pembimbing Dalam',
+            'pembimbing_lapangan' => 'Pembimbing Lapangan',
+            'penguji' => 'Penguji',
+            default => 'Semua peran',
+        };
+    }
+
+    private function pendingStageLabel(?string $stage): string
+    {
+        return match ($stage) {
+            'completed' => 'Sidang selesai',
+            'elapsed' => 'Jadwal lewat, belum ditandai selesai',
+            'scheduled' => 'Akan sidang',
+            'unscheduled' => 'Belum dijadwalkan',
+            'postponed' => 'Sidang ditunda',
+            default => 'Semua tahap',
+        };
     }
 
     private function fileDataUri(string $path, string $mime): ?string

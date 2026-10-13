@@ -60,7 +60,7 @@
     </nav>
 
     <section class="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
-        <form class="grid gap-3 md:grid-cols-[1fr_240px_auto]">
+        <form class="grid gap-3 md:grid-cols-2 {{ $activeSection === 'pending' ? 'xl:grid-cols-[minmax(0,1fr)_200px_190px_220px_auto]' : 'xl:grid-cols-[minmax(0,1fr)_240px_auto]' }}">
             <input type="hidden" name="section" value="{{ $activeSection }}">
             <input name="q" value="{{ $filters['q'] ?? '' }}" placeholder="{{ $activeSection === 'pending' ? 'Cari penilai, email, mahasiswa, atau NIM' : 'Cari nama mahasiswa atau NIM' }}" class="rounded-2xl border-slate-200 text-sm">
             <select name="period" class="rounded-2xl border-slate-200 text-sm">
@@ -68,6 +68,22 @@
                     <option value="{{ $period->id }}" @selected($selectedPeriod?->id === $period->id)>{{ $period->name }}</option>
                 @endforeach
             </select>
+            @if($activeSection === 'pending')
+                <select name="role" aria-label="Jenis penilai" class="rounded-2xl border-slate-200 text-sm">
+                    <option value="">Semua peran</option>
+                    <option value="pembimbing_dalam" @selected(($filters['role'] ?? null) === 'pembimbing_dalam')>Pembimbing Dalam</option>
+                    <option value="pembimbing_lapangan" @selected(($filters['role'] ?? null) === 'pembimbing_lapangan')>Pembimbing Lapangan</option>
+                    <option value="penguji" @selected(($filters['role'] ?? null) === 'penguji')>Penguji</option>
+                </select>
+                <select name="stage" aria-label="Tahap sidang" class="rounded-2xl border-slate-200 text-sm">
+                    <option value="">Semua tahap sidang</option>
+                    <option value="completed" @selected(($filters['stage'] ?? null) === 'completed')>Sidang selesai</option>
+                    <option value="elapsed" @selected(($filters['stage'] ?? null) === 'elapsed')>Jadwal lewat</option>
+                    <option value="scheduled" @selected(($filters['stage'] ?? null) === 'scheduled')>Akan sidang</option>
+                    <option value="unscheduled" @selected(($filters['stage'] ?? null) === 'unscheduled')>Belum dijadwalkan</option>
+                    <option value="postponed" @selected(($filters['stage'] ?? null) === 'postponed')>Sidang ditunda</option>
+                </select>
+            @endif
             <button class="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white">Filter</button>
         </form>
     </section>
@@ -78,23 +94,26 @@
                 <div>
                     <p class="text-xs font-black uppercase tracking-widest text-amber-700">Tindak lanjut penilaian</p>
                     <h3 class="mt-1 text-lg font-black text-slate-950">Penilai Belum Submit</h3>
-                    <p class="mt-1 text-sm text-slate-600">Hanya menampilkan penilaian yang sudah tersedia dan belum disubmit pada {{ $selectedPeriod->name }}.</p>
+                    <p class="mt-1 text-sm text-slate-600">Hanya menampilkan penilaian yang sudah tersedia dan belum disubmit pada {{ $selectedPeriod->name }}. Penguji masuk daftar sejak tanggal sidang; status "jadwal lewat" belum berarti sidang ditandai selesai.</p>
                     @unless($mailDeliveryEnabled)
                         <p class="mt-2 text-sm font-bold text-amber-700">Pengiriman dinonaktifkan karena SMTP server belum dikonfigurasi.</p>
                     @endunless
                 </div>
                 <div class="flex flex-wrap gap-2">
                     @php
-                        $pendingReportQuery = array_filter(['period' => $selectedPeriod->id, 'q' => $filters['q'] ?? null]);
+                        $pendingReportQuery = array_filter(['period' => $selectedPeriod->id, 'q' => $filters['q'] ?? null, 'role' => $filters['role'] ?? null, 'stage' => $filters['stage'] ?? null]);
                     @endphp
                     <a target="_blank" href="{{ route('management.scores.pending.preview', $pendingReportQuery) }}" class="inline-flex min-h-11 items-center rounded-xl border border-cyan-200 px-4 py-2 text-sm font-black text-cyan-700">Preview</a>
                     <a href="{{ route('management.scores.pending.pdf', $pendingReportQuery) }}" class="inline-flex min-h-11 items-center rounded-xl border border-rose-200 px-4 py-2 text-sm font-black text-rose-700">Download PDF</a>
                     <a target="_blank" href="{{ route('management.scores.pending.preview', ['print' => 1] + $pendingReportQuery) }}" class="inline-flex min-h-11 items-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-black text-slate-700">Print</a>
                     @if($pendingAssessors->isNotEmpty() && $mailDeliveryEnabled)
-                        <form method="POST" action="{{ route('management.score-reminders.send-all') }}" onsubmit="return confirm('Kirim pengingat email kepada seluruh penilai tertunda pada periode ini?')">
+                        <form method="POST" action="{{ route('management.score-reminders.send-all') }}" onsubmit="return confirm('Kirim pengingat hanya untuk mahasiswa pada hasil filter ini?')">
                             @csrf
                             <input type="hidden" name="period_id" value="{{ $selectedPeriod->id }}">
-                            <button class="min-h-11 rounded-xl bg-slate-950 px-4 py-2 text-sm font-black text-white">Kirim Semua</button>
+                            <input type="hidden" name="role" value="{{ $filters['role'] ?? '' }}">
+                            <input type="hidden" name="stage" value="{{ $filters['stage'] ?? '' }}">
+                            <input type="hidden" name="q" value="{{ $filters['q'] ?? '' }}">
+                            <button class="min-h-11 rounded-xl bg-slate-950 px-4 py-2 text-sm font-black text-white">Kirim Hasil Filter</button>
                         </form>
                     @endif
                 </div>
@@ -115,13 +134,24 @@
                                 <td class="px-5 py-4"><span class="rounded-full bg-cyan-50 px-3 py-1 text-xs font-bold text-cyan-700">{{ $pending['assessor_label'] }}</span></td>
                                 <td class="px-5 py-4">
                                     <p class="font-bold text-slate-950">{{ $pending['pending_count'] }} mahasiswa</p>
-                                    <p class="mt-1 max-w-xl text-xs leading-5 text-slate-500">{{ $pending['items']->pluck('student_name')->implode(', ') }}</p>
+                                    <div class="mt-1 max-w-xl text-xs leading-5 text-slate-500">
+                                        @foreach($pending['items']->take(3) as $item)
+                                            <p>{{ $item['student_name'] }} · {{ $item['exam_stage_label'] }}</p>
+                                        @endforeach
+                                        @if($pending['items']->count() > 3)
+                                            <details class="mt-1"><summary class="cursor-pointer font-bold text-cyan-700">{{ $pending['items']->count() - 3 }} mahasiswa lainnya</summary>
+                                                @foreach($pending['items']->skip(3) as $item)<p>{{ $item['student_name'] }} · {{ $item['exam_stage_label'] }}</p>@endforeach
+                                            </details>
+                                        @endif
+                                    </div>
                                 </td>
                                 <td class="px-5 py-4 text-right">
                                     <form method="POST" action="{{ route('management.score-reminders.send', $pending['assessor']) }}" onsubmit="return confirm('Kirim pengingat ke {{ $pending['assessor']->email }}?')">
                                         @csrf
                                         <input type="hidden" name="period_id" value="{{ $selectedPeriod->id }}">
                                         <input type="hidden" name="assessor_type" value="{{ $pending['assessor_type'] }}">
+                                        <input type="hidden" name="stage" value="{{ $filters['stage'] ?? '' }}">
+                                        <input type="hidden" name="q" value="{{ $filters['q'] ?? '' }}">
                                         <button @disabled(! $mailDeliveryEnabled) class="rounded-xl border border-cyan-200 px-4 py-2 text-xs font-black text-cyan-700 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400">Kirim Email</button>
                                     </form>
                                 </td>

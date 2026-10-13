@@ -7,9 +7,6 @@
     $scoreLocked = $assignment->finalScore?->isLocked() || $assessmentLocked || $assessorSubmitted;
 @endphp
 <div class="space-y-6">
-    @if(session('status'))
-        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{{ session('status') }}</div>
-    @endif
     <section class="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
         <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>

@@ -32,7 +32,7 @@
                 <td>{{ $pending['pending_count'] }} mahasiswa</td>
                 <td>
                     @foreach($pending['items'] as $item)
-                        <div class="student-item"><strong>{{ $item['student_name'] }}</strong> ({{ $item['student_number'] }}) · {{ $item['place_name'] }}</div>
+                        <div class="student-item"><strong>{{ $item['student_name'] }}</strong> ({{ $item['student_number'] }}) · {{ $item['place_name'] }}<br><span class="muted">{{ $item['exam_stage_label'] }}</span></div>
                     @endforeach
                 </td>
             </tr>
