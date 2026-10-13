@@ -467,6 +467,66 @@ class KpFinalReportTest extends TestCase
             ->assertSee('2210631230201');
     }
 
+    public function test_management_can_preview_print_and_download_filtered_report_in_all_formats(): void
+    {
+        $this->submittedReport();
+        $other = $this->makeUser('other-report@test.local', ['mahasiswa']);
+        $otherStudent = $this->makeStudent($other, '2210631230999');
+        $otherAssignment = $this->makeAssignment($otherStudent, $this->lecturer, $this->field);
+        KpFinalReport::create(['kp_assignment_id' => $otherAssignment->id, 'current_version' => 1, 'status' => 'draft']);
+
+        $query = '?q=2210631230201&status=menunggu_review';
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/final-reports'.$query)
+            ->assertOk()
+            ->assertSee('Preview')
+            ->assertSee('Excel');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/final-reports/report/preview'.$query)
+            ->assertOk()
+            ->assertSee('2210631230201')
+            ->assertDontSee('2210631230999')
+            ->assertSee('Total data:');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/final-reports/report/preview?print=1&q=2210631230201&status=menunggu_review')
+            ->assertOk()
+            ->assertSee('window.print()');
+
+        $pdf = $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/final-reports/report/download/pdf'.$query)
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF', $pdf->getContent());
+        $this->assertStringNotContainsString('2210631230999', $pdf->getContent());
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/final-reports/report/download/word'.$query)
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/msword; charset=UTF-8')
+            ->assertSee('2210631230201')
+            ->assertDontSee('2210631230999');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/final-reports/report/download/excel'.$query)
+            ->assertOk()
+            ->assertHeader('content-disposition', 'attachment; filename=monitoring-laporan-kp-'.now()->format('Ymd-His').'.xlsx');
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/final-reports/report/preview?q=tidak-ada')
+            ->assertOk()
+            ->assertSee('Belum ada data sesuai filter.');
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/final-reports/report/download/excel?q=tidak-ada')
+            ->assertOk();
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/management/final-reports/report/preview')->assertForbidden();
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/management/final-reports/report/download/pdf')->assertForbidden();
+    }
+
     public function test_download_file_is_protected_by_ownership(): void
     {
         $report = $this->submittedReport();

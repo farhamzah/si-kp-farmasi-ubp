@@ -179,6 +179,8 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('logbooks/{logbook}/evidence/download', [LogbookMonitoringController::class, 'download'])->name('logbooks.evidence.download');
             Route::get('logbook-logs', [LogbookLogController::class, 'index'])->name('logbook-logs.index');
             Route::get('final-reports', [FinalReportMonitoringController::class, 'index'])->name('final-reports.index');
+            Route::get('final-reports/report/preview', [FinalReportMonitoringController::class, 'preview'])->name('final-reports.report.preview');
+            Route::get('final-reports/report/download/{format}', [FinalReportMonitoringController::class, 'reportDownload'])->name('final-reports.report.download');
             Route::get('final-reports/{report}', [FinalReportMonitoringController::class, 'show'])->name('final-reports.show');
             Route::get('final-reports/files/{file}/download', [FinalReportMonitoringController::class, 'download'])->name('final-reports.files.download');
             Route::get('final-report-logs', [FinalReportLogController::class, 'index'])->name('final-report-logs.index');

@@ -54,6 +54,21 @@
         </form>
     </section>
 
+    @php($reportQuery = request()->only(['q', 'period', 'status', 'internal_status', 'field_status', 'sort']))
+    <section class="si-card flex flex-wrap items-center justify-between gap-3 p-4">
+        <div>
+            <h2 class="font-semibold text-slate-950">Laporan monitoring</h2>
+            <p class="text-sm text-slate-500">Seluruh data sesuai filter, termasuk halaman berikutnya.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="{{ route('management.final-reports.report.preview', $reportQuery) }}" target="_blank" rel="noopener" class="si-btn si-btn-secondary">Preview</a>
+            <a href="{{ route('management.final-reports.report.preview', array_merge($reportQuery, ['print' => 1])) }}" target="_blank" rel="noopener" class="si-btn si-btn-secondary">Print</a>
+            <a href="{{ route('management.final-reports.report.download', array_merge(['format' => 'pdf'], $reportQuery)) }}" class="si-btn si-btn-secondary">PDF</a>
+            <a href="{{ route('management.final-reports.report.download', array_merge(['format' => 'excel'], $reportQuery)) }}" class="si-btn si-btn-secondary">Excel</a>
+            <a href="{{ route('management.final-reports.report.download', array_merge(['format' => 'word'], $reportQuery)) }}" class="si-btn si-btn-secondary">Word</a>
+        </div>
+    </section>
+
     <section class="si-table-wrap">
         <div class="overflow-x-auto">
             <table class="si-data-table">

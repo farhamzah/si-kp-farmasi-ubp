@@ -22,6 +22,7 @@ class KpTableReportExport implements FromArray, ShouldAutoSize, WithEvents
         private readonly string $title,
         private readonly array $meta,
         private readonly Collection $rows,
+        private readonly ?array $emptyHeadings = null,
     ) {
         $this->headingRow = 5 + (int) ceil((count($this->meta) + 1) / 2);
         $this->lastColumnIndex = max(1, count($this->headings()));
@@ -113,7 +114,7 @@ class KpTableReportExport implements FromArray, ShouldAutoSize, WithEvents
 
     private function headings(): array
     {
-        return array_keys($this->rows->first() ?? [
+        return array_keys($this->rows->first() ?? $this->emptyHeadings ?? [
             'No' => '',
             'Mahasiswa' => '',
             'NIM' => '',
