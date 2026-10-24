@@ -18,6 +18,7 @@ class ExamInvitationInboxController extends Controller
                 'assignment.student.user',
                 'assignment.period',
                 'assignment.place',
+                'assignment.finalReport.latestFile',
                 'assignment.internalSupervisor.user',
                 'assignment.fieldSupervisor.user',
                 'supervisor.user',

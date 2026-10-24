@@ -29,7 +29,7 @@
             <div>
                 <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Inbox Jadwal Sidang</p>
                 <h2 class="mt-1 text-2xl font-black text-slate-950">Undangan sidang</h2>
-                <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-600">Daftar ini dibaca dari jadwal sidang KP. Surat resmi muncul jika koordinator sudah menerbitkan undangan, lengkap dengan preview, PDF, dan QR verifikasi.</p>
+                <p class="mt-1 max-w-3xl text-sm leading-6 text-slate-600">Daftar ini dibaca dari jadwal sidang KP. Surat resmi muncul jika koordinator sudah menerbitkan undangan. Laporan mahasiswa dapat dibuka dari undangan yang sama.</p>
             </div>
             <span class="w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-200">Read-only</span>
         </div>
@@ -95,6 +95,11 @@
                                 <a href="{{ route('exam-invitations.letter.pdf', $exam->invitation) }}" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-center text-xs font-black text-slate-700">Download PDF</a>
                             @else
                                 <span class="rounded-xl bg-amber-50 px-3 py-2 text-center text-xs font-bold text-amber-700 ring-1 ring-amber-100">Surat belum diterbitkan koordinator</span>
+                            @endif
+                            @if($assignment?->finalReport && ($assignment->finalReport->final_document_url || $assignment->finalReport->latestFile))
+                                <a href="{{ route('exam-invitations.report.preview', $exam) }}" target="_blank" rel="noopener" class="rounded-xl border border-emerald-200 bg-white px-4 py-2 text-center text-xs font-black text-emerald-700">Preview Laporan</a>
+                            @else
+                                <span class="rounded-xl bg-amber-50 px-3 py-2 text-center text-xs font-bold text-amber-700 ring-1 ring-amber-100">Laporan belum tersedia</span>
                             @endif
                             <div class="rounded-xl bg-white px-3 py-2 text-xs leading-5 text-slate-600 ring-1 ring-slate-200">
                                 <div><span class="font-black text-slate-700">Pembimbing:</span> {{ $exam->supervisor ? lecturer_display_name($exam->supervisor) : '-' }}</div>

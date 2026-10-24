@@ -9,6 +9,7 @@ use App\Http\Controllers\Examiner\AssessmentController as ExaminerAssessmentCont
 use App\Http\Controllers\Examiner\ExamScheduleController as ExaminerExamScheduleController;
 use App\Http\Controllers\ExamInvitationInboxController;
 use App\Http\Controllers\ExamInvitationLetterController;
+use App\Http\Controllers\ExamInvitationReportController;
 use App\Http\Controllers\ExamMinuteController;
 use App\Http\Controllers\FieldSupervisor\AssessmentController as FieldAssessmentController;
 use App\Http\Controllers\FieldSupervisor\CompetencyController as FieldCompetencyController;
@@ -114,6 +115,8 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/undangan-sidang/surat/{invitation}', [ExamInvitationLetterController::class, 'preview'])->name('exam-invitations.letter.preview');
         Route::get('/undangan-sidang/surat/{invitation}/pdf', [ExamInvitationLetterController::class, 'downloadPdf'])->name('exam-invitations.letter.pdf');
         Route::get('/undangan-sidang/surat/{invitation}/word', [ExamInvitationLetterController::class, 'downloadWord'])->name('exam-invitations.letter.word');
+        Route::get('/undangan-sidang/{exam}/laporan', [ExamInvitationReportController::class, 'preview'])->name('exam-invitations.report.preview');
+        Route::get('/undangan-sidang/{exam}/laporan/file', [ExamInvitationReportController::class, 'file'])->name('exam-invitations.report.file');
         Route::get('/berita-acara-sidang/{minute}', [ExamMinuteController::class, 'preview'])->name('exam-minutes.preview');
         Route::get('/berita-acara-sidang/{minute}/pdf', [ExamMinuteController::class, 'downloadPdf'])->name('exam-minutes.pdf');
 

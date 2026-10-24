@@ -100,6 +100,7 @@ class ExamInvitationLetterController extends Controller
                 'exam.assignment.student.user',
                 'exam.assignment.period',
                 'exam.assignment.place',
+                'exam.assignment.finalReport',
                 'exam.assignment.fieldSupervisor.user',
                 'exam.supervisor.user',
                 'exam.examiner.user',

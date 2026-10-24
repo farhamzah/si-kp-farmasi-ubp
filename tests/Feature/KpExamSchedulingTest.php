@@ -707,6 +707,82 @@ class KpExamSchedulingTest extends TestCase
         $this->assertSame('dijadwalkan', $exam->fresh()->status);
     }
 
+    public function test_examiner_can_preview_report_from_invitation_but_unassigned_user_cannot(): void
+    {
+        $exam = $this->scheduledExam();
+        $exam->examiners()->attach($this->secondExaminer->id, ['sort_order' => 2]);
+        $invitation = KpExamInvitation::create([
+            'kp_exam_id' => $exam->id,
+            'letter_number' => '001/UND-KP/2026',
+            'verification_code' => 'REPORTTEST001',
+            'coordinator_name' => 'Koordinator',
+            'head_program_name' => 'Kaprodi',
+            'dean_name' => 'Dekan',
+        ]);
+
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->get('/undangan-sidang')
+            ->assertOk()
+            ->assertSee('Preview Laporan')
+            ->assertSee(route('exam-invitations.report.preview', $exam));
+
+        $this->actingAs($this->secondExaminerUser)->withSession(['active_role' => 'penguji'])
+            ->get(route('exam-invitations.report.preview', $exam))
+            ->assertOk()
+            ->assertSee('Evaluasi Pelayanan Kefarmasian di Apotek Sehat')
+            ->assertSee('https://docs.google.com/document/d/final');
+
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->get(route('exam-invitations.letter.preview', $invitation))
+            ->assertOk()
+            ->assertSee('Preview Laporan');
+
+        $this->actingAs($this->nonExaminer->user)->withSession(['active_role' => 'pembimbing_dalam'])
+            ->get(route('exam-invitations.report.preview', $exam))->assertForbidden();
+
+        $exam->examiners()->detach($this->secondExaminer->id);
+        $this->actingAs($this->secondExaminerUser)->withSession(['active_role' => 'penguji'])
+            ->get(route('exam-invitations.report.preview', $exam))->assertForbidden();
+    }
+
+    public function test_invitation_report_pdf_preview_and_download_are_private(): void
+    {
+        Storage::fake('local');
+        $exam = $this->scheduledExam();
+        $report = $this->assignment->finalReport;
+        $report->update(['final_document_url' => null]);
+        $report->files()->create([
+            'version' => 1,
+            'original_filename' => 'laporan-sidang.pdf',
+            'file_path' => 'kp-final-reports/laporan-sidang.pdf',
+            'file_disk' => 'local',
+            'file_mime' => 'application/pdf',
+            'file_size' => 16,
+            'uploaded_by' => $this->mahasiswa->id,
+            'uploaded_at' => now(),
+        ]);
+        Storage::disk('local')->put('kp-final-reports/laporan-sidang.pdf', '%PDF-1.4 test');
+
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->get(route('exam-invitations.report.preview', $exam))
+            ->assertOk()
+            ->assertSee('Preview laporan KP')
+            ->assertSee(route('exam-invitations.report.file', $exam));
+
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->get(route('exam-invitations.report.file', $exam))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+
+        $this->actingAs($this->examinerUser)->withSession(['active_role' => 'penguji'])
+            ->get(route('exam-invitations.report.file', ['exam' => $exam, 'download' => 1]))
+            ->assertOk()
+            ->assertDownload('laporan-sidang.pdf');
+
+        $this->actingAs($this->secondExaminerUser)->withSession(['active_role' => 'penguji'])
+            ->get(route('exam-invitations.report.file', $exam))->assertForbidden();
+    }
+
     public function test_koordinator_can_publish_official_exam_invitation_letter(): void
     {
         $exam = $this->scheduledExam();
