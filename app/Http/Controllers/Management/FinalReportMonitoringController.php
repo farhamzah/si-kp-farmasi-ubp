@@ -201,6 +201,15 @@ class FinalReportMonitoringController extends Controller
         return back()->with('success', 'Laporan disetujui atas nama tindakan koordinator.');
     }
 
+    public function submitDraftOnBehalf(Request $request, KpFinalReport $report, KpFinalReportService $service)
+    {
+        $this->ensureCoordinator($request);
+        $data = $request->validate(['reason' => ['required', 'string', 'min:10', 'max:1000']]);
+        $service->submitDraftOnBehalf($request->user(), $report, $data['reason']);
+
+        return back()->with('success', 'Draft diajukan untuk review oleh koordinator. Periksa laporan sebelum memberi persetujuan.');
+    }
+
     public function approveGuidanceOnBehalf(Request $request, KpFinalReport $report, KpReportGuidanceLog $guidance, KpFinalReportService $service)
     {
         $this->ensureCoordinator($request);

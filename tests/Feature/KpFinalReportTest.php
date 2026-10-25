@@ -487,6 +487,44 @@ class KpFinalReportTest extends TestCase
         $this->post($base.'/approve/field', ['reason' => 'Upaya approval ulang oleh koordinator.'])->assertSessionHasErrors('report');
     }
 
+    public function test_coordinator_can_submit_documented_draft_then_approve_it_without_impersonating_student(): void
+    {
+        $report = $this->submittedReport();
+        $report->update(['status' => 'draft', 'submitted_at' => null]);
+        $base = '/management/final-reports/'.$report->id;
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get($base)->assertOk()->assertSee('Ajukan untuk Review')->assertDontSee('Setujui Laporan');
+        $this->post($base.'/submit-draft', ['reason' => 'singkat'])->assertSessionHasErrors('reason');
+        $this->post($base.'/submit-draft', ['reason' => 'Laporan sudah diperiksa dan siap direview.'])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertSame('menunggu_review', $report->fresh()->status);
+        $this->assertNotNull($report->fresh()->submitted_at);
+        $this->assertDatabaseHas('kp_final_report_logs', [
+            'kp_final_report_id' => $report->id,
+            'user_id' => $this->koordinator->id,
+            'action' => 'coordinator_submitted_draft',
+        ]);
+        $this->get($base)->assertOk()->assertSee('Setujui Laporan');
+        $this->post($base.'/approve/internal', ['reason' => 'Laporan telah diperiksa koordinator.'])->assertRedirect();
+        $this->assertSame('disetujui', $report->fresh()->internal_review_status);
+    }
+
+    public function test_coordinator_cannot_submit_empty_or_non_draft_report_and_admin_cannot_override(): void
+    {
+        $report = KpFinalReport::create(['kp_assignment_id' => $this->assignment->id, 'current_version' => 1, 'status' => 'draft']);
+        $url = '/management/final-reports/'.$report->id.'/submit-draft';
+        $reason = ['reason' => 'Dokumen sudah saya periksa langsung.'];
+
+        $this->actingAs($this->admin)->withSession(['active_role' => 'admin'])->post($url, $reason)->assertForbidden();
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/final-reports/'.$report->id)->assertSee('Belum ada dokumen')->assertDontSee('Ajukan untuk Review');
+        $this->post($url, $reason)->assertSessionHasErrors('report');
+        $report->update(['status' => 'revisi', 'final_document_url' => 'https://drive.google.com/file/d/example/view']);
+        $this->post($url, $reason)->assertSessionHasErrors('report');
+        $this->assertSame('revisi', $report->fresh()->status);
+    }
+
     public function test_coordinator_override_requires_reason_and_cannot_bypass_draft_revision_or_role(): void
     {
         $report = $this->submittedReport();

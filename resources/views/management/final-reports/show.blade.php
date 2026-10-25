@@ -10,6 +10,23 @@
         <p class="text-sm text-slate-500">{{ $report->assignment->student->user->name }} | {{ $report->assignment->student->nim ?: '-' }}</p>
         <h2 class="mt-1 text-xl font-bold text-slate-950">{{ $report->assignment->place->name }}</h2>
         <span class="mt-2 inline-flex rounded px-2 py-1 text-xs font-semibold ring-1 {{ $report->statusBadgeClass() }}">{{ $report->statusLabel() }}</span>
+        @if($report->status === 'draft')
+            <div class="mt-4 rounded border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                <p class="font-semibold">Laporan belum diajukan untuk review</p>
+                <p class="mt-1">Draft dibuat saat mahasiswa menyimpan file atau tautan. Persetujuan pembimbing belum dapat dilakukan sampai laporan diajukan.</p>
+                @if($isCoordinator && ($report->files->isNotEmpty() || filled($report->final_document_url)))
+                    <form method="POST" action="{{ route('management.final-reports.submit-draft-on-behalf', $report) }}" class="mt-3 flex flex-wrap items-end gap-2">
+                        @csrf
+                        <label class="min-w-64 flex-1 text-xs font-semibold">Alasan pengajuan oleh koordinator
+                            <input name="reason" required minlength="10" maxlength="1000" class="si-input mt-1" placeholder="Alasan dan hasil pemeriksaan dokumen">
+                        </label>
+                        <button class="si-btn si-btn-primary" onclick="return confirm('Dokumen sudah diperiksa dan siap diajukan untuk review?')">Ajukan untuk Review</button>
+                    </form>
+                @elseif($isCoordinator)
+                    <p class="mt-2 font-semibold">Belum ada dokumen. Minta mahasiswa mengunggah file atau tautan laporan terlebih dahulu.</p>
+                @endif
+            </div>
+        @endif
         <div class="mt-4 grid gap-4 md:grid-cols-2">
             @foreach(['internal' => 'Pembimbing Dalam', 'field' => 'Pembimbing Lapangan'] as $role => $label)
                 <div class="rounded border border-slate-200 p-4 text-sm">

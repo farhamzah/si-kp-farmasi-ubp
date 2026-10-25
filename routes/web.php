@@ -185,6 +185,7 @@ Route::middleware(['auth', 'active'])->group(function () {
             Route::get('final-reports/report/preview', [FinalReportMonitoringController::class, 'preview'])->name('final-reports.report.preview');
             Route::get('final-reports/report/download/{format}', [FinalReportMonitoringController::class, 'reportDownload'])->name('final-reports.report.download');
             Route::get('final-reports/{report}', [FinalReportMonitoringController::class, 'show'])->name('final-reports.show');
+            Route::post('final-reports/{report}/submit-draft', [FinalReportMonitoringController::class, 'submitDraftOnBehalf'])->name('final-reports.submit-draft-on-behalf');
             Route::post('final-reports/{report}/approve/{role}', [FinalReportMonitoringController::class, 'approveOnBehalf'])->name('final-reports.approve-on-behalf');
             Route::post('final-reports/{report}/guidance/{guidance}/approve', [FinalReportMonitoringController::class, 'approveGuidanceOnBehalf'])->name('final-reports.guidance.approve-on-behalf');
             Route::post('final-reports/{report}/guidance/{role}/complete', [FinalReportMonitoringController::class, 'completeGuidanceOnBehalf'])->name('final-reports.guidance.complete-on-behalf');

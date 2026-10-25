@@ -112,6 +112,39 @@ class KpFinalReportService
         return $report->fresh();
     }
 
+    public function submitDraftOnBehalf(User $coordinator, KpFinalReport $report, string $reason): KpFinalReport
+    {
+        abort_unless($coordinator->hasRole('koordinator_kp'), 403);
+
+        return DB::transaction(function () use ($coordinator, $report, $reason) {
+            $report = KpFinalReport::query()->lockForUpdate()->findOrFail($report->id);
+            if ($report->status !== 'draft') {
+                throw ValidationException::withMessages(['report' => 'Hanya laporan berstatus Draft yang dapat diajukan oleh koordinator.']);
+            }
+            if (! $report->files()->exists() && blank($report->final_document_url)) {
+                throw ValidationException::withMessages(['report' => 'Mahasiswa harus menambahkan file atau tautan laporan sebelum diajukan.']);
+            }
+
+            $report->update([
+                'status' => 'menunggu_review',
+                'submitted_at' => now(),
+                'internal_review_status' => 'pending',
+                'internal_reviewed_by' => null,
+                'internal_reviewed_at' => null,
+                'internal_review_note' => null,
+                'field_review_status' => 'pending',
+                'field_reviewed_by' => null,
+                'field_reviewed_at' => null,
+                'field_review_note' => null,
+            ]);
+            $this->logActivity($coordinator, $report, 'coordinator_submitted_draft', 'draft', 'menunggu_review', $reason, [
+                'submitted_on_behalf_of_assignment_id' => $report->kp_assignment_id,
+            ]);
+
+            return $report->fresh();
+        });
+    }
+
     public function approve(User $lecturerUser, KpFinalReport $report, ?string $note = null): KpFinalReport
     {
         $this->ensureLecturerCanReview($lecturerUser, $report);

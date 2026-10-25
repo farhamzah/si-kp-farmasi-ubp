@@ -120,6 +120,9 @@
                             <td>
                                 <span class="rounded-full px-2.5 py-1 text-xs font-semibold ring-1 {{ $report->statusBadgeClass() }}">{{ $report->statusLabel() }}</span>
                                 <div class="mt-2 text-xs text-slate-500">Versi {{ $report->current_version }}</div>
+                                @if($report->status === 'draft')
+                                    <div class="mt-1 text-xs text-amber-800">{{ $report->latestFile || filled($report->final_document_url) ? 'Belum diajukan' : 'Dokumen belum ada' }}</div>
+                                @endif
                             </td>
                             <td><a href="{{ route('management.final-reports.show',$report) }}" class="si-btn si-btn-secondary min-h-9 px-3 py-1.5 text-xs text-cyan-700">Detail</a></td>
                         </tr>
