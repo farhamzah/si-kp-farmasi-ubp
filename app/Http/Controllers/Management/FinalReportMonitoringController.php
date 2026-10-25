@@ -7,7 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Models\KpFinalReport;
 use App\Models\KpFinalReportFile;
 use App\Models\KpPeriod;
+use App\Models\KpReportGuidanceLog;
 use App\Models\User;
+use App\Services\KpFinalReportService;
 use App\Support\SimplePdfReport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -114,12 +116,12 @@ class FinalReportMonitoringController extends Controller
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
             ->when($internalStatus === 'guidance_pending', fn ($q) => $q->whereNull('internal_guidance_completed_at'))
             ->when($internalStatus === 'guidance_completed', fn ($q) => $q->whereNotNull('internal_guidance_completed_at'))
-            ->when($internalStatus === 'report_pending', fn ($q) => $q->where(fn ($status) => $status->whereNull('internal_review_status')->orWhere('internal_review_status', '!=', 'disetujui')))
+            ->when($internalStatus === 'report_pending', fn ($q) => $q->where('status', 'menunggu_review')->where(fn ($status) => $status->whereNull('internal_review_status')->orWhere('internal_review_status', 'pending')))
             ->when($internalStatus === 'report_approved', fn ($q) => $q->where('internal_review_status', 'disetujui'))
             ->when($internalStatus === 'completed', fn ($q) => $q->whereNotNull('internal_guidance_completed_at')->where('internal_review_status', 'disetujui'))
             ->when($fieldStatus === 'guidance_pending', fn ($q) => $q->whereNull('field_guidance_completed_at'))
             ->when($fieldStatus === 'guidance_completed', fn ($q) => $q->whereNotNull('field_guidance_completed_at'))
-            ->when($fieldStatus === 'report_pending', fn ($q) => $q->where(fn ($status) => $status->whereNull('field_review_status')->orWhere('field_review_status', '!=', 'disetujui')))
+            ->when($fieldStatus === 'report_pending', fn ($q) => $q->where('status', 'menunggu_review')->where(fn ($status) => $status->whereNull('field_review_status')->orWhere('field_review_status', 'pending')))
             ->when($fieldStatus === 'report_approved', fn ($q) => $q->where('field_review_status', 'disetujui'))
             ->when($fieldStatus === 'completed', fn ($q) => $q->whereNotNull('field_guidance_completed_at')->where('field_review_status', 'disetujui'))
             ->when($request->filled('q'), function ($q) use ($request) {
@@ -186,8 +188,40 @@ class FinalReportMonitoringController extends Controller
     public function show(KpFinalReport $report): View
     {
         return view('management.final-reports.show', [
-            'report' => $report->load(['assignment.student.user', 'assignment.period', 'assignment.place', 'assignment.internalSupervisor.user', 'files.uploadedBy', 'logs.user', 'latestFile']),
+            'report' => $report->load(['assignment.student.user', 'assignment.period', 'assignment.place', 'assignment.internalSupervisor.user', 'assignment.fieldSupervisor.user', 'assignment.reportGuidanceLogs.validatedBy', 'files.uploadedBy', 'logs.user', 'latestFile']),
         ]);
+    }
+
+    public function approveOnBehalf(Request $request, KpFinalReport $report, string $role, KpFinalReportService $service)
+    {
+        $this->ensureCoordinator($request);
+        $data = $request->validate(['reason' => ['required', 'string', 'min:10', 'max:1000']]);
+        $service->approveOnBehalf($request->user(), $report, $role, $data['reason']);
+
+        return back()->with('success', 'Laporan disetujui atas nama tindakan koordinator.');
+    }
+
+    public function approveGuidanceOnBehalf(Request $request, KpFinalReport $report, KpReportGuidanceLog $guidance, KpFinalReportService $service)
+    {
+        $this->ensureCoordinator($request);
+        $data = $request->validate(['reason' => ['required', 'string', 'min:10', 'max:1000']]);
+        $service->approveGuidanceOnBehalf($request->user(), $report, $guidance, $data['reason']);
+
+        return back()->with('success', 'Sesi bimbingan divalidasi oleh koordinator.');
+    }
+
+    public function completeGuidanceOnBehalf(Request $request, KpFinalReport $report, string $role, KpFinalReportService $service)
+    {
+        $this->ensureCoordinator($request);
+        $data = $request->validate(['reason' => ['required', 'string', 'min:10', 'max:1000']]);
+        $service->completeGuidanceOnBehalf($request->user(), $report, $role, $data['reason']);
+
+        return back()->with('success', 'Bimbingan ditandai selesai oleh koordinator.');
+    }
+
+    private function ensureCoordinator(Request $request): void
+    {
+        abort_unless($request->session()->get('active_role') === 'koordinator_kp' && $request->user()->hasRole('koordinator_kp'), 403);
     }
 
     public function download(KpFinalReportFile $file): StreamedResponse

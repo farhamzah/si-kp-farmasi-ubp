@@ -467,6 +467,65 @@ class KpFinalReportTest extends TestCase
             ->assertSee('2210631230201');
     }
 
+    public function test_coordinator_can_approve_submitted_report_on_behalf_of_each_supervisor_with_audit(): void
+    {
+        $report = $this->submittedReport();
+        $base = '/management/final-reports/'.$report->id;
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get('/management/final-reports?internal_status=report_pending')
+            ->assertOk()->assertSee('2210631230201');
+        $this->post($base.'/approve/internal', ['reason' => 'Dokumen telah diperiksa koordinator.'])->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('menunggu_review', $report->fresh()->status);
+        $this->assertSame($this->koordinator->id, $report->fresh()->internal_reviewed_by);
+        $this->assertDatabaseHas('kp_final_report_logs', ['kp_final_report_id' => $report->id, 'user_id' => $this->koordinator->id, 'action' => 'coordinator_internal_approved']);
+
+        $this->post($base.'/approve/field', ['reason' => 'Dokumen lapangan telah diperiksa.'])->assertRedirect();
+        $this->assertSame('disetujui', $report->fresh()->status);
+        $this->assertSame($this->koordinator->id, $report->fresh()->field_reviewed_by);
+        $this->get('/management/final-reports?internal_status=report_pending')->assertDontSee('2210631230201');
+        $this->post($base.'/approve/field', ['reason' => 'Upaya approval ulang oleh koordinator.'])->assertSessionHasErrors('report');
+    }
+
+    public function test_coordinator_override_requires_reason_and_cannot_bypass_draft_revision_or_role(): void
+    {
+        $report = $this->submittedReport();
+        $url = '/management/final-reports/'.$report->id.'/approve/internal';
+        $this->actingAs($this->admin)->withSession(['active_role' => 'admin'])
+            ->post($url, ['reason' => 'Dokumen sudah diperiksa.'])->assertForbidden();
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post($url, ['reason' => 'pendek'])->assertSessionHasErrors('reason');
+        $report->update(['status' => 'revisi']);
+        $this->post($url, ['reason' => 'Dokumen sudah diperiksa.'])->assertSessionHasErrors('report');
+        $this->assertNull($report->fresh()->internal_reviewed_by);
+    }
+
+    public function test_coordinator_can_validate_pending_guidance_and_complete_only_after_minimum(): void
+    {
+        $report = $this->submittedReport();
+        $guidance = $this->assignment->reportGuidanceLogs()->create([
+            'reviewer_type' => 'internal', 'guidance_date' => today(), 'topic' => 'Perbaikan laporan',
+            'status' => 'menunggu_validasi', 'submitted_at' => now(),
+        ]);
+        $base = '/management/final-reports/'.$report->id;
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get($base)->assertOk()->assertSee('Validasi Sesi');
+        $this->post($base.'/guidance/internal/complete', ['reason' => 'Semua sesi sudah saya periksa.'])->assertSessionHasErrors('guidance');
+        $this->post($base.'/guidance/'.$guidance->id.'/approve', ['reason' => 'Sesi dan dokumen telah diperiksa.'])->assertRedirect();
+        $this->assertSame($this->koordinator->id, $guidance->fresh()->validated_by);
+        $this->assertDatabaseHas('kp_final_report_logs', ['action' => 'coordinator_guidance_approved', 'user_id' => $this->koordinator->id]);
+        $this->post($base.'/guidance/internal/complete', ['reason' => 'Semua sesi sudah saya periksa.'])->assertSessionHasErrors('guidance');
+        for ($i = 1; $i < 8; $i++) {
+            $this->assignment->reportGuidanceLogs()->create([
+                'reviewer_type' => 'internal', 'guidance_date' => today(), 'topic' => 'Sesi '.$i,
+                'status' => 'disetujui', 'submitted_at' => now(), 'validated_at' => now(), 'validated_by' => $this->lecturerUser->id,
+            ]);
+        }
+        $this->post($base.'/guidance/internal/complete', ['reason' => 'Delapan sesi telah diverifikasi.'])->assertRedirect();
+        $this->assertSame($this->koordinator->id, $report->fresh()->internal_guidance_completed_by);
+        $this->assertDatabaseHas('kp_final_report_logs', ['action' => 'coordinator_internal_guidance_completed']);
+    }
+
     public function test_management_can_preview_print_and_download_filtered_report_in_all_formats(): void
     {
         $this->submittedReport();
@@ -508,10 +567,10 @@ class KpFinalReportTest extends TestCase
             ->assertSee('2210631230201')
             ->assertDontSee('2210631230999');
 
-        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+        $excel = $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->get('/management/final-reports/report/download/excel'.$query)
-            ->assertOk()
-            ->assertHeader('content-disposition', 'attachment; filename=monitoring-laporan-kp-'.now()->format('Ymd-His').'.xlsx');
+            ->assertOk();
+        $this->assertMatchesRegularExpression('/^attachment; filename=monitoring-laporan-kp-\d{8}-\d{6}\.xlsx$/', $excel->headers->get('content-disposition'));
 
         $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
             ->get('/management/final-reports/report/preview?q=tidak-ada')

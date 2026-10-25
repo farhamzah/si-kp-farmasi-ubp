@@ -144,6 +144,89 @@ class KpFinalReportService
         return $this->reviewByRole($fieldUser, $report, 'field', 'disetujui', 'field_approved', $note);
     }
 
+    public function approveOnBehalf(User $coordinator, KpFinalReport $report, string $role, string $reason): KpFinalReport
+    {
+        abort_unless($coordinator->hasRole('koordinator_kp'), 403);
+        abort_unless(in_array($role, ['internal', 'field'], true), 404);
+
+        return DB::transaction(function () use ($coordinator, $report, $role, $reason) {
+            $report = KpFinalReport::query()->lockForUpdate()->findOrFail($report->id);
+            $this->ensureCanReview($report);
+            if (! $report->files()->exists() && blank($report->final_document_url)) {
+                throw ValidationException::withMessages(['report' => 'Laporan belum memiliki file atau link untuk diperiksa.']);
+            }
+            if (! in_array($report->{$role.'_review_status'}, [null, 'pending'], true)) {
+                throw ValidationException::withMessages(['report' => 'Jalur ini sudah direview. Perubahan keputusan memerlukan pengajuan ulang oleh mahasiswa.']);
+            }
+
+            $oldStatus = $report->status;
+            $opposite = $role === 'internal' ? 'field' : 'internal';
+            $newStatus = $report->{$opposite.'_review_status'} === 'disetujui' ? 'disetujui' : 'menunggu_review';
+            $report->update([
+                'status' => $newStatus,
+                'reviewed_by' => $coordinator->id,
+                'reviewed_at' => now(),
+                'review_note' => $reason,
+                $role.'_review_status' => 'disetujui',
+                $role.'_reviewed_by' => $coordinator->id,
+                $role.'_reviewed_at' => now(),
+                $role.'_review_note' => $reason,
+                'approved_at' => $newStatus === 'disetujui' ? now() : null,
+            ]);
+            $report = $this->syncGuidanceCompletionFromApprovedReport($report);
+            $this->logActivity($coordinator, $report, 'coordinator_'.$role.'_approved', $oldStatus, $newStatus, $reason, ['on_behalf_of' => $role]);
+
+            return $report->fresh();
+        });
+    }
+
+    public function approveGuidanceOnBehalf(User $coordinator, KpFinalReport $report, KpReportGuidanceLog $guidance, string $reason): KpReportGuidanceLog
+    {
+        abort_unless($coordinator->hasRole('koordinator_kp'), 403);
+        abort_unless($guidance->kp_assignment_id === $report->kp_assignment_id, 404);
+
+        return DB::transaction(function () use ($coordinator, $report, $guidance, $reason) {
+            $guidance = KpReportGuidanceLog::query()->lockForUpdate()->findOrFail($guidance->id);
+            if ($guidance->status !== 'menunggu_validasi') {
+                throw ValidationException::withMessages(['guidance' => 'Hanya sesi yang menunggu validasi yang dapat disetujui.']);
+            }
+            $guidance->update(['status' => 'disetujui', 'validated_by' => $coordinator->id, 'validated_at' => now(), 'validation_note' => $reason]);
+            $this->syncGuidanceCompletionFromApprovedReport($report->fresh());
+            $this->logActivity($coordinator, $report, 'coordinator_guidance_approved', 'menunggu_validasi', 'disetujui', $reason, [
+                'guidance_id' => $guidance->id,
+                'on_behalf_of' => $guidance->reviewerType(),
+            ]);
+
+            return $guidance->fresh();
+        });
+    }
+
+    public function completeGuidanceOnBehalf(User $coordinator, KpFinalReport $report, string $role, string $reason): KpFinalReport
+    {
+        abort_unless($coordinator->hasRole('koordinator_kp'), 403);
+        abort_unless(in_array($role, ['internal', 'field'], true), 404);
+
+        return DB::transaction(function () use ($coordinator, $report, $role, $reason) {
+            $report = KpFinalReport::query()->lockForUpdate()->findOrFail($report->id);
+            $report->load('assignment');
+            if ($report->{$role.'_guidance_completed_at'}) {
+                throw ValidationException::withMessages(['guidance' => 'Bimbingan jalur ini sudah selesai.']);
+            }
+            $minimum = $role === 'internal' ? 8 : 1;
+            if ($this->reviewedGuidanceCount($report->assignment, $role) < $minimum || $this->pendingGuidanceCount($report->assignment, $role) > 0) {
+                throw ValidationException::withMessages(['guidance' => 'Minimal '.$minimum.' sesi harus direview dan tidak boleh ada sesi menunggu validasi.']);
+            }
+            $report->update([
+                $role.'_guidance_completed_by' => $coordinator->id,
+                $role.'_guidance_completed_at' => now(),
+                $role.'_guidance_completion_note' => $reason,
+            ]);
+            $this->logActivity($coordinator, $report, 'coordinator_'.$role.'_guidance_completed', 'belum_selesai', 'selesai', $reason, ['on_behalf_of' => $role]);
+
+            return $report->fresh();
+        });
+    }
+
     public function requestRevisionByFieldSupervisor(User $fieldUser, KpFinalReport $report, string $note): KpFinalReport
     {
         $this->ensureFieldSupervisorCanReview($fieldUser, $report);

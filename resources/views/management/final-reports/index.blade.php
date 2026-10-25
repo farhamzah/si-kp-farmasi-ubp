@@ -12,6 +12,11 @@
     </section>
 
     <section class="si-card p-5">
+        <div class="mb-4 flex flex-wrap items-center gap-2 text-sm">
+            <span class="font-semibold text-slate-700">Perlu persetujuan laporan:</span>
+            <a class="si-btn si-btn-secondary" href="{{ route('management.final-reports.index', ['status' => 'menunggu_review', 'internal_status' => 'report_pending']) }}">Pembimbing Dalam</a>
+            <a class="si-btn si-btn-secondary" href="{{ route('management.final-reports.index', ['status' => 'menunggu_review', 'field_status' => 'report_pending']) }}">Pembimbing Lapangan</a>
+        </div>
         <form method="GET" class="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
             <input name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Cari mahasiswa/tempat" class="si-input mt-0 xl:col-span-2">
             <select name="period" class="si-input mt-0">
