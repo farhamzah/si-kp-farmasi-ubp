@@ -10,6 +10,23 @@
         <p class="text-sm text-slate-500">{{ $report->assignment->student->user->name }} | {{ $report->assignment->student->nim ?: '-' }}</p>
         <h2 class="mt-1 text-xl font-bold text-slate-950">{{ $report->assignment->place->name }}</h2>
         <span class="mt-2 inline-flex rounded px-2 py-1 text-xs font-semibold ring-1 {{ $report->statusBadgeClass() }}">{{ $report->statusLabel() }}</span>
+        @if($isCoordinator && filled($report->final_document_url) && in_array($report->status, ['menunggu_review', 'disetujui'], true))
+            @if($report->assignment->exam)
+                <p class="mt-4 rounded border border-cyan-200 bg-cyan-50 p-4 text-sm text-cyan-900">Sidang sudah tercatat. Laporan bertanda tangan diserahkan melalui Dokumen Final Pascasidang, bukan dengan mengubah persetujuan laporan sebelum sidang.</p>
+            @else
+                <div class="mt-4 rounded border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                    <p class="font-semibold">Tautan laporan sebelum sidang rusak?</p>
+                    <p class="mt-1">Setelah dikembalikan, tautan lama tidak dipakai lagi dan persetujuan pembimbing harus diperoleh ulang pada dokumen pengganti.</p>
+                    <form method="POST" action="{{ route('management.final-reports.return-broken-link', $report) }}" class="mt-3 flex flex-wrap items-end gap-2">
+                        @csrf
+                        <label class="min-w-64 flex-1 text-xs font-semibold">Alasan pengembalian
+                            <input name="reason" required minlength="10" maxlength="1000" class="si-input mt-1" placeholder="Contoh: file Drive lama terhapus, mahasiswa perlu mengganti tautan">
+                        </label>
+                        <button class="si-btn si-btn-secondary" onclick="return confirm('Kembalikan laporan untuk penggantian tautan? Persetujuan sebelumnya akan dibuka ulang.')">Kembalikan Tautan Rusak</button>
+                    </form>
+                </div>
+            @endif
+        @endif
         @if($report->status === 'draft')
             <div class="mt-4 rounded border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
                 <p class="font-semibold">Laporan belum diajukan untuk review</p>

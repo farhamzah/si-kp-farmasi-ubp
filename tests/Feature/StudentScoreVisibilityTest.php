@@ -365,6 +365,13 @@ class StudentScoreVisibilityTest extends TestCase
 
     public function test_student_submits_post_exam_report_as_google_drive_file_link(): void
     {
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/laporan-akhir')
+            ->assertOk()
+            ->assertSee('href="#dokumen-pascasidang"', false)
+            ->assertSee('Dokumen Final Pascasidang')
+            ->assertSee('Link laporan sebelum sidang terkunci');
+
         $this->assignment->postExamReport->update([
             'status' => KpPostExamReport::STATUS_REVISION,
             'approved_at' => null,

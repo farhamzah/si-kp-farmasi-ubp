@@ -188,7 +188,7 @@ class FinalReportMonitoringController extends Controller
     public function show(KpFinalReport $report): View
     {
         return view('management.final-reports.show', [
-            'report' => $report->load(['assignment.student.user', 'assignment.period', 'assignment.place', 'assignment.internalSupervisor.user', 'assignment.fieldSupervisor.user', 'assignment.reportGuidanceLogs.validatedBy', 'files.uploadedBy', 'logs.user', 'latestFile']),
+            'report' => $report->load(['assignment.student.user', 'assignment.period', 'assignment.place', 'assignment.exam.minutes', 'assignment.internalSupervisor.user', 'assignment.fieldSupervisor.user', 'assignment.reportGuidanceLogs.validatedBy', 'files.uploadedBy', 'logs.user', 'latestFile']),
         ]);
     }
 
@@ -208,6 +208,15 @@ class FinalReportMonitoringController extends Controller
         $service->submitDraftOnBehalf($request->user(), $report, $data['reason']);
 
         return back()->with('success', 'Draft diajukan untuk review oleh koordinator. Periksa laporan sebelum memberi persetujuan.');
+    }
+
+    public function returnBrokenLink(Request $request, KpFinalReport $report, KpFinalReportService $service)
+    {
+        $this->ensureCoordinator($request);
+        $data = $request->validate(['reason' => ['required', 'string', 'min:10', 'max:1000']]);
+        $service->returnBrokenLinkForCorrection($request->user(), $report, $data['reason']);
+
+        return back()->with('success', 'Tautan lama ditandai rusak. Mahasiswa dapat menyimpan tautan baru dan mengajukan ulang laporan.');
     }
 
     public function approveGuidanceOnBehalf(Request $request, KpFinalReport $report, KpReportGuidanceLog $guidance, KpFinalReportService $service)

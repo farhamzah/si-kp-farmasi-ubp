@@ -145,6 +145,45 @@ class KpFinalReportService
         });
     }
 
+    public function returnBrokenLinkForCorrection(User $coordinator, KpFinalReport $report, string $reason): KpFinalReport
+    {
+        abort_unless($coordinator->hasRole('koordinator_kp'), 403);
+
+        return DB::transaction(function () use ($coordinator, $report, $reason) {
+            $report = KpFinalReport::query()->lockForUpdate()->findOrFail($report->id);
+            $report->load('assignment');
+            if ($report->assignment->exam()->exists()) {
+                throw ValidationException::withMessages(['report' => 'Sidang sudah tercatat. Gunakan Dokumen Final Pascasidang untuk laporan bertanda tangan, bukan mengganti laporan sebelum sidang.']);
+            }
+            if (! in_array($report->status, ['menunggu_review', 'disetujui'], true) || blank($report->final_document_url)) {
+                throw ValidationException::withMessages(['report' => 'Hanya tautan laporan yang terkunci dan belum memiliki sidang yang dapat dikembalikan untuk perbaikan.']);
+            }
+
+            $oldStatus = $report->status;
+            $oldUrl = $report->final_document_url;
+            $report->update([
+                'status' => 'revisi',
+                'final_document_url' => null,
+                'final_document_label' => null,
+                'reviewed_by' => $coordinator->id,
+                'reviewed_at' => now(),
+                'review_note' => $reason,
+                'approved_at' => null,
+                'internal_review_status' => 'pending',
+                'internal_reviewed_by' => null,
+                'internal_reviewed_at' => null,
+                'internal_review_note' => null,
+                'field_review_status' => 'pending',
+                'field_reviewed_by' => null,
+                'field_reviewed_at' => null,
+                'field_review_note' => null,
+            ]);
+            $this->logActivity($coordinator, $report, 'coordinator_broken_link_returned', $oldStatus, 'revisi', $reason, ['previous_url' => $oldUrl]);
+
+            return $report->fresh();
+        });
+    }
+
     public function approve(User $lecturerUser, KpFinalReport $report, ?string $note = null): KpFinalReport
     {
         $this->ensureLecturerCanReview($lecturerUser, $report);

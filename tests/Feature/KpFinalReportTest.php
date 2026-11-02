@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\FieldSupervisor;
 use App\Models\KpAssignment;
+use App\Models\KpExam;
+use App\Models\KpExamRequest;
 use App\Models\KpFinalReport;
 use App\Models\KpLogbook;
 use App\Models\KpReportGuidanceLog;
@@ -485,6 +487,69 @@ class KpFinalReportTest extends TestCase
         $this->assertSame($this->koordinator->id, $report->fresh()->field_reviewed_by);
         $this->get('/management/final-reports?internal_status=report_pending')->assertDontSee('2210631230201');
         $this->post($base.'/approve/field', ['reason' => 'Upaya approval ulang oleh koordinator.'])->assertSessionHasErrors('report');
+    }
+
+    public function test_coordinator_can_return_broken_drive_link_before_exam_and_student_can_replace_it(): void
+    {
+        $report = $this->submittedReport();
+        $oldUrl = 'https://drive.google.com/file/d/deleted-report/view';
+        $newUrl = 'https://drive.google.com/file/d/replacement-report/view';
+        $report->update([
+            'status' => 'disetujui', 'final_document_url' => $oldUrl,
+            'internal_review_status' => 'disetujui', 'field_review_status' => 'disetujui', 'approved_at' => now(),
+        ]);
+        $base = '/management/final-reports/'.$report->id;
+
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->get($base)->assertOk()->assertSee('Kembalikan Tautan Rusak');
+        $this->post($base.'/return-broken-link', ['reason' => 'File di Drive sudah dihapus mahasiswa.'])
+            ->assertRedirect()->assertSessionHasNoErrors();
+
+        $report->refresh();
+        $this->assertSame('revisi', $report->status);
+        $this->assertNull($report->final_document_url);
+        $this->assertNull($report->approved_at);
+        $this->assertSame('pending', $report->internal_review_status);
+        $this->assertSame('pending', $report->field_review_status);
+        $log = $report->logs()->where('action', 'coordinator_broken_link_returned')->firstOrFail();
+        $this->assertSame($this->koordinator->id, $log->user_id);
+        $this->assertSame($oldUrl, $log->metadata['previous_url']);
+
+        $this->actingAs($this->mahasiswa)->withSession(['active_role' => 'mahasiswa'])
+            ->get('/mahasiswa/laporan-akhir')->assertOk()->assertSee('Link Laporan untuk Review');
+        $this->post('/mahasiswa/laporan-akhir/link-final', [
+            'report_title' => 'Laporan pengganti', 'final_document_url' => $newUrl,
+        ])->assertRedirect()->assertSessionHasNoErrors();
+        $this->post('/mahasiswa/laporan-akhir/submit')->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('menunggu_review', $report->fresh()->status);
+        $this->assertSame($newUrl, $report->fresh()->final_document_url);
+    }
+
+    public function test_broken_link_correction_is_coordinator_only_and_cannot_reopen_scheduled_exam(): void
+    {
+        $report = $this->submittedReport();
+        $report->update(['final_document_url' => 'https://drive.google.com/file/d/deleted-report/view']);
+        $url = '/management/final-reports/'.$report->id.'/return-broken-link';
+        $reason = ['reason' => 'File laporan di Google Drive terhapus.'];
+
+        $this->actingAs($this->admin)->withSession(['active_role' => 'admin'])->post($url, $reason)->assertForbidden();
+        $this->actingAs($this->koordinator)->withSession(['active_role' => 'koordinator_kp'])
+            ->post($url, ['reason' => 'pendek'])->assertSessionHasErrors('reason');
+
+        $examRequest = KpExamRequest::create([
+            'kp_assignment_id' => $this->assignment->id, 'requested_by' => $this->mahasiswa->id,
+            'status' => 'disetujui', 'submitted_at' => now(),
+        ]);
+        KpExam::create([
+            'kp_exam_request_id' => $examRequest->id, 'kp_assignment_id' => $this->assignment->id,
+            'supervisor_id' => $this->lecturer->id, 'examiner_id' => $this->lecturer->id,
+            'exam_date' => today(), 'start_time' => '09:00', 'end_time' => '10:00',
+            'mode' => 'offline', 'room' => 'Ruang Sidang', 'status' => 'dijadwalkan',
+            'scheduled_by' => $this->koordinator->id, 'scheduled_at' => now(),
+        ]);
+        $this->get('/management/final-reports/'.$report->id)->assertSee('Dokumen Final Pascasidang')->assertDontSee('Kembalikan Tautan Rusak');
+        $this->post($url, $reason)->assertSessionHasErrors('report');
+        $this->assertSame('menunggu_review', $report->fresh()->status);
     }
 
     public function test_coordinator_can_submit_documented_draft_then_approve_it_without_impersonating_student(): void

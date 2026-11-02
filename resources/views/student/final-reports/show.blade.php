@@ -261,8 +261,8 @@
                     <div class="grid gap-5 p-5 md:p-6 xl:grid-cols-[minmax(0,1fr)_320px]">
                         <div class="min-w-0">
                             <p class="text-xs font-black uppercase tracking-widest text-cyan-700">Folder resmi laporan final</p>
-                            <h3 class="mt-1 text-xl font-black text-slate-950">Upload PDF final ke Google Drive prodi</h3>
-                            <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Gunakan folder Drive resmi untuk menyimpan laporan akhir yang sudah final dan sudah ditandatangani lengkap. Setelah file berhasil diupload, buka file di Drive, salin link berbagi file, lalu tempel di form Link Laporan Final.</p>
+                            <h3 class="mt-1 text-xl font-black text-slate-950">Laporan untuk review sebelum sidang</h3>
+                            <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Unggah laporan yang akan direview pembimbing ke folder Drive resmi, lalu tempel link file di bawah. Laporan yang sudah diperbaiki dan ditandatangani setelah sidang dikirim melalui bagian Dokumen Final Pascasidang, bukan di sini.</p>
                             <div class="mt-4 grid gap-3 md:grid-cols-3">
                                 <div class="rounded-2xl border border-cyan-100 bg-cyan-50/60 p-4">
                                     <p class="text-xs font-black uppercase tracking-widest text-cyan-700">1. Nama File</p>
@@ -292,8 +292,8 @@
                 <section class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 md:p-6">
                     <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div>
-                            <h3 class="text-lg font-black text-slate-950">Link Laporan Final</h3>
-                            <p class="mt-1 text-sm text-slate-500">Tempel link file laporan final dari Google Drive resmi. Link ini menjadi bukti pengumpulan final dan akan diperiksa pembimbing sebelum nilai dapat dibuka.</p>
+                            <h3 class="text-lg font-black text-slate-950">Link Laporan untuk Review</h3>
+                            <p class="mt-1 text-sm text-slate-500">Tempel link file laporan dari Google Drive resmi untuk review pembimbing sebelum sidang.</p>
                         </div>
                         @if($report?->final_document_url)
                             <div class="flex flex-wrap gap-2">
@@ -313,7 +313,14 @@
                         </form>
                         <p class="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-5 text-amber-800">Pastikan yang ditempel adalah link file laporan final, bukan link folder. Jika pembimbing tidak bisa membuka, ubah akses Drive menjadi dapat dilihat oleh akun yang memiliki link atau bagikan langsung ke pembimbing.</p>
                     @else
-                        <p class="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">Link final terkunci saat laporan sedang direview atau sudah disetujui.</p>
+                        <div class="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                            <p>Link laporan sebelum sidang terkunci saat review atau setelah disetujui. Jika file Drive lama terhapus sebelum sidang, hubungi koordinator agar laporan dikembalikan untuk penggantian tautan.</p>
+                            @if($assignment->exam?->minutes)
+                                <a href="#dokumen-pascasidang" class="mt-2 inline-block font-bold text-emerald-700 underline">Sudah sidang? Kirim PDF bertanda tangan di Dokumen Final Pascasidang</a>
+                            @elseif($assignment->exam)
+                                <p class="mt-2">Jika sudah sidang, form dokumen bertanda tangan akan tersedia setelah berita acara sidang terbit.</p>
+                            @endif
+                        </div>
                     @endif
                 </section>
 
@@ -348,7 +355,7 @@
 
                 @if($assignment->exam?->minutes)
                     @php($postExamReport = $assignment->postExamReport)
-                    <section class="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm md:p-6">
+                    <section id="dokumen-pascasidang" class="scroll-mt-24 rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm md:p-6">
                         <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                             <div>
                                 <p class="text-xs font-black uppercase tracking-widest text-emerald-700">Sesudah Sidang</p>
